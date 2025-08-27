@@ -4,6 +4,8 @@ server:
     context-path: /restaurantserver
 
 spring:
+  config:
+    import: optional:file:./application.env
   datasource:
     url: ${DB_URL}
     driver-class-name: com.mysql.cj.jdbc.Driver
