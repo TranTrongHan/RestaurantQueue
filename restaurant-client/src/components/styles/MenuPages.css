@@ -1,0 +1,23 @@
+.category-list {
+  gap: 10px; /* Khoảng cách giữa các danh mục */
+}
+
+.category-item {
+  cursor: pointer;
+  border: 1px solid #ccc; /* Viền xám nhẹ */
+  border-radius: 8px;
+  padding: 8px 16px;
+  color: #333; /* Bỏ màu xanh mặc định */
+  transition: all 0.2s ease-in-out;
+}
+
+.category-item:hover {
+  background-color: #f8f9fa;
+  border-color: #912910; /* Màu chủ đạo */
+}
+
+.category-item.active {
+  background-color: #912910;
+  color: white;
+  border-color: #912910;
+}

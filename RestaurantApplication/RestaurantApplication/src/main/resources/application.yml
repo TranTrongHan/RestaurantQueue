@@ -1,0 +1,68 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /restaurantserver
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+            user-name-attribute: sub
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+  main:
+    allow-bean-definition-overriding: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+cloudinary:
+  cloud_name: ${CLOUDINARY_NAME}
+  api_key: ${CLOUDINARY_API_KEY}
+  api_secret: ${CLOUDINARY_API_SECRET}
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION}
+  issuer: ${JWT_ISSUER}
+
+vnpay:
+  tmnCode: ${VNPAY_TMN_CODE}
+  secretKey: ${VNPAY_SECRET_KEY}
+  baseUrl: ${VNPAY_BASE_URL}
+  returnUrl: ${VNPAY_RETURN_URL}
+
+redis:
+  stream-key: kitchen-stream
+  zset-key: kitchen-priority-queue
+  stream:
+    group: bep_group
+    consumer: bep_1
+
+app:
+  firebase:
+    config: ${FIREBASE_CONFIG_PATH}
