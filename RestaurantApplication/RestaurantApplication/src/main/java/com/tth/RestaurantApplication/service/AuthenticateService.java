@@ -13,6 +13,7 @@ import com.tth.RestaurantApplication.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +22,7 @@ import java.text.ParseException;
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE,makeFinal = true)
+@Slf4j
 public class AuthenticateService {
     UserRepository userRepository;
     PasswordEncoder passwordEncoder;
@@ -36,9 +38,11 @@ public class AuthenticateService {
         User user = userRepository.findByUsername(loginRequest.getUsername())
                 .orElse(null);
 
+
         if (user == null || !passwordEncoder.matches(loginRequest.getPassword(), user.getPassword())) {
             throw new AppException(ErrorCode.INVALID_CREDENTIALS);
         }
+
         String token = jwtService.generateToken(user);
 
         return LoginResponse.builder()

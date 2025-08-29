@@ -18,6 +18,8 @@ import Footer from '../layout/Footer';
 import SpinnerComp from '../common/SpinnerComp';
 import { authApis, endpoints } from '../configs/Apis';
 import { useCookies } from 'react-cookie';
+import { useContext } from 'react';
+import { MyUserContext } from '../configs/Context';
 
 const ProfilePage = () => {
     const [userInfo, setUserInfo] = useState(null);
@@ -37,7 +39,7 @@ const ProfilePage = () => {
         address: '',
         dob: '',
     });
-    const avatar = useRef();
+    const [avatar, setAvatar] = useState();
     const [passwordData, setPasswordData] = useState({
         currentPassword: '',
         newPassword: '',
@@ -61,8 +63,8 @@ const ProfilePage = () => {
                     email: res.data.result.email,
                     address: res.data.result.address,
                     dob: res.data.result.dob,
-                    image: res.data.result.image
                 });
+                setAvatar(res.data.result.image);
             }
 
         } catch (err) {
@@ -78,6 +80,8 @@ const ProfilePage = () => {
             ...prev,
             [name]: value
         }));
+        console.log(`${name} : ${value}`);
+
     };
 
     const handlePasswordChange = (e) => {
@@ -99,19 +103,34 @@ const ProfilePage = () => {
                 return;
             }
             const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.register}/${userId}`
-            // Mock API call
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            let data = new FormData();
+            Object.entries(formData).forEach(([key, value]) => {
+                if (value !== userInfo[key]) {
+                    console.log(`newVal :${value} old:${userInfo[key]} `)
+                    data.append(key, value);
+                }
+            });
 
-            // Update userInfo with new data
-            setUserInfo(prev => ({
-                ...prev,
-                ...formData
-            }));
+            console.log(Object.fromEntries(data.entries()));
+            console.log('url: ', url);
+            let res = await authApis(cookie.token).put(url, data, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            if (res.status === 200) {
+                setSuccess('Cập nhật thông tin thành công!');
+                fetchUserProfile();
+                setIsEditing(false);
+            }
 
-            setSuccess('Cập nhật thông tin thành công!');
-            setIsEditing(false);
+
         } catch (err) {
-            setError('Có lỗi xảy ra khi cập nhật thông tin');
+            if (error.response) {
+                console.error("Backend error:", error.response.data);
+                setError("Có lỗi xảy ra");
+            } else {
+                console.error("Axios error:", error.message);
+                setError("Lỗi kết nối mạng");
+            }
         } finally {
             setSaving(false);
         }
@@ -162,18 +181,34 @@ const ProfilePage = () => {
         }
     };
 
-    const handleImageUpload = (e) => {
+    const handleImageUpload = async (e) => {
         const file = e.target.files[0];
+       
         if (file) {
-            // Mock upload - thực tế sẽ upload lên server
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setFormData(prev => ({
-                    ...prev,
-                    image: e.target.result
-                }));
-            };
-            reader.readAsDataURL(file);
+            console.log("file :",file);
+            try {
+                const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.register}/${userInfo.userId}`;
+                const data = new FormData();
+                data.append("avatar", file);
+                console.log(Object.fromEntries(data.entries()));
+                console.log('url: ', url);
+                let res = await authApis(cookie.token).patch(url, data, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+                if (res.status === 200) {
+                    setSuccess('Cập nhật thông tin thành công!');
+                    setIsEditing(false);
+                    fetchUserProfile();
+                }
+            } catch (error) {
+                if (error.response) {
+                    console.error("Backend error:", error.response.data);
+                    setError("Có lỗi xảy ra");
+                } else {
+                    console.error("Axios error:", error.message);
+                    setError("Lỗi kết nối mạng");
+                }
+            }
         }
     };
 
@@ -309,7 +344,7 @@ const ProfilePage = () => {
                                         <Col md={4} className="text-center mb-4">
                                             <div style={{ position: 'relative', display: 'inline-block' }}>
                                                 <Image
-                                                    src={formData.image || 'https://via.placeholder.com/150'}
+                                                    src={avatar || 'https://via.placeholder.com/150'}
                                                     roundedCircle
                                                     style={{
                                                         width: '150px',

@@ -17,6 +17,7 @@ import com.tth.RestaurantApplication.repository.OrderSessionRepository;
 import com.tth.RestaurantApplication.repository.ReservationRepository;
 import com.tth.RestaurantApplication.repository.TableRepository;
 import com.tth.RestaurantApplication.specification.ReservationSpecification;
+import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,7 @@ public class ReservationService {
     OrderManagementService orderManagementService;
     TableService tableService;
     JwtService jwtService;
+    EmailService emailService;
     public ReservationResponse bookingTable(TableBookingRequest request, User currentUser){
         log.info("Step 1: Start bookingTable");
         List<Reservation> existingReservations = reservationRepository.findByUserAndStatusIn(
@@ -90,6 +92,17 @@ public class ReservationService {
 
             table.setStatus(TableEntity.TableStatus.BOOKED);
             tableRepository.save(table);
+            try {
+                emailService.sendBookingConfirmation(
+                        currentUser.getEmail(),
+                        currentUser.getFullName(),
+                        reservation.getCheckinTime().toString(),
+                        String.valueOf(table.getTableName()),
+                        reservation.getReservationId().toString()
+                );
+            } catch (MessagingException e) {
+                log.error("Không thể gửi email xác nhận cho reservation {}", reservation.getReservationId(), e);
+            }
 
             return reservationMapper.toReservationResponse(reservation);
         } else {

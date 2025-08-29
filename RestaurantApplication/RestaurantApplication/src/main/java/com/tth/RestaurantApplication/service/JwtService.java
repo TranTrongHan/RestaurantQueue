@@ -9,6 +9,7 @@ import com.tth.RestaurantApplication.configs.JwtConfig;
 import com.tth.RestaurantApplication.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
@@ -18,6 +19,7 @@ import java.util.Date;
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE, makeFinal = true)
+@Slf4j
 public class JwtService {
 
     JwtConfig jwtConfig;
@@ -31,8 +33,9 @@ public class JwtService {
                 .expirationTime(new Date(System.currentTimeMillis() + jwtConfig.getExpiration()))
                 .claim("userId", user.getUserId())
                 .claim("username", user.getUsername())
-                .claim("role", user.getRole().name())
+                .claim("role", user.getRole().toString())
                 .build();
+
 
         // Tạo JWS Header
         JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.HS256)

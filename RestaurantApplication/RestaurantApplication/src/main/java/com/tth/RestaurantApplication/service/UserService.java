@@ -60,37 +60,49 @@ public class UserService {
         return userMapper.toUserResponse(this.userRepository.findById(userID).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED)));
     }
 
-    public UserResponse updateUser(String userID, UserUpdateRequest request,MultipartFile avatarFile) throws IOException {
+    public UserResponse updateUser(String userID, UserUpdateRequest request) throws IOException {
         User persisted = this.userRepository.findById(userID).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
         if (request != null) {
             if (request.getFullName() != null && !request.getFullName().isBlank()) {
+                log.info("fullName: {}", request.getFullName());
                 persisted.setFullName(request.getFullName());
             }
             if (request.getDob() != null) {
+                log.info("dob: {}", request.getDob());
                 persisted.setDob(request.getDob());
             }
             if (request.getEmail() != null && !request.getEmail().isBlank()) {
+                log.info("email: {}", request.getEmail());
                 persisted.setEmail(request.getEmail());
             }
             if (request.getPhone() != null && !request.getPhone().isBlank()) {
+                log.info("phone: {}", request.getPhone());
                 persisted.setPhone(request.getPhone());
             }
             if (request.getAddress() != null && !request.getAddress().isBlank()) {
+                log.info("address: {}", request.getAddress());
                 persisted.setAddress(request.getAddress());
             }
-            if (request.getPassword() != null) {
-                log.info("password : {}",request.getPassword());
+            if (request.getPassword() != null && !request.getPassword().isBlank()) {
+                log.info("password : {}", request.getPassword());
                 persisted.setPassword(passwordEncoder.encode(request.getPassword()));
             }
         }
+        log.info("before avatar");
 
+
+        return userMapper.toUserResponse(userRepository.save(persisted));
+    }
+    public UserResponse updateUserAvatar(String userId, MultipartFile avatarFile) throws IOException {
+        User persisted = this.userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
         // Xử lý upload ảnh nếu có
         if (avatarFile != null && !avatarFile.isEmpty()) {
-            String avatarUrl = cloudinaryService.upload(avatarFile).toString();
-            persisted.setImage(avatarUrl);
+            log.info("has avatar");
+            Map uploadResult = cloudinaryService.upload(avatarFile);
+            String imageUrl = (String) uploadResult.get("url");
+            persisted.setImage(imageUrl);
         }
-
         return userMapper.toUserResponse(userRepository.save(persisted));
     }
     public void deleteUser(String userID){

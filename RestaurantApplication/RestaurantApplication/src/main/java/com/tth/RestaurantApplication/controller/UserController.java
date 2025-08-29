@@ -37,10 +37,17 @@ public class UserController {
     }
 
     @PutMapping(value = "/users/{id}",consumes = {"multipart/form-data"})
-    ApiResponse<UserResponse> updateUser(@PathVariable(value = "id") String userId,  @ModelAttribute  UserUpdateRequest request,
-                                         @RequestPart(value = "avatar", required = false) MultipartFile avatarFile) throws IOException {
+    ApiResponse<UserResponse> updateUser(@PathVariable(value = "id") String userId,  @ModelAttribute UserUpdateRequest request) throws IOException {
         return ApiResponse.<UserResponse>builder()
-                .result(this.userService.updateUser(userId, request,avatarFile))
+                .result(this.userService.updateUser(userId, request))
+                .build();
+    }
+    @CrossOrigin
+    @PatchMapping(value = "/users/{id}",consumes = {"multipart/form-data"})
+    ApiResponse<UserResponse> updateUserAvatar(@PathVariable(value = "id") String userId,
+                                         @RequestPart(value = "avatar") MultipartFile avatarFile) throws IOException {
+        return ApiResponse.<UserResponse>builder()
+                .result(this.userService.updateUserAvatar(userId,avatarFile))
                 .build();
     }
 
