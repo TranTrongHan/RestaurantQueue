@@ -11,7 +11,10 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
-
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    cache: false
   security:
     oauth2:
       client:
