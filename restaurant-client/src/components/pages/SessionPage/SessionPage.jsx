@@ -55,9 +55,24 @@ const SessionPage = () => {
     const params = new URLSearchParams(location.search);
     const sessionToken = params.get("token") || null;
     const sessionId = params.get("sessionId") || null;
+    const [customerJwt,setCustomerJwt] = useState(null);
+    window.addEventListener("message" , (event) => {
+        if (event.origin !== window.location.origin) return; 
+        let customerJwtEvent  = event.data;
+        if(customerJwtEvent){
+            console.log("has customer jwt event");
+            setCustomerJwt(customerJwtEvent || null);
+        }
+        
+        
+    })
     const token = sessionStorage.getItem("customer_jwt");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const  [customerInfo,setCustomerInfo] = useState({
+        name : "",
+        isVIP : ""
+    });
     const nav = useNavigate();
     const validateToken = async () => {
         console.log("sessionToken: ", sessionToken);
@@ -74,9 +89,13 @@ const SessionPage = () => {
                     alert("Token không hợp lệ. Tự động chuyển về trang chủ sau 3 giây nữa");
                     return;
                 }
+                setCustomerInfo({
+                    name : result.reservationResponse.customerResponse.fullName,
+                    isVIP : result.reservationResponse.customerResponse.isVIP != null ? true : false
+                });
 
                 console.log("Xác thực sessionToken thành công!");
-                console.log("customerJWT: ", token);
+                console.log("customerJWT: ", customerJwt);
 
             }
 
@@ -187,8 +206,8 @@ const SessionPage = () => {
             const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.order_session}/${sessionId}/orderitems`;
             console.log("fetching url: ", url);
             console.log("Payload being sent:", payload);
-            console.log("customer_jwt: ", token)
-            let response = await authApis(token).post(url, payload);
+            console.log("customer_jwt: ", customerJwt)
+            let response = await authApis(customerJwt).post(url, payload);
             if (response.status === 200) {
                 console.log("orderId: ", response.data.result[0].orderId);
                 setOrderId(response.data.result[0].orderId);
@@ -225,9 +244,9 @@ const SessionPage = () => {
         return () => unsubscribe();
     }, [orderId]);
     // BillContent
-    const [billItems,setBillItems] = useState([]);
+    const [billItems, setBillItems] = useState([]);
     useEffect(() => {
-        const colRef = collection(db,"orderBills",String(orderId),"billItems");
+        const colRef = collection(db, "orderBills", String(orderId), "billItems");
         const unsubscribe = onSnapshot(colRef, (snapshot) => {
             const data = snapshot.docs.map(doc => ({
                 id: doc.id,
@@ -237,23 +256,23 @@ const SessionPage = () => {
         });
 
         return () => unsubscribe();
-    },[orderId])
+    }, [orderId])
     const formatPrice = (price) => {
         return new Intl.NumberFormat('vi-VN').format(price) + 'đ';
     };
     const [success, setSuccess] = useState(null);
     const pay = async () => {
         const pendingItems = items.filter(item => item.status == "PENDING");
-        if(pendingItems.length > 0){
-             alert("Có món đang chờ, không thể thanh toán");
-             return;
+        if (pendingItems.length > 0) {
+            alert("Có món đang chờ, không thể thanh toán");
+            return;
         }
-       
+
         try {
             setLoading(true);
             const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.order_session}/${sessionId}`;
             console.log("url: ", url);
-            let res = await authApis(token).post(url);
+            let res = await authApis(customerJwt).post(url);
             if (res.status === 200) {
                 setSuccess("Thanh toán thành công");
             }
@@ -281,7 +300,7 @@ const SessionPage = () => {
         try {
             const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.order_session}/${orderItemId}`;
             console.log("delete url: ", url);
-            let res = await authApis(token).delete(url);
+            let res = await authApis(customerJwt).delete(url);
             if (res.status === 200) {
                 alert("Xóa món thành công")
             }
@@ -295,7 +314,7 @@ const SessionPage = () => {
             }
         }
     }
-    
+
     return (
         <>
             {error ? (<AlertComp variant="danger" lable={error} />) : (loading ? (<SpinnerComp />) : (
@@ -321,7 +340,7 @@ const SessionPage = () => {
                                             margin: 0,
                                             fontWeight: 'bold'
                                         }}>
-                                            Order Tablet
+                                            Order Tablet - {customerInfo.name}  {customerInfo.isVIP ? ("- Khách VIP") : (null)}
                                         </h3>
                                     </Card.Body>
                                 </Card>
@@ -421,7 +440,7 @@ const SessionPage = () => {
 
                                         {/* Bill Content */}
                                         {activeTab === 'bill' && (
-                                            <BillContent formatPrice={formatPrice}  billItems={billItems}/>
+                                            <BillContent formatPrice={formatPrice} billItems={billItems} />
                                         )}
                                     </Card.Body>
 

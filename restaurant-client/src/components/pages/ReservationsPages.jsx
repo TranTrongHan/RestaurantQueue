@@ -70,15 +70,18 @@ const ReservationsPages = () => {
                 setSucess("Checkin thành công");
                 fetchReservations();
                 const session_token = res.data.result.sessionToken;
-                const { customerJwt, sessionId } = res.data.result;
+                const customerJwt = res.data.result.customerJwt || null;
+                const sessionId = res.data.result.sessionId || null;
                 if (session_token) {
                     const session_url = `${import.meta.env.VITE_CONTEXT_PATH}/order_session?token=${session_token}&sessionId=${sessionId}`;
                     console.log("sessionPageUrl: ", session_url);
                     const newWindow = window.open(session_url, "_blank");
                     if (newWindow) {
                         newWindow.onload = () => {
-                            newWindow.sessionStorage.setItem("customer_jwt", customerJwt);
-                            newWindow.sessionStorage.setItem("session_id", sessionId);
+                          newWindow.postMessage(
+                            customerJwt,
+                            window.location.origin
+                          );
                         };
                     }
                 }

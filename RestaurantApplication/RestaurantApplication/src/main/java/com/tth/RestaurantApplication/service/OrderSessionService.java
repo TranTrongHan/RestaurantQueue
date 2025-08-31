@@ -12,6 +12,7 @@ import com.tth.RestaurantApplication.exception.ErrorCode;
 import com.tth.RestaurantApplication.mapper.OrderItemMapper;
 import com.tth.RestaurantApplication.mapper.OrderMapper;
 import com.tth.RestaurantApplication.mapper.OrderSessionMapper;
+import com.tth.RestaurantApplication.mapper.ReservationMapper;
 import com.tth.RestaurantApplication.properties.RedisProperties;
 import com.tth.RestaurantApplication.repository.*;
 import jakarta.annotation.PostConstruct;
@@ -56,7 +57,8 @@ public class OrderSessionService {
     ChefRepository chefRepository;
     KitchenAssignmentHelperService kitchenAssignmentHelperService;
     RedisProperties redisProperties;
-
+    ReservationMapper reservationMapper;
+    TableRepository tableRepository;
     @PostConstruct
     public void init() {
         String streamKey = redisProperties.getStreamKey();
@@ -80,6 +82,7 @@ public class OrderSessionService {
         }
 
         OrderSessionResponse response = orderSessionMapper.toOrderSessionResponse(orderSession);
+        response.setReservationResponse(reservationMapper.toReservationResponse(orderSession.getReservation()));
         response.setValid(true);
 
         log.info("Validated OrderSession token={} success", token);
@@ -218,7 +221,7 @@ public class OrderSessionService {
         OrderSession orderSession = orderSessionRepository.findById(sessionId).orElseThrow(() -> new AppException(ErrorCode.ORDER_SESSION_NOT_FOUND));
 
         Reservation reservation = orderSession.getReservation();
-
+        TableEntity table =  reservation.getTable();
         Order order = orderRepository.findByOrderSession(orderSession);
         if (order != null) {
             log.info("has order");
@@ -240,6 +243,8 @@ public class OrderSessionService {
 
         orderSession.setExpiredAt(LocalDateTime.now());
         orderSessionRepository.save(orderSession);
+        table.setStatus(TableEntity.TableStatus.AVAILABLE);
+        tableRepository.save(table);
         reservation.setCheckoutTime(LocalDateTime.now());
         reservation.setStatus(Reservation.ReservationStatus.CHECKEDOUT);
         reservationRepository.save(reservation);
