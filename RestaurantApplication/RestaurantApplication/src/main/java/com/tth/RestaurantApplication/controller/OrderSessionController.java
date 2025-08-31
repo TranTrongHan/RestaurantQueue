@@ -5,13 +5,18 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.tth.RestaurantApplication.dto.request.ApiResponse;
 import com.tth.RestaurantApplication.dto.request.OrderRequest;
+import com.tth.RestaurantApplication.dto.request.PaymentRequest;
 import com.tth.RestaurantApplication.dto.response.BillResponse;
 import com.tth.RestaurantApplication.dto.response.OrderItemResponse;
 import com.tth.RestaurantApplication.dto.response.OrderResponse;
 import com.tth.RestaurantApplication.dto.response.OrderSessionResponse;
+import com.tth.RestaurantApplication.entity.Order;
+import com.tth.RestaurantApplication.entity.User;
 import com.tth.RestaurantApplication.exception.AppException;
 import com.tth.RestaurantApplication.exception.ErrorCode;
+import com.tth.RestaurantApplication.service.AuthenticateService;
 import com.tth.RestaurantApplication.service.JwtService;
+import com.tth.RestaurantApplication.service.OnlineOrderService;
 import com.tth.RestaurantApplication.service.OrderSessionService;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
@@ -22,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.text.ParseException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -29,8 +35,9 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE,makeFinal = true)
 @RequestMapping("/api/order_session")
 public class OrderSessionController {
-
+    AuthenticateService authenticateService;
     OrderSessionService orderSessionService;
+    OnlineOrderService onlineOrderService;
     JwtService jwtService;
     @GetMapping("/validate")
     public ApiResponse<OrderSessionResponse> validateSession(@RequestParam("token") String token){
@@ -68,6 +75,31 @@ public class OrderSessionController {
         return ApiResponse.<BillResponse>builder()
                 .result(orderSessionService.pay(sessionId))
                 .message("pay successful")
+                .build();
+    }
+    @PostMapping("/createPayment/{sessionId}")
+    public ApiResponse<String> createPayment(@RequestBody(required = false) PaymentRequest request,
+                                             @RequestHeader("Authorization") String token,
+                                             @PathVariable(value = "sessionId") Integer sessionId,
+                                             @RequestParam String returnUrl) throws Exception {
+        log.info("return url received: {}",returnUrl);
+        User currentUser = authenticateService.getCurrentUser(token.substring(7));
+        Order order = orderSessionService.getCurrentUserOrder(sessionId);
+        String paymentUrl = onlineOrderService.createPaymentUrl(currentUser, request,"DINE_IN",order,returnUrl);
+        return ApiResponse.<String>builder()
+                .result(paymentUrl)
+                .message("Create payment url success")
+                .build();
+    }
+
+    @GetMapping("/vnpayReturn")
+    public ApiResponse<BillResponse> vnpayReturn(@RequestParam Map<String, String> params,
+                                                 @RequestHeader("Authorization") String token) throws Exception {
+        User currentUser = authenticateService.getCurrentUser(token.substring(7));
+        BillResponse bill = onlineOrderService.handleVnpayReturn(params, currentUser);
+        return ApiResponse.<BillResponse>builder()
+                .result(bill)
+                .message("Payment verified and bill created")
                 .build();
     }
     @DeleteMapping("/{orderItemId}")

@@ -42,7 +42,7 @@ public class UserController {
                 .result(this.userService.updateUser(userId, request))
                 .build();
     }
-    @CrossOrigin
+
     @PatchMapping(value = "/users/{id}",consumes = {"multipart/form-data"})
     ApiResponse<UserResponse> updateUserAvatar(@PathVariable(value = "id") String userId,
                                          @RequestPart(value = "avatar") MultipartFile avatarFile) throws IOException {

@@ -46,10 +46,10 @@ public class KitchenAssignmentHelperService {
     public KitchenAssignmentResponse assignToChef(Integer orderItemId, Integer chefId) throws Exception {
         OrderItem orderItem = orderItemRepository.findById(orderItemId)
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_ITEM_NOT_FOUND));
-        log.info("orderItemId nhận được: {}",orderItemId);
+//        log.info("orderItemId nhận được: {}",orderItemId);
         Chef chef = chefRepository.findById(chefId).orElseThrow(() -> new AppException(ErrorCode.KITCHEN_ASSIGN_NOT_FOUND));
 //        log.info("chefId: {}",chef.getUserId());
-        log.info("chef rảnh: {}", chef.getUser().getUserId());
+//        log.info("chef rảnh: {}", chef.getUser().getUserId());
         KitchenAssignment assignment = new KitchenAssignment();
         assignment.setChef(chef);
         assignment.setOrderItem(orderItem);
@@ -63,15 +63,15 @@ public class KitchenAssignmentHelperService {
 //        firestoreService.updateDeadlineTime(orderItem,LocalDateTime.now().plusMinutes((long) avgTime));
 //        log.info("đã cập nhật deadlineTime thực tế cho orderItem {}",orderItem.getOrderItemId());
         assignment = kitchenAssignmentRepository.save(assignment);
-        log.info("đã lưu assignment{}", assignment.getKitchenAssignId());
+//        log.info("đã lưu assignment{}", assignment.getKitchenAssignId());
         firestoreService.pushKitchenAssignment(assignment,orderItem);
         orderItem.setStatus(OrderItem.OrderItemStatus.COOKING);
         orderItemRepository.save(orderItem);
-        log.info("cập nhật {} cooking",orderItem.getOrderItemId());
+//        log.info("cập nhật {} cooking",orderItem.getOrderItemId());
         firestoreService.updateOrderItemField(String.valueOf(orderItem.getOrder().getOrderId()),String.valueOf(orderItem.getOrderItemId()),"status", OrderItem.OrderItemStatus.COOKING.toString());
         chef.setIsAvailable(false);
         chefRepository.save(chef);
-        log.info("đã cập nhật trạng thái chef {}",chef.getUser().getUserId());
+//        log.info("đã cập nhật trạng thái chef {}",chef.getUser().getUserId());
 
         return kitchenAssignmentMapper.toKitchenAssignmentResponse(assignment);
 

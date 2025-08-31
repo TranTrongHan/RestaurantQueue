@@ -6,7 +6,7 @@ import { Button, Card, Col, Container, Pagination, Row } from "react-bootstrap";
 import CookingPage from "./CookingPage";
 import FinishPage from "./FinishPage";
 import { db } from "../../../firebase";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import PendingPage from "./PendingPage";
 
 const KitchenPage = () => {
@@ -17,10 +17,11 @@ const KitchenPage = () => {
     const [page, setPage] = useState(0);
     const [totalPage, setTotalPage] = useState(0);
     const [pageSize, setPageSize] = useState(0);
+    const [totalItems,setTotalItems] = useState(0);
     const [cookie,] = useCookies(["token"]);
     const [activeTab, setActiveTab] = useState('cooking');
     const primaryColor = '#912910';
-    const lightColor = '#f8f9fa';
+   
     const whiteColor = '#ffffff';
 
     const handleFinishButton = async (item) => {
@@ -59,6 +60,7 @@ const KitchenPage = () => {
                 setKitchenOrders(res.data.result.content);
                 setTotalPage(res.data.result.page.totalPages);
                 setPageSize(res.data.result.page.size);
+                setTotalItems(res.data.result.page.totalElements);
             }
 
         } catch (error) {
@@ -123,7 +125,8 @@ const KitchenPage = () => {
     const fetchKitchenOrdersFireStore = () => {
         const colRef = collection(db, "kitchen");
 
-        const q = query(colRef, where("status", "==", "COOKING"));
+        const q = query(colRef, 
+            where("status", "==", "COOKING"));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => ({
@@ -143,7 +146,8 @@ const KitchenPage = () => {
     // PendingPage 
     const fetchOrderItemsFireStore = () => {
         const colRef = collection(db, "orderItems");
-        const q2 = query(colRef, where("status", "==", "PENDING"));
+        const q2 = query(colRef, where("status", "==", "PENDING"),
+                orderBy("priorityScore","asc"));
         const unsubscribe = onSnapshot(q2, (snapshot) => {
             const data = snapshot.docs.map(doc => ({
                 orderItemId: doc.id,
@@ -158,6 +162,7 @@ const KitchenPage = () => {
         const unsubscribe = fetchOrderItemsFireStore();
         return () => unsubscribe && unsubscribe();
     }, [])
+   
     return (
         <>
             <Header />
@@ -232,7 +237,7 @@ const KitchenPage = () => {
                                 }}>
                                 {activeTab === 'cooking' && <CookingPage items={items} handleFinishButton={handleFinishButton}/>}
                                 {activeTab === 'pending' && <PendingPage orderItems={orderItems} />}
-                                {activeTab === 'done' && <FinishPage kitchenOrders={kitchenOrders} renderPagination={renderPagination} totalPage={totalPage} />}
+                                {activeTab === 'done' && <FinishPage kitchenOrders={kitchenOrders} renderPagination={renderPagination} totalPage={totalPage} totalItems={totalItems} />}
                             </Card.Body>
 
                         </Card>

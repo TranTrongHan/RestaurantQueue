@@ -5,9 +5,11 @@ import com.tth.RestaurantApplication.dto.request.ApiResponse;
 import com.tth.RestaurantApplication.dto.request.PaymentRequest;
 import com.tth.RestaurantApplication.dto.response.BillResponse;
 import com.tth.RestaurantApplication.dto.response.OnlineOrderResponse;
+import com.tth.RestaurantApplication.entity.Order;
 import com.tth.RestaurantApplication.entity.User;
 import com.tth.RestaurantApplication.service.AuthenticateService;
 import com.tth.RestaurantApplication.service.OnlineOrderService;
+import com.tth.RestaurantApplication.service.OrderManagementService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -27,14 +29,16 @@ import java.util.Map;
 public class OnlineOrderController {
     OnlineOrderService onlineOrderService;
     AuthenticateService authenticateService;
-
+    OrderManagementService orderManagementService;
 
     @PostMapping("/createPayment")
     public ApiResponse<String> createPayment(@RequestBody(required = false) PaymentRequest request,
-                                             @RequestHeader("Authorization") String token) throws Exception {
+                                             @RequestHeader("Authorization") String token,
+                                             @RequestParam String returnUrl) throws Exception {
+        log.info("return url received: {}",returnUrl);
         User currentUser = authenticateService.getCurrentUser(token.substring(7));
-
-        String paymentUrl = onlineOrderService.createPaymentUrl(currentUser, request);
+        Order order = orderManagementService.createForOnlineOrder(currentUser);
+        String paymentUrl = onlineOrderService.createPaymentUrl(currentUser, request,"TAKE_HOME",order,returnUrl);
         return ApiResponse.<String>builder()
                 .result(paymentUrl)
                 .message("Create payment url success")

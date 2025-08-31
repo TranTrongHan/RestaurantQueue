@@ -30,11 +30,10 @@ public class VNPayService {
     @Value("${vnpay.baseUrl}")
     private String vnp_Url;
 
-    @Value("${vnpay.returnUrl}")
-    private String vnp_Returnurl;
 
 
-    public String createPaymentUrl(Integer orderId, Long subtotal) throws Exception {
+
+    public String createPaymentUrl(Integer orderId, Long subtotal,String returnUrl) throws Exception {
         Map<String, String> vnp_Params = new HashMap<>();
         vnp_Params.put("vnp_Version", "2.1.0");
         vnp_Params.put("vnp_Command", "pay");
@@ -42,19 +41,19 @@ public class VNPayService {
         vnp_Params.put("vnp_Amount", String.valueOf(subtotal * 100)); // VNPay yêu cầu *100
         vnp_Params.put("vnp_CurrCode", "VND");
         vnp_Params.put("vnp_IpAddr","127.0.0.1");
-
-        vnp_Params.put("vnp_TxnRef", String.valueOf(orderId));
+        String txnRef = orderId + "-" + System.currentTimeMillis();
+        vnp_Params.put("vnp_TxnRef",txnRef);
         vnp_Params.put("vnp_OrderInfo", "Thanh toan don hang " + orderId);
         vnp_Params.put("vnp_OrderType", "billpayment");
         vnp_Params.put("vnp_Locale", "vn");
-        vnp_Params.put("vnp_ReturnUrl", vnp_Returnurl);
+        vnp_Params.put("vnp_ReturnUrl", returnUrl);
 
         Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
         String createDate = formatter.format(cld.getTime());
         vnp_Params.put("vnp_CreateDate", createDate);
 
-        cld.add(Calendar.MINUTE, 15); // Hết hạn sau 15p
+        cld.add(Calendar.MINUTE, 3); // Hết hạn sau 15p
         String expireDate = formatter.format(cld.getTime());
         vnp_Params.put("vnp_ExpireDate", expireDate);
 

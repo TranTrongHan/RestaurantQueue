@@ -55,27 +55,25 @@ const SessionPage = () => {
     const params = new URLSearchParams(location.search);
     const sessionToken = params.get("token") || null;
     const sessionId = params.get("sessionId") || null;
-    const [customerJwt,setCustomerJwt] = useState(null);
-    window.addEventListener("message" , (event) => {
-        if (event.origin !== window.location.origin) return; 
-        let customerJwtEvent  = event.data;
-        if(customerJwtEvent){
-            console.log("has customer jwt event");
+    const [customerJwt, setCustomerJwt] = useState(null);
+    window.addEventListener("message", (event) => {
+        if (event.origin !== window.location.origin) return;
+        let customerJwtEvent = event.data;
+        if (customerJwtEvent) {
+            console.log("has customer jwt event", customerJwtEvent);
             setCustomerJwt(customerJwtEvent || null);
+            sessionStorage.setItem("customerJwt", customerJwtEvent)
         }
-        
-        
-    })
-    const token = sessionStorage.getItem("customer_jwt");
+    });
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const  [customerInfo,setCustomerInfo] = useState({
-        name : "",
-        isVIP : ""
+    const [customerInfo, setCustomerInfo] = useState({
+        name: "",
+        isVIP: ""
     });
     const nav = useNavigate();
     const validateToken = async () => {
-        console.log("sessionToken: ", sessionToken);
         try {
             setLoading(true);
             const url = `${endpoints.order_session}/validate?token=${sessionToken}`;
@@ -90,8 +88,8 @@ const SessionPage = () => {
                     return;
                 }
                 setCustomerInfo({
-                    name : result.reservationResponse.customerResponse.fullName,
-                    isVIP : result.reservationResponse.customerResponse.isVIP != null ? true : false
+                    name: result.reservationResponse.customerResponse.fullName,
+                    isVIP: result.reservationResponse.customerResponse.isVIP != null ? true : false
                 });
 
                 console.log("Xác thực sessionToken thành công!");
@@ -261,41 +259,9 @@ const SessionPage = () => {
         return new Intl.NumberFormat('vi-VN').format(price) + 'đ';
     };
     const [success, setSuccess] = useState(null);
-    const pay = async () => {
-        const pendingItems = items.filter(item => item.status == "PENDING");
-        if (pendingItems.length > 0) {
-            alert("Có món đang chờ, không thể thanh toán");
-            return;
-        }
+    const [showModalPay, setShowModalPay] = useState(false);
 
-        try {
-            setLoading(true);
-            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.order_session}/${sessionId}`;
-            console.log("url: ", url);
-            let res = await authApis(customerJwt).post(url);
-            if (res.status === 200) {
-                setSuccess("Thanh toán thành công");
-            }
-        } catch (error) {
-            if (error.response) {
-                console.error("Backend error:", error.response.data);
-                setError("Lỗi từ máy chủ: " + error.response.data.message);
-            } else {
-                console.error("Axios error:", error.message);
-                setError("Lỗi kết nối mạng. Vui lòng thử lại sau.");
-            }
-        } finally {
-            setLoading(false);
-        }
-    }
-    useEffect(() => {
-        if (success) {
-            const timer = setTimeout(() => {
-                nav("/");
-            }, 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [success]);
+
     const handleCancelOrderItem = async (orderItemId) => {
         try {
             const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.order_session}/${orderItemId}`;
@@ -314,11 +280,190 @@ const SessionPage = () => {
             }
         }
     }
+    const handlePayment = async () => {
+        if (billItems.length === 0) {
+            alert("Vui lòng order món để thanh toán!");
+            return;
+        }
+        const pendingItems = items.filter(item => item.status == "PENDING");
+        const cookingItems = items.filter(item => item.status == "COOKING");
+        if (pendingItems.length > 0 || cookingItems.length > 0) {
+            setShowModalPay(true);
+            return;
+        }
 
+        try {
+            setLoading(true);
+            const returnUrl = window.location.href;
+            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['order_session']}/createPayment/${sessionId}?returnUrl=${returnUrl}`;
+
+            console.log("posting url: ", url)
+            let res = await authApis(customerJwt).post(url);
+            if (res.status === 200 && res.data.result) {
+                console.log("Thanh toán thành công");
+                const paymentUrl = res.data.result;
+                console.log("Redirecting to VNPAY:", paymentUrl);
+                window.location.href = paymentUrl
+            }
+        } catch (error) {
+            if (error.response) {
+                console.error("Backend error:", error.response.data);
+            } else {
+                console.error("Axios error:", error.message);
+            }
+        } finally {
+            setLoading(false);
+        }
+    }
+    const [paymentStatus, setPaymentStatus] = useState(null);
+    const [bill, setBill] = useState(null);
+    const [showModal, setShowModal] = useState(false);
+    const handleVnPayReturn = async () => {
+        const searchParams = new URLSearchParams(location.search);
+
+        
+        const vnpParams = new URLSearchParams();
+        searchParams.forEach((value, key) => {
+            if (key.startsWith("vnp_")) {
+                vnpParams.append(key, value);
+            }
+        });
+        if (![...vnpParams.keys()].some(k => k.startsWith("vnp_"))) return;
+        try {
+            console.log("customerjwt: ", sessionStorage.getItem("customerJwt"));
+            console.log("get return url: ", `${import.meta.env.VITE_API_BASE_URL}${endpoints['order_session']}/vnpayReturn?${vnpParams.toString()}`)
+            const res = await authApis(sessionStorage.getItem("customerJwt")).get(
+                `${import.meta.env.VITE_API_BASE_URL}${endpoints['order_session']}/vnpayReturn?${vnpParams.toString()}`,
+            );
+
+            setPaymentStatus("success");
+            setBill(res.data.result);
+            setShowModal(true);
+        } catch (err) {
+            console.error("Payment verify error:", err);
+            setPaymentStatus("failed");
+            setShowModal(true);
+        }
+    };
+    const closeModal = () => {
+        setShowModal(false);
+    };
+    useEffect(() => {
+        if (paymentStatus) {
+            const timer = setTimeout(() => {
+                nav("/");
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [paymentStatus]);
+    useEffect(() => {
+        handleVnPayReturn();
+    }, [location])
     return (
         <>
             {error ? (<AlertComp variant="danger" lable={error} />) : (loading ? (<SpinnerComp />) : (
                 <>
+                    {/* Modal Overlay */}
+                    {showModal && (
+                        <div style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            zIndex: 1000
+                        }}>
+                            {/* Modal Content */}
+                            <div style={{
+                                backgroundColor: 'white',
+                                borderRadius: '12px',
+                                padding: '30px',
+                                maxWidth: '400px',
+                                width: '90%',
+                                textAlign: 'center',
+                                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+                                transform: showModal ? 'scale(1)' : 'scale(0.9)',
+                                transition: 'transform 0.3s ease'
+                            }}>
+                                {paymentStatus === "success" && (
+                                    <>
+                                        <div style={{
+                                            fontSize: '60px',
+                                            marginBottom: '20px'
+                                        }}></div>
+                                        <h2 style={{
+                                            color: '#28a745',
+                                            margin: '0 0 15px 0',
+                                            fontSize: '24px',
+                                            fontWeight: 'bold'
+                                        }}>
+                                            Thanh toán thành công!
+                                        </h2>
+                                        <p style={{
+                                            color: '#666',
+                                            margin: '0 0 25px 0',
+                                            fontSize: '16px'
+                                        }}>
+                                            Cảm ơn bạn đã thanh toán. Đơn hàng của bạn đã được xử lý thành công.
+                                        </p>
+                                    </>
+                                )}
+
+                                {paymentStatus === "failed" && (
+                                    <>
+                                        <div style={{
+                                            fontSize: '60px',
+                                            marginBottom: '20px'
+                                        }}></div>
+                                        <h2 style={{
+                                            color: '#dc3545',
+                                            margin: '0 0 15px 0',
+                                            fontSize: '24px',
+                                            fontWeight: 'bold'
+                                        }}>
+                                            Thanh toán thất bại!
+                                        </h2>
+                                        <p style={{
+                                            color: '#666',
+                                            margin: '0 0 25px 0',
+                                            fontSize: '16px'
+                                        }}>
+                                            Đã xảy ra lỗi trong quá trình thanh toán. Vui lòng thử lại.
+                                        </p>
+                                    </>
+                                )}
+
+                                {/* Close Button */}
+                                <button
+                                    onClick={closeModal}
+                                    style={{
+                                        backgroundColor: paymentStatus === "success" ? '#28a745' : '#dc3545',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        padding: '12px 24px',
+                                        fontSize: '16px',
+                                        fontWeight: '500',
+                                        cursor: 'pointer',
+                                        transition: 'background-color 0.3s ease',
+                                        minWidth: '100px'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.target.style.backgroundColor = paymentStatus === "success" ? '#218838' : '#c82333';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.target.style.backgroundColor = paymentStatus === "success" ? '#28a745' : '#dc3545';
+                                    }}
+                                >
+                                    Đóng
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     {success && <AlertComp variant="success" lable={success} />}
                     <Container fluid style={{
                         height: '100vh',
@@ -440,7 +585,7 @@ const SessionPage = () => {
 
                                         {/* Bill Content */}
                                         {activeTab === 'bill' && (
-                                            <BillContent formatPrice={formatPrice} billItems={billItems} />
+                                            <BillContent formatPrice={formatPrice} billItems={billItems} showModalPay={showModalPay} setShowModalPay={setShowModalPay} />
                                         )}
                                     </Card.Body>
 
@@ -477,7 +622,7 @@ const SessionPage = () => {
                                             <Button
                                                 disabled={loading}
                                                 size="lg"
-                                                onClick={pay}
+                                                onClick={handlePayment}
                                                 style={{
                                                     backgroundColor: '#bd4d20ff',
                                                     width: '100%',

@@ -1,6 +1,6 @@
 // src/components/pages/CartPage.js
 import React, { useContext, useEffect, useState } from "react";
-import { Button, Container, Image, Table, Card, Row, Col, InputGroup, Form, Alert } from "react-bootstrap";
+import { Button, Container, Image, Card, Row, Col, InputGroup, Form, Alert } from "react-bootstrap";
 import { MyCartContext } from "../configs/Context";
 import { authApis, endpoints } from "../configs/Apis";
 import { useCookies } from "react-cookie";
@@ -12,7 +12,6 @@ const CartPage = () => {
     const [cart, cartDispatch] = useContext(MyCartContext);
     const [cookies, setCookies] = useCookies(["token"]);
     const [loading, setLoading] = useState(false);
-    
     const updateQuantity = async (itemId, delta) => {
         cartDispatch({
             type: "add",
@@ -123,24 +122,25 @@ const CartPage = () => {
         console.log(`${name} : ${value}`);
     }
     useEffect(() => {
-        if(discountError){
+        if (discountError) {
             const timer = setTimeout(() => {
                 setDiscountError(null);
-            },3000)
+            }, 3000)
             return () => clearTimeout(timer);
         }
-    },[discountError])
+    }, [discountError])
     const checkDiscount = () => {
         if (!discount) {
             setDiscountError("Vui lòng nhập mã");
         }
-        
+
     }
     const handlePayment = async () => {
         try {
 
             setLoading(true);
-            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['online_order']}/createPayment`;
+            const returnUrl = window.location.href;
+            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['online_order']}/createPayment?returnUrl=${returnUrl}`;
             console.log("posting url: ", url)
             let res = await authApis(cookies.token).post(url);
             if (res.status === 200 && res.data.result) {
@@ -195,7 +195,6 @@ const CartPage = () => {
             background: 'linear-gradient(135deg, #912910 0%, #b8401f 100%)',
             padding: '20px 0'
         }}>
-
             {/* Modal Overlay */}
             {showModal && (
                 <div style={{
@@ -297,6 +296,7 @@ const CartPage = () => {
                     </div>
                 </div>
             )}
+
             <Container style={{ maxWidth: '1200px' }}>
                 <div style={{
                     textAlign: 'center',

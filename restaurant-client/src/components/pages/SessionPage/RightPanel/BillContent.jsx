@@ -1,6 +1,6 @@
-import { Card } from "react-bootstrap";
+import { Button, Card, Modal } from "react-bootstrap";
 
-const BillContent = ({ billItems = [], formatPrice }) => {
+const BillContent = ({ billItems = [], formatPrice,showModalPay,setShowModalPay }) => {
     // Tính tổng tiền
     const totalAmount = billItems.reduce((sum, item) => sum + (item.quantity * item.price), 0);
 
@@ -46,7 +46,7 @@ const BillContent = ({ billItems = [], formatPrice }) => {
 
                     {/* Danh sách món ăn */}
                     {billItems.map((item, index) => (
-                        <div 
+                        <div
                             key={item.orderItemId}
                             style={{
                                 display: 'flex',
@@ -60,16 +60,16 @@ const BillContent = ({ billItems = [], formatPrice }) => {
                             onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
                             onMouseLeave={(e) => e.target.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#fafafa'}
                         >
-                            <div style={{ 
-                                flex: '2', 
+                            <div style={{
+                                flex: '2',
                                 fontWeight: '500',
                                 color: '#2c3e50',
                                 fontSize: '15px'
                             }}>
                                 {item.name}
                             </div>
-                            <div style={{ 
-                                flex: '1', 
+                            <div style={{
+                                flex: '1',
                                 textAlign: 'center',
                                 fontSize: '14px',
                                 color: '#6c757d',
@@ -82,16 +82,16 @@ const BillContent = ({ billItems = [], formatPrice }) => {
                             }}>
                                 {item.quantity}
                             </div>
-                            <div style={{ 
-                                flex: '1', 
+                            <div style={{
+                                flex: '1',
                                 textAlign: 'center',
                                 fontSize: '14px',
                                 color: '#6c757d'
                             }}>
                                 {formatPrice(item.price)}
                             </div>
-                            <div style={{ 
-                                flex: '1', 
+                            <div style={{
+                                flex: '1',
                                 textAlign: 'right',
                                 fontWeight: '600',
                                 color: '#e74c3c',
@@ -144,7 +144,7 @@ const BillContent = ({ billItems = [], formatPrice }) => {
                             {formatPrice(totalAmount)}
                         </span>
                     </div>
-                    
+
                     {/* Thông tin thêm */}
                     <div style={{
                         marginTop: '12px',
@@ -160,6 +160,26 @@ const BillContent = ({ billItems = [], formatPrice }) => {
                     </div>
                 </Card.Footer>
             </Card>
+
+            <Modal
+                show={showModalPay}
+                onHide={() => setShowModalPay(false)}
+                backdrop="static"
+                keyboard={false}
+            >
+                <Modal.Header closeButton>
+                    <Modal.Title>Thông báo</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    Có món đang chờ hoặc đang được nấu. Vui lòng thử lại sau! 
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="success" onClick={() => setShowModalPay(false)}>
+                        OK
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+        
         </>
     );
 };

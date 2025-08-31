@@ -253,6 +253,33 @@ public class OrderSessionService {
 
         return billResponse;
     }
+    public Order getCurrentUserOrder(Integer sessionId){
+        OrderSession orderSession = orderSessionRepository.findById(sessionId).orElseThrow(() -> new AppException(ErrorCode.ORDER_SESSION_NOT_FOUND));
+
+        Reservation reservation = orderSession.getReservation();
+        TableEntity table =  reservation.getTable();
+        Order order = orderRepository.findByOrderSession(orderSession);
+        if (order != null) {
+            log.info("has order");
+        }
+        return order;
+    }
+    @jakarta.transaction.Transactional
+    public BigDecimal getSubTotal(User currentUser, Order order) {
+        List<OrderItem> orderItems = order.getOrderItems();
+        if (orderItems != null) {
+            log.info("has list order items");
+        }
+        BigDecimal[] subtotal = {BigDecimal.ZERO};
+        orderItems.forEach(orderItem -> {
+            MenuItem menuItem = menuItemRepository.findByMenuItemId(orderItem.getMenuItem().getMenuItemId())
+                    .orElseThrow(() -> new AppException(ErrorCode.MENU_ITEM_NOT_FOUND));
+
+            subtotal[0] = subtotal[0].add(menuItem.getPrice().multiply(new BigDecimal(orderItem.getQuantity())));
+        });
+
+        return subtotal[0];
+    }
 
     public void cancelOrderItem(Integer orderItemId){
         OrderItem orderItem = orderItemRepository.findById(orderItemId)

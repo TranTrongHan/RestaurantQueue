@@ -36,7 +36,7 @@ public class OrderManagementService {
     ReservationRepository reservationRepository;
 
     @Transactional
-    Order createForOnlineOrder(User currentUser) {
+    public Order createForOnlineOrder(User currentUser) {
         OnlineOrder onlineOrder = new OnlineOrder();
         onlineOrder.setUser(currentUser);
         onlineOrder.setDeliveryAddress(currentUser.getAddress());

@@ -2,12 +2,11 @@ package com.tth.RestaurantApplication.service;
 
 import com.tth.RestaurantApplication.dto.request.PaymentRequest;
 import com.tth.RestaurantApplication.dto.response.BillResponse;
-import com.tth.RestaurantApplication.entity.Bill;
-import com.tth.RestaurantApplication.entity.Order;
-import com.tth.RestaurantApplication.entity.Promotion;
+import com.tth.RestaurantApplication.entity.*;
+import com.tth.RestaurantApplication.exception.AppException;
+import com.tth.RestaurantApplication.exception.ErrorCode;
 import com.tth.RestaurantApplication.mapper.BillMapper;
-import com.tth.RestaurantApplication.repository.BillRepository;
-import com.tth.RestaurantApplication.repository.PromotionsRepository;
+import com.tth.RestaurantApplication.repository.*;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -25,7 +24,10 @@ public class PaymentService {
     BillRepository billRepository;
     PromotionsRepository promotionsRepository;
     BillMapper billMapper;
-
+    OrderSessionRepository orderSessionRepository;
+    TableRepository tableRepository;
+    ReservationRepository reservationRepository;
+    OrderRepository orderRepository;
     BillResponse createBill(Order order, PaymentRequest request, BigDecimal subTotal){
         Promotion promotions = null;
 
@@ -54,5 +56,23 @@ public class PaymentService {
 
         billRepository.save(bill);
         return billMapper.toBillResponse(bill);
+    }
+    BillResponse createBillForDineInOrder(Order order, PaymentRequest request, BigDecimal subTotal){
+        BillResponse response = createBill(order,request,subTotal);
+        OrderSession orderSession = order.getOrderSession();
+
+        Reservation reservation = orderSession.getReservation();
+        TableEntity table =  reservation.getTable();
+        orderSession.setExpiredAt(LocalDateTime.now());
+        orderSessionRepository.save(orderSession);
+        table.setStatus(TableEntity.TableStatus.AVAILABLE);
+        tableRepository.save(table);
+        reservation.setCheckoutTime(LocalDateTime.now());
+        reservation.setStatus(Reservation.ReservationStatus.CHECKEDOUT);
+        reservationRepository.save(reservation);
+        order.setIsPaid(true);
+        orderRepository.save(order);
+
+        return response;
     }
 }

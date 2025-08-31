@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Card, Col, Row } from 'react-bootstrap';
 
-const FinishPage = ({ kitchenOrders = [], totalPage, renderPagination }) => {
+const FinishPage = ({ kitchenOrders = [], totalPage, renderPagination,totalItems }) => {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -164,7 +164,7 @@ const FinishPage = ({ kitchenOrders = [], totalPage, renderPagination }) => {
                         <Card.Header className="card-header d-flex justify-content-between align-items-center">
                             <Row>
                                 <Col>
-                                    <h5 className="mb-0">Đã hoàn thành ({kitchenOrders.length} món)</h5>
+                                    <h5 className="mb-0">Đã hoàn thành ({totalItems} món)</h5>
                                     <span className="badge bg-warning">{formatTime(currentTime.toISOString())}</span>
                                 </Col>
                             </Row>

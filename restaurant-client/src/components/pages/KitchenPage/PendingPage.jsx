@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Card, Col, Row } from "react-bootstrap";
+import { Badge, Card, Col, Row } from "react-bootstrap";
 
 const PendingPage = ({ orderItems }) => {
     const [selectedItem, setselectedItem] = useState(null);
@@ -69,8 +69,10 @@ const PendingPage = ({ orderItems }) => {
                     <Col lg={5}>
                         <div className="fw-bold mb-1">{item.name} (SL: {item.quantity})</div>
                     </Col>
-                    <Col lg={5} style={{ display: "flex", justifyContent: "flex-end" }}>
-                        <div className="fw-bold mb-1">{item.table} </div>
+                    <Col lg={5} style={{ display: "flex", justifyContent: "flex-end",gap:"8px" }}>
+                        <span className="fw-bold mb-1">{item.table} </span>
+                        <span>{item.VIP ? (<Badge bg="primary">VIP</Badge>):(null)}</span>
+                        <span>{item.isLate !='false'? (<Badge bg="danger">LATE</Badge>):(null)}</span>
                     </Col>
                 </Row>
             </div>

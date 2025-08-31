@@ -20,17 +20,18 @@ spring:
       client:
         registration:
           google:
+            redirect-uri: http://localhost:8080/restaurantserver/login/oauth2/code/google
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
-            scope:
-              - email
-              - profile
+            scope: email,profile
+
         provider:
           google:
             authorization-uri: https://accounts.google.com/o/oauth2/auth
             token-uri: https://oauth2.googleapis.com/token
             user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
             user-name-attribute: sub
+
   mail:
     host: smtp.gmail.com
     port: 587
@@ -82,3 +83,11 @@ redis:
 app:
   firebase:
     config: ${FIREBASE_CONFIG_PATH}
+
+logging:
+  level:
+    root: INFO
+    org:
+      springframework:
+        security: DEBUG
+        web: TRACE

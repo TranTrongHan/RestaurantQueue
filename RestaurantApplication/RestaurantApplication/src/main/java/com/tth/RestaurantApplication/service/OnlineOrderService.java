@@ -11,6 +11,7 @@ import com.tth.RestaurantApplication.exception.ErrorCode;
 import com.tth.RestaurantApplication.mapper.CustomerMapper;
 import com.tth.RestaurantApplication.mapper.OnlineOrderMapper;
 import com.tth.RestaurantApplication.mapper.OrderItemMapper;
+import com.tth.RestaurantApplication.properties.RedisProperties;
 import com.tth.RestaurantApplication.repository.MenuItemRepository;
 import com.tth.RestaurantApplication.repository.OnlineOrderRepository;
 import com.tth.RestaurantApplication.repository.OrderItemRepository;
@@ -34,6 +35,7 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+
 public class OnlineOrderService {
     private final OrderManagementService orderManagementService;
     private final PaymentService paymentService;
@@ -45,25 +47,28 @@ public class OnlineOrderService {
     private final CustomerMapper customerMapper;
     private final OnlineOrderMapper onlineOrderMapper;
     private final MenuItemRepository menuItemRepository;
+    private final OrderSessionService orderSessionService;
+
+
     @Value("${vnpay.secretKey}")
     private String vnp_HashSecret;
 
-    public List<OnlineOrderResponse> getOnlineOrder(User currenUser){
+    public List<OnlineOrderResponse> getOnlineOrder(User currenUser) {
         List<OnlineOrderResponse> onlineOrderResponses = new ArrayList<>();
 
         List<OnlineOrder> onlineOrders = onlineOrderRepository.findByUser_UserId(currenUser.getUserId());
-        if(onlineOrders.isEmpty()){
+        if (onlineOrders.isEmpty()) {
             return Collections.emptyList();
         }
         CustomerResponse customerResponse = customerMapper.toCustomerResponse(currenUser);
         onlineOrders.forEach(onlineOrder -> {
             Order order = orderRepository.findByOnlineOrder_OnlineOrderId(onlineOrder.getOnlineOrderId());
-            if(order == null){
+            if (order == null) {
                 throw new AppException(ErrorCode.ORDER_NOT_FOUND);
             }
             List<OrderItem> orderItems = orderItemRepository.findByOrder_OrderId(order.getOrderId());
             List<OrderItemResponse> orderItemResponses = new ArrayList<>();
-            if(!orderItems.isEmpty()){
+            if (!orderItems.isEmpty()) {
                 orderItems.forEach(item -> {
                     orderItemResponses.add(orderItemMapper.toOrderItemResponse(item));
                 });
@@ -73,20 +78,27 @@ public class OnlineOrderService {
 
         return onlineOrderResponses;
     }
-    public BillResponse processOnlinePayment(User currentUser, PaymentRequest request){
-        Order order = orderManagementService.createForOnlineOrder(currentUser);
-        BigDecimal subTotal = orderManagementService.createOrderItemsFromCartForOnlineOrderAndGetSubTotal(currentUser,order);
 
-        return paymentService.createBill(order,request,subTotal);
+    public BillResponse processOnlinePayment(User currentUser, PaymentRequest request) {
+        Order order = orderManagementService.createForOnlineOrder(currentUser);
+        BigDecimal subTotal = orderManagementService.createOrderItemsFromCartForOnlineOrderAndGetSubTotal(currentUser, order);
+
+        return paymentService.createBill(order, request, subTotal);
     }
-    @Transactional
-    public String createPaymentUrl(User currentUser, PaymentRequest request) throws Exception {
-        Order order = orderManagementService.createForOnlineOrder(currentUser);
 
+    @Transactional
+    public String createPaymentUrl(User currentUser, PaymentRequest request,String orderType,Order order,String returnUrl) throws Exception {
+        BigDecimal subTotal = BigDecimal.ZERO;
         // Tính subtotal từ cart
-        BigDecimal subTotal = orderManagementService
-                .createOrderItemsFromCartForOnlineOrderAndGetSubTotal(currentUser, order);
-        log.info("subtotal in  createpaymentURL : {}",subTotal);
+        if(orderType.equals("TAKE_HOME")){
+             subTotal = orderManagementService
+                    .createOrderItemsFromCartForOnlineOrderAndGetSubTotal(currentUser, order);
+        } else if(orderType.equals("DINE_IN")){
+
+            subTotal = orderSessionService.getSubTotal(currentUser,order);
+        }
+
+//        log.info("subtotal in  createpaymentURL : {}", subTotal);
         // Áp dụng promotion
 //        BigDecimal discount = BigDecimal.ZERO;
 //        if (request != null && request.getPromotionName() != null) {
@@ -98,8 +110,9 @@ public class OnlineOrderService {
         // Gọi VNPAY service tạo URL
         Long total = subTotal.longValue();
         log.info("call vnPayService");
-        return vnPayService.createPaymentUrl(order.getOrderId(), total);
+        return vnPayService.createPaymentUrl(order.getOrderId(), total,returnUrl);
     }
+
     @Transactional
     public BillResponse handleVnpayReturn(Map<String, String> params, User currentUser) throws Exception {
         // 1. Kiểm tra chữ ký (secure hash)
@@ -119,8 +132,9 @@ public class OnlineOrderService {
         }
 
         // 2. Lấy thông tin orderId từ vnp_TxnRef
-        Long orderId = Long.valueOf(params.get("vnp_TxnRef"));
-        log.info("orderId: {}",orderId);
+        String txnRef = params.get("vnp_TxnRef");
+        Long orderId = Long.valueOf(txnRef.split("-")[0]);
+        log.info("orderId: {}", orderId);
         Order order = orderRepository.findById(Math.toIntExact(orderId))
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
@@ -138,7 +152,13 @@ public class OnlineOrderService {
         if ("00".equals(responseCode)) {
             order.setIsPaid(true);
             log.info("✅ Giao dịch thành công (Mã: {}).", responseCode);
-            return paymentService.createBill(order,null,BigDecimal.valueOf(amountFromVnpay));
+            if(order.getOnlineOrder() != null){
+                return paymentService.createBill(order, null, BigDecimal.valueOf(amountFromVnpay));
+            } else {
+                return paymentService.createBillForDineInOrder(order,null,BigDecimal.valueOf(amountFromVnpay));
+            }
+
+
         } else {
             order.setIsPaid(false);
             log.warn("❌ Giao dịch thất bại (Mã: {}).", responseCode);

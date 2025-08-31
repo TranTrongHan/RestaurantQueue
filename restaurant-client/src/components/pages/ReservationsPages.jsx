@@ -73,6 +73,7 @@ const ReservationsPages = () => {
                 const customerJwt = res.data.result.customerJwt || null;
                 const sessionId = res.data.result.sessionId || null;
                 if (session_token) {
+                    console.log("jwt being sent: ",customerJwt)
                     const session_url = `${import.meta.env.VITE_CONTEXT_PATH}/order_session?token=${session_token}&sessionId=${sessionId}`;
                     console.log("sessionPageUrl: ", session_url);
                     const newWindow = window.open(session_url, "_blank");

@@ -2,6 +2,7 @@ package com.tth.RestaurantApplication;
 
 import com.tth.RestaurantApplication.configs.JwtConfig;
 import com.tth.RestaurantApplication.service.StatsService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -11,11 +12,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableConfigurationProperties(JwtConfig.class)
 @SpringBootApplication
 @EnableScheduling
+@Slf4j
 public class RestaurantApplication {
 
 
     public static void main(String[] args) {
-
 		SpringApplication.run(RestaurantApplication.class, args);
 	}
 

@@ -33,6 +33,7 @@ public class SecurityConfig {
     JwtAccessDeniedHandlerConfig jwtAccessDeniedHandlerConfig;
     CustomOAuth2UserService customOAuth2UserService;
     CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
+
     private final String [] PUBLIC_ENDPOINTS = {"/api/users/**","/api/auth/**","/api/menu_items/**"};
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
@@ -41,7 +42,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors ->  cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST,PUBLIC_ENDPOINTS).permitAll()
+                        .requestMatchers("/oauth2/**", "/login/**").permitAll()
                         .requestMatchers(HttpMethod.POST,PUBLIC_ENDPOINTS).permitAll()
                         .requestMatchers("/api/menu_items/**").permitAll()
                         .requestMatchers("/api/categories").permitAll()
@@ -56,13 +57,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,"/api/order_session/validate").permitAll()
                         .requestMatchers("/api/order_session/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/kitchen/**").hasRole("STAFF")
-                        .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
+//                        .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .requestMatchers("/admin/**").permitAll()
                         .requestMatchers("/css/**",
                                 "/js/**", "/images/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
+                        .loginProcessingUrl("/login/oauth2/code/*")
                         .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                         .successHandler(customOAuth2SuccessHandler)
                 )
@@ -92,6 +94,7 @@ public class SecurityConfig {
 
         return httpSecurity.build();
     }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
