@@ -1,12 +1,12 @@
-import { useNavigate, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useContext, useEffect, useState } from "react";
 import { authApis, endpoints } from "../configs/Apis";
 import { useCookies } from "react-cookie";
 import SpinnerComp from "../common/SpinnerComp";
 import AlertComp from "../common/AlertComp";
 import Header from "../layout/Header";
 import Footer from "../layout/Footer";
-import { Container, Card, Row, Col, Badge, Form, Button, Table } from "react-bootstrap";
+import { Container, Card, Row, Col, Badge, Form, Button, Table, Modal } from "react-bootstrap";
 import { 
     FaChair, 
     FaCalendarAlt, 
@@ -19,6 +19,7 @@ import {
 
 } from "react-icons/fa";
 import dayjs from "dayjs";
+import { MyUserContext } from "../configs/Context";
 
 const ReservationDetailPage = () => {
     const { id } = useParams();
@@ -28,8 +29,13 @@ const ReservationDetailPage = () => {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
     const nav = useNavigate();
-
+    const [user,] = useContext(MyUserContext);
+    const [show, setShow] = useState(false);
     const fetchReservationDetail = async () => {
+        if (!user) {
+            setShow(true);
+            return;
+        }
         try {
             setLoading(true);
             const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints["booking"]}/${id}`;
@@ -42,6 +48,7 @@ const ReservationDetailPage = () => {
             }
         } catch (err) {
             console.log(err.message);
+            setError(err.message);
             if (err.response) {
                 if (err.response.data.code === 9997) {
                     setError("Không có quyền truy cập!")
@@ -56,20 +63,6 @@ const ReservationDetailPage = () => {
         fetchReservationDetail();
     }, [id]);
 
-    const getStatusBadge = (status) => {
-        switch (status) {
-            case "BOOKED":
-                return <Badge bg="warning" text="dark">Đã đặt</Badge>;
-            case "CANCELED":
-                return <Badge bg="danger">Đã hủy</Badge>;
-            case "CHECKED_IN":
-                return <Badge bg="primary">Đã nhận bàn</Badge>;
-            case "CHECKEDOUT":
-                return <Badge bg="success">Đã thanh toán</Badge>;
-            default:
-                return <Badge bg="secondary">{status}</Badge>;
-        }
-    };
 
     const getBillStatusBadge = (status) => {
         switch (status) {
@@ -297,41 +290,7 @@ const ReservationDetailPage = () => {
                                             </Row>
                                         </div>
 
-                                        {/* Danh sách món ăn */}
-                                        {/* <div className="p-4">
-                                            <h6 className="fw-bold mb-3">
-                                                Danh sách món đã order
-                                            </h6>
-                                            
-                                            <div className="table-responsive">
-                                                <Table className="table-hover">
-                                                    <thead className="table-light">
-                                                        <tr>
-                                                            <th>STT</th>
-                                                            <th>Món ăn</th>
-                                                            <th className="text-center">Số lượng</th>
-                                                        
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {reservation.bill.order.items.map((item, index) => (
-                                                            <tr key={item.orderItemId}>
-                                                                <td>{index + 1}</td>
-                                                                <td>
-                                                                    <strong>Món #{item.orderItemId}</strong>
-                                                                </td>
-                                                                <td className="text-center">
-                                                                    <Badge bg="primary">{item.quantity}</Badge>
-                                                                </td>
-                                                              
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </Table>
-                                            </div>
-                                        </div> */}
-
-                                        {/* Thông tin thanh toán */}
+                                     
                                         <div 
                                             className="p-4 text-white"
                                             style={{ 
@@ -392,7 +351,25 @@ const ReservationDetailPage = () => {
                             </div>
                         </Col>
                     </Row>
+                    
                 )}
+                 <Modal show={show} onHide={() => setShow(false)}>
+                        <Modal.Header closeButton>
+                            <Modal.Title>Yêu cầu đăng nhập</Modal.Title>
+                        </Modal.Header>
+                        <Modal.Body>
+                            Vui lòng{" "}
+                            <Link to={`/login?redirect=${encodeURIComponent(window.location.pathname)}`}>
+                                đăng nhập
+                            </Link>{" "}
+                            để xem đơn đặt bàn
+                        </Modal.Body>
+                        <Modal.Footer>
+                            <Button variant="secondary" onClick={() => setShow(false)}>
+                                Đóng
+                            </Button>
+                        </Modal.Footer>
+                    </Modal>
             </Container>
             <Footer />
         </div>

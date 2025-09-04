@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useCookies } from "react-cookie";
 import { useLocation, useNavigate } from "react-router-dom";
 import SpinnerComp from "../../common/SpinnerComp";
@@ -317,10 +317,12 @@ const SessionPage = () => {
     }
     const [paymentStatus, setPaymentStatus] = useState(null);
     const [bill, setBill] = useState(null);
+    const hasCalled = useRef(false);
     const [showModal, setShowModal] = useState(false);
     const handleVnPayReturn = async () => {
         const searchParams = new URLSearchParams(location.search);
-
+        if (hasCalled.current) return;
+        hasCalled.current = true;
         
         const vnpParams = new URLSearchParams();
         searchParams.forEach((value, key) => {

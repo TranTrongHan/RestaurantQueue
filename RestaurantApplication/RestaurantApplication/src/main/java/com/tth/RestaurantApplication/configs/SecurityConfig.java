@@ -57,6 +57,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,"/api/order_session/validate").permitAll()
                         .requestMatchers("/api/order_session/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/kitchen/**").hasRole("STAFF")
+                        .requestMatchers("/api/comments/**").hasAnyRole("CUSTOMER","ADMIN")
 //                        .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .requestMatchers("/admin/**").permitAll()
                         .requestMatchers("/css/**",
@@ -72,17 +73,17 @@ public class SecurityConfig {
 //                .formLogin(form -> form
 //                        .loginPage("/admin/login")
 //                        .loginProcessingUrl("/admin/login")
-//                        .defaultSuccessUrl("/admin", true)
+//                        .defaultSuccessUrl("/admin/home", true)
 //                        .failureUrl("/admin/login?error=true")
 //                        .permitAll()
 //                )
-//                .logout(logout -> logout
-//                        .logoutUrl("/admin/logout")
-//                        .logoutSuccessUrl("/admin/login?logout=true")
-//                        .invalidateHttpSession(true)
-//                        .deleteCookies("JSESSIONID")
-//                        .permitAll()
-//                )
+                .logout(logout -> logout
+                        .logoutUrl("/admin/logout")
+                        .logoutSuccessUrl("/admin/login?logout=true")
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID")
+                        .permitAll()
+                )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.ALWAYS)
                 )

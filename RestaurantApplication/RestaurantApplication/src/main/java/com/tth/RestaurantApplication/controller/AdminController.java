@@ -3,16 +3,18 @@ package com.tth.RestaurantApplication.controller;
 
 import com.tth.RestaurantApplication.dto.request.MenuItemForm;
 import com.tth.RestaurantApplication.dto.response.BillResponse;
+import com.tth.RestaurantApplication.dto.response.CommentAdminResponse;
 import com.tth.RestaurantApplication.dto.response.MenuItemResponse;
 import com.tth.RestaurantApplication.entity.Bill;
 import com.tth.RestaurantApplication.entity.MenuItem;
-import com.tth.RestaurantApplication.service.BillService;
-import com.tth.RestaurantApplication.service.CategoryService;
-import com.tth.RestaurantApplication.service.MenuItemService;
-import com.tth.RestaurantApplication.service.StatsService;
+import com.tth.RestaurantApplication.service.*;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,6 +24,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.temporal.WeekFields;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/admin")
@@ -32,6 +35,7 @@ public class AdminController {
     BillService billService;
     MenuItemService menuItemService;
     CategoryService categoryService;
+    CommentService commentService;
     @GetMapping("/home")
     public String adminHome(Model model, Authentication authentication) {
 
@@ -94,6 +98,19 @@ public class AdminController {
     public String adminAddMenuItem(@ModelAttribute(value = "item") MenuItemForm form ){
         menuItemService.addOrUpdateMenuItem(form);
         return "redirect:/admin/menus";
+    }
+    @GetMapping("/comments")
+    public String adminCommentView(@RequestParam Map<String, String> params,
+                                   @PageableDefault(page = 0, size = 5,
+                                           sort = "id", direction = Sort.Direction.ASC) Pageable pageable,
+                                   Model model) {
+
+        Page<CommentAdminResponse> comments = commentService.getComments(params, pageable);
+
+        model.addAttribute("comments", comments.getContent());
+        model.addAttribute("page", comments);
+        model.addAttribute("params", params);
+        return "comments";
     }
     @GetMapping("/login")
     public String login(){

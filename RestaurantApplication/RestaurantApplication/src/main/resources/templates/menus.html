@@ -27,7 +27,6 @@
                 <td>
                     <button class="btn btn-danger" th:onclick="'deleteMenuItem(\''+@{/api/menu_items/}+'\','+${item.menuItemId}+')'">Xóa</button>
                     <a th:href="@{'/admin/menus/' + ${item.menuItemId}}" class="btn btn-success">️Cập nhật</a>
-
                 </td>
             </tr>
         </tbody>

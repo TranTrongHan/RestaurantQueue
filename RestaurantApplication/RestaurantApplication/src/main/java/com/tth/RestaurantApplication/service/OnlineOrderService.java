@@ -152,20 +152,19 @@ public class OnlineOrderService {
         if ("00".equals(responseCode)) {
             order.setIsPaid(true);
             log.info("✅ Giao dịch thành công (Mã: {}).", responseCode);
-            if(order.getOnlineOrder() == null){
+            if(order.getOrderSession() != null){
                 log.info("this order {} has no online_order",order.getOrderId());
                 return paymentService.createBillForDineInOrder(order, null, BigDecimal.valueOf(amountFromVnpay));
-            } else {
+            } else if(order.getOnlineOrder() != null){
                 log.info("this order {} has online_order",order.getOrderId());
                 return paymentService.createBill(order,null,BigDecimal.valueOf(amountFromVnpay));
             }
-
-
         } else {
             order.setIsPaid(false);
             log.warn("❌ Giao dịch thất bại (Mã: {}).", responseCode);
             orderRepository.delete(order);
             throw new AppException(ErrorCode.PAYMENT_FAILED);
         }
+        return null;
     }
 }

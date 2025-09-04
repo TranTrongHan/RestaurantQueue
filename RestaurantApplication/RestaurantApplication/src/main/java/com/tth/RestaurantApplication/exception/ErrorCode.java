@@ -31,6 +31,9 @@ public enum ErrorCode {
     TOKEN_MISSING(1015, "Authorization token is required"),
     ACCESS_DENIED(1016, "Access denied"),
     UNAUTHORIZED(1017, "Unauthorized access"),
+    COMMENT_TOO_FAST(1018,"Bạn đang bình luận quá nhanh, vui lòng thử lại sau."),
+    COMMENT_DUPLICATE(1019,"Nội dung bình luận bị trùng lặp."),
+    COMMENT_NOT_FOUND(1020,"Không tìm thấy bình luận."),
     FORBIDDEN(9997,"Forbidden access"),
 
     

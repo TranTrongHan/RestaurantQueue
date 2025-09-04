@@ -28,36 +28,16 @@ public class PaymentService {
     TableRepository tableRepository;
     ReservationRepository reservationRepository;
     OrderRepository orderRepository;
-    private Bill buildBill(Order order, PaymentRequest request, BigDecimal subTotal) {
-        Promotion promotions = null;
-        if (request != null) {
-            promotions = promotionsRepository.findByName(request.getPromotionName());
-        }
-
-        BigDecimal discountAmount = promotions != null ? subTotal.multiply(promotions.getValue()) : BigDecimal.ZERO;
-        BigDecimal totalAmount = subTotal.subtract(discountAmount);
-
-        Bill bill = new Bill();
-        bill.setOrder(order);
-        bill.setCreatedAt(LocalDateTime.now());
-        bill.setSubTotal(subTotal);
-        bill.setDiscountAmount(discountAmount);
-        bill.setTotalAmount(totalAmount);
-        bill.setStatus(Bill.BillStatus.PAID);
-        bill.setPaymentTime(LocalDateTime.now());
-        return bill;
-    }
+    BillService billService;
     BillResponse createBill(Order order, PaymentRequest request, BigDecimal subTotal) {
-        Bill bill = buildBill(order, request, subTotal);
+        Bill bill = billService.buildBill(order, request, subTotal);
         billRepository.save(bill);
         return billMapper.toBillResponse(bill);
     }
-
     BillResponse createBillForDineInOrder(Order order, PaymentRequest request, BigDecimal subTotal) {
-        Bill bill = buildBill(order, request, subTotal);
+        Bill bill = billService.buildBill(order, request, subTotal);
         billRepository.save(bill);
-
-        // extra dine-in logic
+        log.info("saved 1 bill");
         OrderSession orderSession = order.getOrderSession();
         Reservation reservation = orderSession.getReservation();
         TableEntity table = reservation.getTable();

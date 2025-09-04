@@ -417,7 +417,6 @@ const MenuPages = () => {
                                                         <SpinnerComp />
                                                     ) : (
                                                         <>
-
                                                             <span>Thêm vào giỏ</span>
                                                         </>
                                                     )}

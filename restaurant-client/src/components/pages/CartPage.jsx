@@ -1,5 +1,5 @@
 // src/components/pages/CartPage.js
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { Button, Container, Image, Card, Row, Col, InputGroup, Form, Alert } from "react-bootstrap";
 import { MyCartContext } from "../configs/Context";
 import { authApis, endpoints } from "../configs/Apis";
@@ -163,11 +163,13 @@ const CartPage = () => {
     const location = useLocation();
     const [paymentStatus, setPaymentStatus] = useState(null);
     const [bill, setBill] = useState(null);
+    const hasCalled = useRef(false);
     const [showModal, setShowModal] = useState(false);
     const handleVnPayReturn = async () => {
         const query = location.search;
         if (!query.includes("vnp_")) return;
-
+        if (hasCalled.current) return;
+        hasCalled.current = true;
         try {
             const res = await authApis(cookies.token).get(
                 `${import.meta.env.VITE_API_BASE_URL}${endpoints['online_order']}/vnpayReturn${query}`,
@@ -188,7 +190,7 @@ const CartPage = () => {
 
     useEffect(() => {
         handleVnPayReturn();
-    }, [location, cookies])
+    }, [location])
     return (
         <div style={{
             minHeight: '100vh',

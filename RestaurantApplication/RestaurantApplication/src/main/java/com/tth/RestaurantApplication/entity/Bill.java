@@ -46,7 +46,7 @@ public class Bill {
     private LocalDateTime paymentTime;
 
     public enum BillStatus {
-        UNPAID, PAID, CANCELED
+        UNPAID, PAID
     }
     // Getters and Setters...
 }
