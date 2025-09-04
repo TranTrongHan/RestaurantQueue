@@ -7,36 +7,54 @@
 <div th:replace="~{base :: header}"></div>
 
 <div class="container">
-    <div class="row">
-        <div class="col-md-6 col-6">
-            <canvas id="myChart"></canvas>
-        </div>
-        <div class="col-md-6 col-6">
-            <table class="table">
-                <thead>
-                <tr>
-                    <th>Id</th>
-                    <th>Ten mon an</th>
-                    <th>So luong mon</th>
-                </tr>
+    <div class="d-flex flex-column">
 
-                </thead>
-                <tbody >
-                <tr th:each="item :${itemsStats}">
-                    <td th:text="${item[0]}"></td>
-                    <td th:text="${item[1]}"></td>
-                    <td th:text="${item[2]}"></td>
-                </tr>
-                </tbody>
-            </table>
+        <h1 class="text-center">Xu hướng doanh thu</h1>
+        <div class="row ">
+            <div class="col-md-4">
+                <select class="form-select" id="selectPeriodValue" >
+<!--                    <option value="DAY" th:selected="${period == 'DAY'}">Theo ngày</option>-->
+                    <option value="WEEK"  th:selected="${period == 'WEEK'} ">Theo tuần</option>
+                    <option value="MONTH"  th:selected="${period == 'MONTH'}">Theo tháng</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" id="selectOrderTypeValue">
+                    <option value="DINE_IN" th:selected="${orderType == 'DAY'}">Tại nhà hàng</option>
+                    <option value="ONLINE"  th:selected="${orderType == 'WEEK'}">Nền tảng online</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-primary" id="statsBtn" >Thống kê</button>
+            </div>
+        </div>
+        <div class="col">
+            <canvas id="revenueChart"></canvas>
+        </div>
+        <h1 class="text-center mt-3">Doanh thu món ăn</h1>
+        <div class="row ">
+            <div class="col-md-4">
+                <select class="form-select" id="selectPeriodValueMenu" >
+                    <option value="TODAY" th:selected="${periodMenu == 'TODAY'}">Hôm nay</option>
+                    <option value="THIS_WEEK"  th:selected="${periodMenu == 'THIS_WEEK'} ">Tuần này</option>
+                    <option value="THIS_MONTH"  th:selected="${periodMenu == 'THIS_MONTH'}">Tháng này</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-primary" id="statsMenuBtn" >Thống kê</button>
+            </div>
+        </div>
+        <div class="col">
+            <canvas id="revenueMenuChart"></canvas>
         </div>
     </div>
-
 </div>
-
 <div th:replace="~{base :: footer}"></div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script th:src="@{/js/index.js}"></script>
-
+<script th:inline="javascript">
+    let revenueStats = [[${revenueStats}]];
+    let menuRevenueStats = [[ ${menuRevenueStats} ]];
+</script>
 </body>
 </html>

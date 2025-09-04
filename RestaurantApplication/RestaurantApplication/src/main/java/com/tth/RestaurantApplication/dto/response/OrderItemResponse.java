@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Data
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@JsonInclude(JsonInclude.Include.NON_NULL)
+
 public class OrderItemResponse {
     Integer orderItemId;
     Integer orderId;
@@ -31,5 +31,4 @@ public class OrderItemResponse {
     LocalDateTime expectedDeadlineTime;
     String note = null;
     Double priorityScore;
-
 }

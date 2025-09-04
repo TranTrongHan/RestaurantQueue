@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -52,12 +51,12 @@ public class OrderItem {
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
-    @OneToOne(mappedBy = "orderItem",fetch = FetchType.LAZY,cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "orderItem", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private KitchenAssignment kitchenAssignment;
 
     // Enum cho trạng thái của món ăn trong order
     public enum OrderItemStatus {
-        PENDING, COOKING, DONE, CANCELED, ONHOLD
+        PENDING, COOKING, DONE,
     }
 
     // Getters and Setters...

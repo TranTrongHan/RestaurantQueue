@@ -7,10 +7,9 @@ import org.mapstruct.Mapping;
 
 import java.util.Optional;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring",uses = {ReservationMapper.class})
 public interface OrderMapper {
-
-    @Mapping(source = "order.orderItems",target = "items")
-//    @Mapping(source = "onlineOrder" , target = "onlineOrder")
+    @Mapping(source = "orderItems",target = "items")
+    @Mapping(source = "orderSession.reservation" , target = "reservationResponse")
     OrderResponse toOrderResponse(Order order);
 }

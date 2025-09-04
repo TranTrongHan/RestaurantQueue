@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+    <th:context th:replace="~{base :: resources }"></th:context>
+</head>
+<body>
+<div th:replace="~{base :: header}"></div>
+<div class="container mt-3">
+    <h1>Quản lý món ăn</h1>
+    <form  method="post" th:action="@{/admin/menus/add}" th:object="${item}" enctype="multipart/form-data">
+        <div class="mb-3 mt-3">
+            <label for="name" class="form-label">Tên món ăn: </label>
+            <input type="text" class="form-control" id="name" placeholder="Tên món" th:field="*{name}" />
+        </div>
+        <div class="mb-3 mt-3">
+            <label for="price" class="form-label">Đơn giá: </label>
+            <input type="text" class="form-control" id="price" placeholder="Đơn giá" th:field="*{price}"  />
+        </div>
+        <div class="mb-3 mt-3">
+            <label for="cate" class="form-label">Danh mục: </label>
+            <select class="form-select" th:field="*{categoryId}" id="cate">
+                <option th:each="c: ${cates}" th:value="${c.categoryId}" th:text="${c.name}">1</option>
+            </select>
+        </div>
+        <div class="mb-3 mt-3">
+            <label for="avgCookingTime" class="form-label">Thời gian nấu trung bình: </label>
+            <input type="text" class="form-control" id="avgCookingTime" placeholder="Thời gian nấu " th:field="*{avgCookingTime}" />
+        </div>
+        <div class="mb-3 mt-3">
+            <label for="image" class="form-label">Ảnh món ăn: </label>
+            <input type="file" class="form-control" th:field="*{file}"  id="image" />
+            <img th:if="${item.image != null}" th:src="${item.image}" width="200" />
+        </div>
+        <div class="mb-3 mt-3">
+            <input type="hidden" class="form-control" th:field="*{menuItemId}"  />
+            <input type="hidden" class="form-control" th:field="*{image}"  />
+            <button class="btn btn-success mt-1" type="submit">
+                <span th:if="${item.menuItemId == null}">Thêm món</span>
+                <span th:unless="${item.menuItemId == null}">Cập nhật </span>
+            </button>
+        </div>
+    </form>
+</div>
+<div th:replace="~{base :: footer}"></div>
+</body>
+</html>

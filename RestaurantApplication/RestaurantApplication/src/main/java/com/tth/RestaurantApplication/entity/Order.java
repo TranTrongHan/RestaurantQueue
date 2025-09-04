@@ -23,7 +23,7 @@ public class Order {
     @Column(name = "order_id")
     private Integer orderId;
 
-    @ManyToOne
+    @OneToOne
     @JoinColumn(name = "session_id",nullable = true,unique = true)
     private OrderSession orderSession;
 
@@ -37,11 +37,11 @@ public class Order {
     @Column(name = "is_paid")
     private Boolean isPaid;
 
-    @OneToMany(mappedBy = "order")
+    @OneToMany(mappedBy = "order",fetch = FetchType.LAZY)
     private List<OrderItem> orderItems;
 
     @OneToOne(mappedBy = "order")
     private Bill bill;
 
-    // Getters and Setters...
+
 }

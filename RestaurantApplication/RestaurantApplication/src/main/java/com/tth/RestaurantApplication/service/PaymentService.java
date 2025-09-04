@@ -28,23 +28,15 @@ public class PaymentService {
     TableRepository tableRepository;
     ReservationRepository reservationRepository;
     OrderRepository orderRepository;
-    BillResponse createBill(Order order, PaymentRequest request, BigDecimal subTotal){
+    private Bill buildBill(Order order, PaymentRequest request, BigDecimal subTotal) {
         Promotion promotions = null;
-
-        if(request!= null){
-            log.info("promotionName : {}",request.getPromotionName());
+        if (request != null) {
             promotions = promotionsRepository.findByName(request.getPromotionName());
         }
-        log.info("no promotion");
-        BigDecimal totalAmount = BigDecimal.ZERO;
-        BigDecimal discountAmount = BigDecimal.ZERO;
 
-        if(promotions!=null){
-            discountAmount = subTotal.multiply(promotions.getValue());
-            totalAmount = subTotal.subtract(discountAmount);
-        } else {
-            totalAmount = subTotal;
-        }
+        BigDecimal discountAmount = promotions != null ? subTotal.multiply(promotions.getValue()) : BigDecimal.ZERO;
+        BigDecimal totalAmount = subTotal.subtract(discountAmount);
+
         Bill bill = new Bill();
         bill.setOrder(order);
         bill.setCreatedAt(LocalDateTime.now());
@@ -53,26 +45,36 @@ public class PaymentService {
         bill.setTotalAmount(totalAmount);
         bill.setStatus(Bill.BillStatus.PAID);
         bill.setPaymentTime(LocalDateTime.now());
-
+        return bill;
+    }
+    BillResponse createBill(Order order, PaymentRequest request, BigDecimal subTotal) {
+        Bill bill = buildBill(order, request, subTotal);
         billRepository.save(bill);
         return billMapper.toBillResponse(bill);
     }
-    BillResponse createBillForDineInOrder(Order order, PaymentRequest request, BigDecimal subTotal){
-        BillResponse response = createBill(order,request,subTotal);
-        OrderSession orderSession = order.getOrderSession();
 
+    BillResponse createBillForDineInOrder(Order order, PaymentRequest request, BigDecimal subTotal) {
+        Bill bill = buildBill(order, request, subTotal);
+        billRepository.save(bill);
+
+        // extra dine-in logic
+        OrderSession orderSession = order.getOrderSession();
         Reservation reservation = orderSession.getReservation();
-        TableEntity table =  reservation.getTable();
+        TableEntity table = reservation.getTable();
+
         orderSession.setExpiredAt(LocalDateTime.now());
         orderSessionRepository.save(orderSession);
+
         table.setStatus(TableEntity.TableStatus.AVAILABLE);
         tableRepository.save(table);
+
         reservation.setCheckoutTime(LocalDateTime.now());
         reservation.setStatus(Reservation.ReservationStatus.CHECKEDOUT);
         reservationRepository.save(reservation);
+
         order.setIsPaid(true);
         orderRepository.save(order);
 
-        return response;
+        return billMapper.toBillResponse(bill);
     }
 }

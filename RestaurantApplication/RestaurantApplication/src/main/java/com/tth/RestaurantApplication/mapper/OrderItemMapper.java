@@ -6,7 +6,7 @@ import com.tth.RestaurantApplication.entity.OrderItem;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring", uses = {MenuItemMapper.class})
+@Mapper(componentModel = "spring",uses = {MenuItemMapper.class})
 public interface OrderItemMapper {
     @Mapping(source = "menuItem.name",target = "name")
     @Mapping(source = "menuItem.image", target = "image")

@@ -12,6 +12,8 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 
 import jakarta.persistence.*;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -42,12 +44,12 @@ public class MenuItem {
     private String image;
 
     @Column(name = "is_available")
-    private Boolean isAvailable;
+    private Boolean isAvailable = Boolean.TRUE;
 
     @Column(name = "avg_cooking_time")
     private Double avgCookingTime;
 
-    @Column(name = "base_cooking_time")
+    @Column(name = "base_cooking_time",nullable = true)
     private Double baseCookingTime;
 
     @OneToMany(mappedBy = "menuItem")
@@ -56,5 +58,6 @@ public class MenuItem {
     @OneToMany(mappedBy = "menuItem")
     private List<OrderItem> orderItems;
 
-
+    @Transient
+    private MultipartFile file;
 }

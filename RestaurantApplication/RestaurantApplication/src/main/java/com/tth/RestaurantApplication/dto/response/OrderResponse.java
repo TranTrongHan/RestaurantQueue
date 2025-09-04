@@ -11,6 +11,7 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class OrderResponse {
     Integer orderId;
+    ReservationResponse reservationResponse = null;
     List<OrderItemResponse> items;
     LocalDateTime createdAt;
     Boolean isPaid;

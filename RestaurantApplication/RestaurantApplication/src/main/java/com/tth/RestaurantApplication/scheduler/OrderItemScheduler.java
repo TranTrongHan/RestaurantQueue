@@ -49,7 +49,7 @@ public class OrderItemScheduler {
             double oldScore = item.getPriorityScore();
             double newScore = orderSessionService.calculatePriorityScore(item);
             if (LocalDateTime.now().isAfter(item.getDeadlineTime()) && item != null) {
-                log.warn("🚨 CẢNH BÁO: Món ăn với ID {} đã vượt quá thời gian dự kiến (deadlineTime).", item.getOrderItemId());
+                log.warn(" CẢNH BÁO: Món ăn với ID {} đã vượt quá thời gian dự kiến (deadlineTime).", item.getOrderItemId());
                 newScore = newScore - 50.0;
                 firestoreService.updateOrderItemField(String.valueOf(item.getOrder().getOrderId()),String.valueOf(item.getOrderItemId()),"priorityScore",newScore);
                 firestoreService.updateOrderItemField(String.valueOf(item.getOrder().getOrderId()),String.valueOf(item.getOrderItemId()),"isLate",Boolean.TRUE.toString());

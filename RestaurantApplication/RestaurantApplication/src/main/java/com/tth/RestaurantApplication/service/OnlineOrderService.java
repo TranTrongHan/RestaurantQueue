@@ -152,10 +152,12 @@ public class OnlineOrderService {
         if ("00".equals(responseCode)) {
             order.setIsPaid(true);
             log.info("✅ Giao dịch thành công (Mã: {}).", responseCode);
-            if(order.getOnlineOrder() != null){
-                return paymentService.createBill(order, null, BigDecimal.valueOf(amountFromVnpay));
+            if(order.getOnlineOrder() == null){
+                log.info("this order {} has no online_order",order.getOrderId());
+                return paymentService.createBillForDineInOrder(order, null, BigDecimal.valueOf(amountFromVnpay));
             } else {
-                return paymentService.createBillForDineInOrder(order,null,BigDecimal.valueOf(amountFromVnpay));
+                log.info("this order {} has online_order",order.getOrderId());
+                return paymentService.createBill(order,null,BigDecimal.valueOf(amountFromVnpay));
             }
 
 
