@@ -14,6 +14,7 @@ const ReservationsPages = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [search, setSearch] = useState("");
+    const [status, setStatus] = useState("BOOKED");
     const [loadingBtn, setLoadingBtn] = useState(false);
     const [sucess, setSucess] = useState(null);
     const fetchReservations = async () => {
@@ -23,6 +24,9 @@ const ReservationsPages = () => {
             if (search) {
                 console.log("has search");
                 url = `${url}?customer=${search}`;
+            }
+            if(status){
+                url = `${url}${search ? '&' : '?'}status=${status}`;
             }
             console.log("fetching url: ", url);
             let res = await authApis(cookies.token).get(url);
@@ -41,22 +45,21 @@ const ReservationsPages = () => {
             setLoading(false);
         }
     }
-
     useEffect(() => {
-        if (search) {
-            let timer = setTimeout(() => {
-                fetchReservations();
-                return () => clearTimeout(timer);
-            }, 2000)
-        }
+
         fetchReservations();
+
     }, []);
+    useEffect(() => {
+        if (search || status) {
+            fetchReservations();
+        }
+    }, [search,status]);
 
     const formatTime = (time) => {
         return moment(time).format("HH:mm:ss DD/MM/YYYY");
     };
     const handleChange = (e) => {
-
         setSearch(e.target.value);
         console.log("value: ", e.target.value);
     }
@@ -73,16 +76,16 @@ const ReservationsPages = () => {
                 const customerJwt = res.data.result.customerJwt || null;
                 const sessionId = res.data.result.sessionId || null;
                 if (session_token) {
-                    console.log("jwt being sent: ",customerJwt)
+                    console.log("jwt being sent: ", customerJwt)
                     const session_url = `${import.meta.env.VITE_CONTEXT_PATH}/order_session?token=${session_token}&sessionId=${sessionId}`;
                     console.log("sessionPageUrl: ", session_url);
                     const newWindow = window.open(session_url, "_blank");
                     if (newWindow) {
                         newWindow.onload = () => {
-                          newWindow.postMessage(
-                            customerJwt,
-                            window.location.origin
-                          );
+                            newWindow.postMessage(
+                                customerJwt,
+                                window.location.origin
+                            );
                         };
                     }
                 }
@@ -136,7 +139,10 @@ const ReservationsPages = () => {
                 };
         }
     };
-
+    const handleSelect = (e) => {
+        console.log("status selected: ", e.target.value);
+        setStatus(e.target.value);
+    }
     return (
         <div style={{
             display: 'flex',
@@ -152,33 +158,47 @@ const ReservationsPages = () => {
                 marginTop: '20px',
                 marginBottom: '40px'
             }}>
-                <Form style={{
-                    marginBottom: '30px',
-                    maxWidth: '600px',
-                    marginLeft: 'auto',
-                    marginRight: 'auto'
-                }}>
-                    <Form.Group controlId="searchBar">
-                        <Form.Control
-                            type="text"
-                            placeholder="Tìm kiếm theo tên khách hàng hoặc tên bàn..."
-                            value={search}
-                            onChange={handleChange}
-                            style={{
-                                padding: '12px 20px',
-                                fontSize: '1rem',
-                                borderRadius: '25px',
-                                border: '1px solid #e0e0e0',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                                outline: 'none',
-                                transition: 'all 0.3s ease',
-                                backgroundColor: '#ffffff'
-                            }}
-                            onFocus={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'}
-                            onBlur={(e) => e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)'}
-                        />
-                    </Form.Group>
-                </Form>
+                <Row className="d-flex align-items-start ">
+                    <Col md={6} lg={6}>
+                        <Form style={{
+                            marginBottom: '30px',
+                            maxWidth: '600px',
+                            marginLeft: 'auto',
+                            marginRight: 'auto'
+                        }}>
+                            <Form.Group controlId="searchBar">
+                                <Form.Control
+                                    type="text"
+                                    placeholder="Tìm kiếm theo tên khách hàng hoặc tên bàn..."
+                                    value={search}
+                                    onChange={handleChange}
+                                    style={{
+                                        padding: '12px 20px',
+                                        fontSize: '1rem',
+                                        borderRadius: '25px',
+                                        border: '1px solid #e0e0e0',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                                        outline: 'none',
+                                        transition: 'all 0.3s ease',
+                                        backgroundColor: '#ffffff'
+                                    }}
+                                    onFocus={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'}
+                                    onBlur={(e) => e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)'}
+                                />
+                            </Form.Group>
+
+                        </Form>
+                    </Col>
+                    <Col md={6} lg={6} >
+                        <Form.Select aria-label="Default select example" onChange={handleSelect} value={status}>
+                            <option >Chọn trạng thái đơn đặt bàn</option>
+                            <option value="BOOKED" >Đã đặt bàn</option>
+                            <option value="CHECKEDIN" >Đã checkin</option>
+                            <option value="CHECKEDOUT">Đã checkout</option>
+                        </Form.Select>
+                    </Col>
+
+                </Row>
                 {loading && (
                     <div style={{
                         display: 'flex',

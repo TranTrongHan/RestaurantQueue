@@ -7,5 +7,6 @@ import lombok.experimental.FieldDefaults;
 @Data
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CommentRequest {
+    Integer rating;
     String content;
 }

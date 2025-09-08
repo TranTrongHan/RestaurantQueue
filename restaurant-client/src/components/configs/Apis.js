@@ -12,7 +12,8 @@ export const endpoints = {
     cart : "/cart",
     online_order:"/online_order",
     order_session: "/order_session",
-    kitchen_order:"/kitchen"
+    kitchen_order:"/kitchen",
+    comments: "/comments"
 }
 
 export default axios.create({

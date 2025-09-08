@@ -15,6 +15,7 @@ public class CommentAdminResponse {
     Integer id;
     String customer;
     String content;
+    Integer rating;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime createdAt;
     String status;      // PENDING / APPROVED / REJECTED

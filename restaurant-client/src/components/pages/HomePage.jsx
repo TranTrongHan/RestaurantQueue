@@ -3,9 +3,7 @@ import { Container } from 'react-bootstrap';
 import Header from '../layout/Header';
 import Footer from '../layout/Footer';
 import { MyUserContext } from '../configs/Context';
-import { useLocation } from 'react-router-dom';
-import { authApis, endpoints } from '../configs/Apis';
-import { useCookies } from 'react-cookie';
+import CommentSection from '../layout/CommentSection/CommenSection';
 
 
 const HomePage = () => {
@@ -22,6 +20,7 @@ const HomePage = () => {
           <p className="text-center">
             Thưởng thức ẩm thực đẳng cấp với không gian sang trọng và dịch vụ chuyên nghiệp.
           </p>
+          {user && <CommentSection />}
         </Container>
 
         <Footer />

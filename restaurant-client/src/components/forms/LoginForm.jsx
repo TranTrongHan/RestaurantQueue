@@ -37,6 +37,7 @@ const LoginForm = () => {
 
     try {
       setLoading(true);
+      
       let res = await Apis.post(endpoints["login"], formData);
 
       if (res.data.code === 200) {

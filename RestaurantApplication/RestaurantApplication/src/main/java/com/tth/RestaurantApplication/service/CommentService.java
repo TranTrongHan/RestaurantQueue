@@ -50,6 +50,7 @@ public class CommentService {
         Comment comment = Comment.builder()
                 .user(user)
                 .content(commentRequest.getContent())
+                .rating(commentRequest.getRating())
                 .createdAt(LocalDateTime.now())
                 .status(Comment.CommentStatus.PENDING) // mặc định chờ duyệt
                 .isSpam(false)

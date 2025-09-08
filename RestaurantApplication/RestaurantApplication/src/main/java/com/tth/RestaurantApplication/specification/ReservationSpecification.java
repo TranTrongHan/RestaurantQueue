@@ -20,6 +20,14 @@ public class ReservationSpecification {
             Join<Reservation,TableEntity> tableJoin = root.join("table");
             List<Predicate> predicates = new ArrayList<>();
 
+            if(params.containsKey("status")){
+                try{
+                    String status = params.get("status");
+                    log.info("status : {}",status);
+                    Reservation.ReservationStatus statusEnum = Reservation.ReservationStatus.valueOf(status);
+                    predicates.add(cb.equal(root.get("status"),status));
+                } catch (IllegalArgumentException ignored) {}
+            }
             if(params.containsKey("customer")){
                 try{
                     String customer = params.get("customer");

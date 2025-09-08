@@ -57,7 +57,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,"/api/order_session/validate").permitAll()
                         .requestMatchers("/api/order_session/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/kitchen/**").hasRole("STAFF")
-                        .requestMatchers("/api/comments/**").hasAnyRole("CUSTOMER","ADMIN")
+                        .requestMatchers(HttpMethod.GET,"api/comments").hasAnyRole("CUSTOMER","ADMIN")
+                        .requestMatchers(HttpMethod.POST,"api/comments/add").hasRole("CUSTOMER")
+                        .requestMatchers(HttpMethod.PUT,"api/comments/**").hasRole("ADMIN")
 //                        .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .requestMatchers("/admin/**").permitAll()
                         .requestMatchers("/css/**",
