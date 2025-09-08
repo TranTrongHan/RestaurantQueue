@@ -29,7 +29,7 @@ public class StripeWebhookController {
     @PostMapping("/create-payment-intent")
     public Map<String, String> createPaymentIntent(@RequestBody Map<String, Object> data) throws StripeException, StripeException {
         long amount = ((Number) data.get("amount")).longValue(); // tính theo cent
-        
+
         PaymentIntentCreateParams params =
                 PaymentIntentCreateParams.builder()
                         .setAmount(amount)
@@ -60,7 +60,7 @@ public class StripeWebhookController {
                     .getObject().orElse(null);
             if (paymentIntent != null) {
                 String orderId = paymentIntent.getMetadata().get("orderId"); // orderId bạn gửi khi tạo PaymentIntent
-                orderService.processSuccessfulPayment(orderId, paymentIntent);
+
             }
         }
 
