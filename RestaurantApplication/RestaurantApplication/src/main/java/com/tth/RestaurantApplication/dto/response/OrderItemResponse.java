@@ -15,7 +15,6 @@ import java.time.LocalDateTime;
 @Data
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-
 public class OrderItemResponse {
     Integer orderItemId;
     Integer orderId;

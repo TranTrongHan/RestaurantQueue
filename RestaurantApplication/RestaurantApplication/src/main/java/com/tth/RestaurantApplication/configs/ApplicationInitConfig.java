@@ -1,23 +1,33 @@
 package com.tth.RestaurantApplication.configs;
 
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tth.RestaurantApplication.entity.MenuItem;
 import com.tth.RestaurantApplication.entity.User;
 import com.tth.RestaurantApplication.repository.UserRepository;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+
 import java.time.LocalDate;
 
+
 @Configuration
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE,makeFinal = true)
 @Slf4j
 public class ApplicationInitConfig {
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+
+    PasswordEncoder passwordEncoder;
+
     @Bean
     ApplicationRunner applicationRunner(UserRepository userRepository){
         return args -> {
@@ -50,6 +60,8 @@ public class ApplicationInitConfig {
                 userRepository.save(user);
                 log.warn("staff user created");
             }
+
+
 
         };
     }

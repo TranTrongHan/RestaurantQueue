@@ -43,6 +43,9 @@ public class MenuItem {
     @Column(name = "image")
     private String image;
 
+    @Column(name = "description")
+    private String description;
+
     @Column(name = "is_available")
     private Boolean isAvailable = Boolean.TRUE;
 
