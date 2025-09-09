@@ -147,7 +147,30 @@ const ReservationDetailPage = () => {
         const timer = setTimeout(() => setSuccess(null), 2500);
         return () => clearTimeout(timer);
     }, [success]);
-
+    const handleDelete = async () => {
+       
+         try {
+            setLoading(true);
+            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['booking']}/${id}`;
+            let res = await authApis(cookies.token).delete(url);
+            if (res.data.code === 200) {
+                nav("/my-reservations");
+            }
+        } catch (err) {
+            if (err.response) {
+                if (Number(err.response.data.code) === 5004) {
+                    setError("Bạn chỉ có thể hủy đơn đặt trong vòng 2 tiếng kể từ khi đặt bàn");
+                } else {
+                    setError(err.response.data.message);
+                }
+            } else {
+                setError("Lỗi khi cập nhật giờ checkin");
+            }
+        } finally {
+            setLoading(false);
+            
+        }
+    }
     return (
         <div className="d-flex flex-column min-vh-100">
             <Header />
@@ -240,6 +263,11 @@ const ReservationDetailPage = () => {
                                                         <FaCheck className="me-1" />Lưu
                                                     </Button>
                                                 </Form>
+                                            </div>
+                                            <div className="mt-3">
+                                                <Button variant="danger" disabled={loading}
+                                                    onClick={handleDelete}
+                                                >Hủy đơn đặt bàn</Button>
                                             </div>
                                         </>
                                     )}

@@ -7,8 +7,9 @@ import { useCookies } from "react-cookie";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import SpinnerComp from "../common/SpinnerComp";
 import { FaCheck } from "react-icons/fa6";
-import { useStripe } from "@stripe/react-stripe-js";
+import { CardElement, useStripe } from "@stripe/react-stripe-js";
 import { useElements } from "@stripe/react-stripe-js";
+import AlertComp from "../common/AlertComp";
 
 const CartPage = () => {
     const [cart, cartDispatch] = useContext(MyCartContext);
@@ -131,12 +132,17 @@ const CartPage = () => {
             return () => clearTimeout(timer);
         }
     }, [discountError])
-    const checkDiscount = () => {
-        if (!discount) {
-            setDiscountError("Vui lòng nhập mã");
+    
+    const [error,setError]= useState(null);
+    useEffect(() => {
+        if (error) {
+            const timer = setTimeout(() => {
+                setError(null);
+            }, 3000)
+            return () => clearTimeout(timer);
         }
-
-    }
+        
+    },[error])
     const handlePayment = async () => {
         try {
 
@@ -155,6 +161,11 @@ const CartPage = () => {
         } catch (error) {
             if (error.response) {
                 console.error("Backend error:", error.response.data);
+                if (Number(error.response.data.code) === 1030) {
+                    setError("Vui lòng cập nhật địa chỉ trước khi thanh toán");
+                } else {
+                    setError(error.response.data.message);
+                }
             } else {
                 console.error("Axios error:", error.message);
             }
@@ -193,7 +204,62 @@ const CartPage = () => {
     useEffect(() => {
         handleVnPayReturn();
     }, [location])
-    
+    const stripe = useStripe();
+    const elements = useElements();
+    const handleStripePayment = async () => {
+        if (!stripe || !elements) {
+            alert("Stripe chưa sẵn sàng");
+            return;
+        }
+        const cardElement = elements.getElement(CardElement);
+        if (!cardElement) {
+            alert("Card Element chưa mount");
+            return;
+        }
+        try {
+            setLoading(true);
+            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.stripe}/create-payment-intent/${sessionId}`;
+            console.log("url: ", url);
+            console.log("customerJwt: ", customerJwt);
+            let res = await authApis(customerJwt).post(url);
+            let clientSecret;
+            if (res.status === 200) {
+                console.log("Created payment intent");
+                clientSecret = res.data.clientSecret;
+                if (clientSecret) {
+                    console.log("Secret: ", clientSecret);
+                }
+                let result = await stripe.confirmCardPayment(clientSecret, {
+                    payment_method: {
+                        card: cardElement,
+                    },
+                    payment_method_options: {
+                        card: {
+                            setup_future_usage: 'off_session' // hoặc bỏ nếu không muốn lưu thẻ
+                        }
+                    }
+                });
+                if (result.error) {
+
+                    setPaymentStatus("failed");
+                    alert("Thanh toán thất bại: " + result.error.message);
+                } else {
+                    if (result.paymentIntent.status === "succeeded") {
+                        setPaymentStatus("success");
+
+                        setShowModal(true);
+                    }
+                }
+            }
+
+
+        } catch (error) {
+            console.log(error);
+            alert("Lỗi hệ thống khi thanh toán.");
+        } finally {
+            setLoading(false);
+        }
+    }
     return (
         <div style={{
             minHeight: '100vh',
@@ -303,6 +369,7 @@ const CartPage = () => {
             )}
 
             <Container style={{ maxWidth: '1200px' }}>
+                {error && <AlertComp variant="danger" lable={error}/>}
                 <div style={{
                     textAlign: 'center',
                     marginBottom: '40px',

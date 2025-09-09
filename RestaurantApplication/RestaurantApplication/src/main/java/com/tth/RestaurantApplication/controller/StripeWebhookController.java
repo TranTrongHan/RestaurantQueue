@@ -79,6 +79,8 @@ public class StripeWebhookController {
         Event event;
 
         try {
+            String webhook = environment.getProperty("webhook.key");
+            log.info("webhook key: {}", webhook);
             event = Webhook.constructEvent(payload, sigHeader, Objects.requireNonNull(environment.getProperty("webhook.key")));
         } catch (SignatureVerificationException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("");

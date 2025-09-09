@@ -22,7 +22,7 @@ import ProfilePage from './components/pages/ProfilePage'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements } from '@stripe/react-stripe-js'
 
-
+const stripePromise = loadStripe(`${import.meta.env.VITE_STRIPE_PUBLIC_KEY}`);
 const App = () => {
   let [user, dispatch] = useReducer(MyUserReducer, null);
   let [cart, dispatchCart] = useReducer(MyCartReducer, []);
@@ -65,7 +65,7 @@ const App = () => {
     loadUser();
     loadCart();
   }, [cookies.token]);
-  const stripePromise = loadStripe(`${import.meta.env.VITE_STRIPE_PUBLIC_KEY}`);
+
 
 
   return (
@@ -73,25 +73,25 @@ const App = () => {
       <MyUserContext.Provider value={[user, dispatch]}>
         <MyCartContext.Provider value={[cart, dispatchCart]}>
           <Elements stripe={stripePromise}>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path='/register' element={<RegisterPage />} />
-              <Route path="/oauth2/success" element={<OAuth2Success />} />
-              <Route path='/' element={<HomePage />} />
-              <Route path='*' element={<HomePage />} />
-              <Route path='/menu' element={<MenuPages />} />
-              <Route path='/booking' element={<TableBookingPage />} />
-              <Route path='/my-reservations' element={<MyReservationPage />} />
-              <Route path='/my-reservations/:id' element={<ReservationDetailPage />} />
-              <Route path='/cart' element={<CartPage />} />
-              <Route path='/online_order' element={<MyOnlineOrderPage />} />
-              <Route path='/reservations' element={<ReservationsPages />} />
-              <Route path='/order_session' element={<SessionPage />} />
-              <Route path='/kitchen' element={<KitchenPage />} />
-              <Route path='/profile' element={<ProfilePage />} />
-            </Routes>
-          </BrowserRouter>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path='/register' element={<RegisterPage />} />
+                <Route path="/oauth2/success" element={<OAuth2Success />} />
+                <Route path='/' element={<HomePage />} />
+                <Route path='*' element={<HomePage />} />
+                <Route path='/menu' element={<MenuPages />} />
+                <Route path='/booking' element={<TableBookingPage />} />
+                <Route path='/my-reservations' element={<MyReservationPage />} />
+                <Route path='/my-reservations/:id' element={<ReservationDetailPage />} />
+                <Route path='/cart' element={<CartPage />} />
+                <Route path='/online_order' element={<MyOnlineOrderPage />} />
+                <Route path='/reservations' element={<ReservationsPages />} />
+                <Route path='/order_session' element={<SessionPage />} />
+                <Route path='/kitchen' element={<KitchenPage />} />
+                <Route path='/profile' element={<ProfilePage />} />
+              </Routes>
+            </BrowserRouter>
           </Elements>
         </MyCartContext.Provider>
       </MyUserContext.Provider>

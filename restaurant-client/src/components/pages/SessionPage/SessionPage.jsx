@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useCookies } from "react-cookie";
+import{ useCallback, useEffect, useRef, useState } from "react";
+
 import { useLocation, useNavigate } from "react-router-dom";
 import SpinnerComp from "../../common/SpinnerComp";
 import AlertComp from "../../common/AlertComp";
-import { Badge, Button, ButtonGroup, Card, Col, Container, Row } from "react-bootstrap";
+import { Badge, Button, Card, Col, Container, Row } from "react-bootstrap";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../../../firebase";
 import Apis, { authApis, endpoints } from "../../configs/Apis";
@@ -12,6 +12,9 @@ import CartContent from "./RightPanel/CartContent";
 import TrackingContent from "./RightPanel/TrackingContent";
 import BillContent from "./RightPanel/BillContent";
 import { useElements, useStripe } from "@stripe/react-stripe-js";
+import { CardElement } from "@stripe/react-stripe-js";
+import StripeForm from "../../forms/StripeForm";
+
 const SessionPage = () => {
     const [menuItems, setMenuItems] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -362,51 +365,13 @@ const SessionPage = () => {
     useEffect(() => {
         handleVnPayReturn();
     }, [location])
-    const stripe = useStripe();
-    const elements = useElements();
-
-    const handleStripePayment = async () => {
-        try {
-            setLoading(true);
-            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.stripe}/create-payment-intent/${sessionId}`;
-            console.log("url: ", url);
-            let res = await authApis(customerJwt).post(url);
-            let clientSecret;
-            if (res.status === 200) {
-                console.log("Created payment intent");
-                clientSecret = res.clientSecret;
-                if (clientSecret) {
-                    console.log("Secret: ", clientSecret);
-                }
-            }
-            const result = await stripe.confirmCardPayment(clientSecret, {
-                payment_method: {
-                    card: elements.getElement(CardElement),
-                },
-            });
-            if (result.error) {
-
-                setPaymentStatus("failed");
-                alert("Thanh toán thất bại: " + result.error.message);
-            } else {
-                if (result.paymentIntent.status === "succeeded") {
-                    setPaymentStatus("success");
-
-                    setShowModal(true);
-                }
-            }
-        } catch (error) {
-            console.error(err);
-            alert("Lỗi hệ thống khi thanh toán.");
-        } finally {
-            setLoading(false);
-        }
-    }
+    
     return (
         <>
             {error ? (<AlertComp variant="danger" lable={error} />) : (loading ? (<SpinnerComp />) : (
                 <>
                     {/* Modal Overlay */}
+                   
                     {showModal && (
                         <div style={{
                             position: 'fixed',
@@ -656,6 +621,7 @@ const SessionPage = () => {
                                             </Button>
                                         </Card.Footer>
                                     )}
+                                    
                                     {activeTab === 'bill' && showPaymentButton && (
                                         <Card.Footer style={{
                                             backgroundColor: lightColor,
@@ -665,7 +631,7 @@ const SessionPage = () => {
                                             <Button
                                                 disabled={loading}
                                                 size="lg"
-                                                onClick={handleStripePayment}
+                                                onClick={handlePayment}
                                                 style={{
                                                     backgroundColor: '#bd4d20ff',
                                                     width: '100%',
@@ -676,6 +642,7 @@ const SessionPage = () => {
                                             >
                                                 {loading ? (<SpinnerComp />) : ("Thanh toán")}
                                             </Button>
+                                            
                                         </Card.Footer>
                                     )}
                                 </Card>

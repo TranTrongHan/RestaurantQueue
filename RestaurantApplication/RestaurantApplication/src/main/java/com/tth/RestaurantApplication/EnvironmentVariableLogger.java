@@ -24,6 +24,6 @@ public class EnvironmentVariableLogger implements CommandLineRunner {
 //        System.out.println("redirect_uri: " + (redirect_uri != null ? redirect_uri : "Not configured"));
 //        System.out.println("Context Path: " + (contextPath != null ? contextPath : "Not configured"));
 //        System.out.println("GOOGLE_CLIENT_ID: " + googleClientId);
-        System.out.println("Stripe secret: " + secretKey);
+//        System.out.println("Stripe secret: " + secretKey);
     }
 }

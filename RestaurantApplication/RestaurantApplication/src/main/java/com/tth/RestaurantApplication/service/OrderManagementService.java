@@ -37,6 +37,9 @@ public class OrderManagementService {
 
     @Transactional
     public Order createForOnlineOrder(User currentUser) {
+        if(currentUser.getAddress()== null){
+            throw new AppException(ErrorCode.ADDRESS_BLANK);
+        }
         OnlineOrder onlineOrder = new OnlineOrder();
         onlineOrder.setUser(currentUser);
         onlineOrder.setDeliveryAddress(currentUser.getAddress());

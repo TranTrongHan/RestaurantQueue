@@ -39,6 +39,8 @@ const TableBookingForm = () => {
 
     if (form.checkValidity() === false) {
       e.stopPropagation();
+      setValidated(true);
+      return;
     } else {
       try {
         setLoading(true);
@@ -52,6 +54,12 @@ const TableBookingForm = () => {
         if (res.data.code === 200) {
           setSuccess("Đặt bàn thành công!");
           setError(null);
+          setFormData({
+            checkinTime: "",
+            capacity: "",
+            note: ""
+          });
+          setValidated(false);
         }
       } catch (err) {
         if (err.response) {
@@ -67,14 +75,9 @@ const TableBookingForm = () => {
         }
       } finally {
         setLoading(false);
-        setFormData({
-          checkinTime: "",
-          capacity: "",
-          note: ""
-        });
       }
     }
-    setValidated(true);
+    
   };
 
   useEffect(() => {

@@ -18,6 +18,7 @@ public enum ErrorCode {
     FULLNAME_BLANK(1006, "Full name cannot be blank"),
     EMAIL_BLANK(1007, "Email cannot be blank"),
     PHONE_BLANK(1008, "Phone number cannot be blank"),
+    ADDRESS_BLANK(1030,"Blank address"),
     
     // ===== VALIDATION ERRORS - FORMAT & LENGTH =====
     USERNAME_INVALID(1009, "Username must be between 4 and 20 characters"),
