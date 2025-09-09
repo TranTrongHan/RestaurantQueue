@@ -13,7 +13,8 @@ export const endpoints = {
     online_order:"/online_order",
     order_session: "/order_session",
     kitchen_order:"/kitchen",
-    comments: "/comments"
+    comments: "/comments",
+    stripe: "/stripe"
 }
 
 export default axios.create({

@@ -29,12 +29,12 @@ public class PaymentService {
     ReservationRepository reservationRepository;
     OrderRepository orderRepository;
     BillService billService;
-    BillResponse createBill(Order order, PaymentRequest request, BigDecimal subTotal) {
+    public BillResponse createBill(Order order, PaymentRequest request, BigDecimal subTotal) {
         Bill bill = billService.buildBill(order, request, subTotal);
         billRepository.save(bill);
         return billMapper.toBillResponse(bill);
     }
-    BillResponse createBillForDineInOrder(Order order, PaymentRequest request, BigDecimal subTotal) {
+    public BillResponse createBillForDineInOrder(Order order, PaymentRequest request, BigDecimal subTotal) {
         Bill bill = billService.buildBill(order, request, subTotal);
         billRepository.save(bill);
         log.info("saved 1 bill");

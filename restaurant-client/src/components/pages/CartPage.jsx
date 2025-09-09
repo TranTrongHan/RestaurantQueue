@@ -7,6 +7,8 @@ import { useCookies } from "react-cookie";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import SpinnerComp from "../common/SpinnerComp";
 import { FaCheck } from "react-icons/fa6";
+import { useStripe } from "@stripe/react-stripe-js";
+import { useElements } from "@stripe/react-stripe-js";
 
 const CartPage = () => {
     const [cart, cartDispatch] = useContext(MyCartContext);
@@ -191,6 +193,7 @@ const CartPage = () => {
     useEffect(() => {
         handleVnPayReturn();
     }, [location])
+    
     return (
         <div style={{
             minHeight: '100vh',

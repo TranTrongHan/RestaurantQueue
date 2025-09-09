@@ -83,6 +83,8 @@ stripe:
   key:
     public: ${STRIPE_PUBLISH_KEY}
     secret: ${STRIPE_SECRET_KEY}
+webhook:
+  key: ${WEBHOOK_KEY}
 app:
   firebase:
     config: ${FIREBASE_CONFIG_PATH}

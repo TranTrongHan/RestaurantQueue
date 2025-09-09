@@ -19,6 +19,8 @@ import SessionPage from './components/pages/SessionPage/SessionPage'
 import KitchenPage from './components/pages/KitchenPage/KitchenPage'
 import OAuth2Success from './components/pages/OAuth2Succes'
 import ProfilePage from './components/pages/ProfilePage'
+import { loadStripe } from '@stripe/stripe-js'
+import { Elements } from '@stripe/react-stripe-js'
 
 
 const App = () => {
@@ -63,12 +65,14 @@ const App = () => {
     loadUser();
     loadCart();
   }, [cookies.token]);
+  const stripePromise = loadStripe(`${import.meta.env.VITE_STRIPE_PUBLIC_KEY}`);
 
 
   return (
     <>
       <MyUserContext.Provider value={[user, dispatch]}>
         <MyCartContext.Provider value={[cart, dispatchCart]}>
+          <Elements stripe={stripePromise}>
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<LoginPage />} />
@@ -88,6 +92,7 @@ const App = () => {
               <Route path='/profile' element={<ProfilePage />} />
             </Routes>
           </BrowserRouter>
+          </Elements>
         </MyCartContext.Provider>
       </MyUserContext.Provider>
     </>

@@ -11,6 +11,7 @@ import LeftPanel from "./LeftPanel";
 import CartContent from "./RightPanel/CartContent";
 import TrackingContent from "./RightPanel/TrackingContent";
 import BillContent from "./RightPanel/BillContent";
+import { useElements, useStripe } from "@stripe/react-stripe-js";
 const SessionPage = () => {
     const [menuItems, setMenuItems] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -215,10 +216,10 @@ const SessionPage = () => {
         } catch (error) {
             if (error.response) {
                 console.error("Backend error:", error.response.data);
-                setError("Lỗi từ máy chủ: " + error.response.data.message);
+                alert("Lỗi từ máy chủ: " + error.response.data.message);
             } else {
                 console.error("Axios error:", error.message);
-                setError("Lỗi kết nối mạng. Vui lòng thử lại sau.");
+                alert("Lỗi kết nối mạng. Vui lòng thử lại sau.");
             }
 
         } finally {
@@ -323,7 +324,7 @@ const SessionPage = () => {
         const searchParams = new URLSearchParams(location.search);
         if (hasCalled.current) return;
         hasCalled.current = true;
-        
+
         const vnpParams = new URLSearchParams();
         searchParams.forEach((value, key) => {
             if (key.startsWith("vnp_")) {
@@ -361,6 +362,46 @@ const SessionPage = () => {
     useEffect(() => {
         handleVnPayReturn();
     }, [location])
+    const stripe = useStripe();
+    const elements = useElements();
+
+    const handleStripePayment = async () => {
+        try {
+            setLoading(true);
+            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.stripe}/create-payment-intent/${sessionId}`;
+            console.log("url: ", url);
+            let res = await authApis(customerJwt).post(url);
+            let clientSecret;
+            if (res.status === 200) {
+                console.log("Created payment intent");
+                clientSecret = res.clientSecret;
+                if (clientSecret) {
+                    console.log("Secret: ", clientSecret);
+                }
+            }
+            const result = await stripe.confirmCardPayment(clientSecret, {
+                payment_method: {
+                    card: elements.getElement(CardElement),
+                },
+            });
+            if (result.error) {
+
+                setPaymentStatus("failed");
+                alert("Thanh toán thất bại: " + result.error.message);
+            } else {
+                if (result.paymentIntent.status === "succeeded") {
+                    setPaymentStatus("success");
+
+                    setShowModal(true);
+                }
+            }
+        } catch (error) {
+            console.error(err);
+            alert("Lỗi hệ thống khi thanh toán.");
+        } finally {
+            setLoading(false);
+        }
+    }
     return (
         <>
             {error ? (<AlertComp variant="danger" lable={error} />) : (loading ? (<SpinnerComp />) : (
@@ -624,7 +665,7 @@ const SessionPage = () => {
                                             <Button
                                                 disabled={loading}
                                                 size="lg"
-                                                onClick={handlePayment}
+                                                onClick={handleStripePayment}
                                                 style={{
                                                     backgroundColor: '#bd4d20ff',
                                                     width: '100%',
