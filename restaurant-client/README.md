@@ -1,12 +1,41 @@
-# React + Vite
+# Development of an Automated Food Distribution Support System for Large Restaurants  
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## 📖 Overview  
+The **Automated Food Distribution Support System** is designed to optimize **order management and kitchen assignment** in large-scale restaurants.  
 
-Currently, two official plugins are available:
+This system ensures faster service and better resource utilization by:  
+-  Allowing customers to place orders via web applications  
+-  Automatically distributing dishes to kitchens based on a **priority score**  
+-  Using **Redis Sorted Set** for order scheduling and prioritization  
+-  Tracking order lifecycle events through **Redis Streams**  
+-  Keeping clients updated in real time via **Firebase Firestore**  
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## 🧮 Priority Score Algorithm  
+Orders are prioritized using the following formula:  
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+priorityScore = α * waitTime + β * avgCookingTime + γ * vipPriority
+
+- ⏳ **waitTime** – Time a customer has been waiting  
+- 🍲 **avgCookingTime** – Average cooking time, updated dynamically using EMA  
+- ⭐ **vipPriority** – Weight assigned to VIP customers  
+
+The system ensures that **high-priority orders** are always processed first by leveraging **Redis Sorted Set**.  
+
+
+## 🏗️ System Architecture  
+-  **Frontend**: React + Vite  
+-  **Backend**: Spring Boot (Java 21)  
+-  **Database**: MySQL (core data storage)  
+-  **Redis**:  
+  - **Sorted Set** → order scheduling & prioritization  
+  - **Stream** → event logging & monitoring  
+-  **Firebase Firestore**: real-time data synchronization across clients  
+
+
+## 📌 Project Status  
+ This system is **currently under development**.  
+- Features are being incrementally implemented.  
+- Unit and integration tests are being written to ensure reliability.  
+- Future work will focus on optimization, and deployment. 

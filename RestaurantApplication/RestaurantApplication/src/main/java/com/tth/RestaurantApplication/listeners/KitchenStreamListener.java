@@ -53,7 +53,7 @@ public class KitchenStreamListener implements StreamListener<String, MapRecord<S
     @Override
     public void onMessage(MapRecord<String, String, String> message) {
         try {
-            processMessage(message); // gọi vào service có @Transactional
+            processMessage(message);
         } catch (Exception e) {
             log.error("Error processing message with ID {}. Error: {}", message.getId().getValue(), e.getMessage());
         }
