@@ -23,6 +23,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -119,6 +121,9 @@ public class KitchenAssignmentHelperService {
                     double avg = menuItemService.getAvgCookingTime(item.getOrderItem().getMenuItem().getMenuItemId());
                     double elapsed = Duration.between(item.getStartAt(), LocalDateTime.now()).toMinutes();
                     double remaining = Math.max(0, avg - elapsed);
+                    remaining = BigDecimal.valueOf(remaining)
+                            .setScale(1, RoundingMode.HALF_UP)
+                            .doubleValue();
                     log.info("Cooking item {} avg={} elapsed={} → remaining={}",
                             item.getOrderItem().getMenuItem().getMenuItemId(),
                             avg, elapsed, remaining);

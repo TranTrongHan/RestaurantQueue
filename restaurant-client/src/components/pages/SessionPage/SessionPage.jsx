@@ -13,7 +13,6 @@ import TrackingContent from "./RightPanel/TrackingContent";
 import BillContent from "./RightPanel/BillContent";
 import { useElements, useStripe } from "@stripe/react-stripe-js";
 import { CardElement } from "@stripe/react-stripe-js";
-import StripeForm from "../../forms/StripeForm";
 
 const SessionPage = () => {
     const [menuItems, setMenuItems] = useState([]);

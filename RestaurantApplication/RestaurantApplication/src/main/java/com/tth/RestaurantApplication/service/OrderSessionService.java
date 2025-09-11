@@ -153,9 +153,7 @@ public class OrderSessionService {
         List<OrderItem> newOrderItems = new ArrayList<>();
         for (MenuItemRequest menuItemRequest : request.getMenuItemRequestList()) {
             OrderItem orderItem = createAndSaveSingleOrderItem(order, menuItemRequest);
-
             newOrderItems.add(orderItem);
-
         }
 
 
@@ -199,21 +197,31 @@ public class OrderSessionService {
     }
 
     public double calculatePriorityScore(OrderItem item) {
+        // Điểm cơ bản
         final double baseScore = 100;
 
+        // 1. Giảm điểm cho khách VIP (càng thấp càng ưu tiên)
         boolean isVIP = item.getOrder().getOrderSession().getReservation().getUser().getIsVip();
-        log.info("isVIP: {}", isVIP);
+        double vipPenalty = isVIP ? 20 : 0;
+
+        // 2. Giảm điểm theo thời gian chờ (càng chờ lâu, điểm càng thấp, ưu tiên càng cao)
         long minutesSinceOrder = Duration.between(
                 item.getStartTime(),
                 LocalDateTime.now()
         ).toMinutes();
+        double waitingTimeBonus = minutesSinceOrder;
 
+        // 3. Giảm điểm theo thời gian nấu (món nấu lâu điểm càng thấp, ưu tiên càng cao)
         double avgCookingTime = menuItemService.getAvgCookingTime(item.getMenuItem().getMenuItemId());
+        double cookingTimePenalty = avgCookingTime * 0.5;
 
-        double score = baseScore - (isVIP ? 20 : 0) - minutesSinceOrder + (avgCookingTime * 0.5);
-
-
+        // Công thức tính điểm ưu tiên tổng hợp
+        double score = baseScore - vipPenalty - waitingTimeBonus - cookingTimePenalty;
+        if (score < 0) {
+            score = 0;
+        }
         return BigDecimal.valueOf(score).setScale(2, RoundingMode.HALF_UP).doubleValue();
+
     }
 
     // Pay xong thi sua lai status reservatiton
