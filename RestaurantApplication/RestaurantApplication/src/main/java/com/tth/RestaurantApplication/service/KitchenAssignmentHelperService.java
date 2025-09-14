@@ -109,10 +109,6 @@ public class KitchenAssignmentHelperService {
     public double calculateEstimatedTime(int menuItemId) {
         log.info("call calculateEstimatedTime");
         int totalChefs = (int) chefRepository.count();
-        int availableChefs = (int) chefRepository.countByIsAvailableTrue();
-        if (availableChefs == 0) availableChefs = 1; // tránh chia 0
-//        log.info("Total chefs: {}, Available chefs: {}", totalChefs, availableChefs);
-
         // Thời gian còn lại của các món đang nấu
         List<Double> cookingRemainingTimes = kitchenAssignmentRepository
                 .findByStatus(KitchenAssignment.KitchenAssignmentStatus.COOKING)
@@ -157,7 +153,6 @@ public class KitchenAssignmentHelperService {
         double estimatedTime = cookingTime + adjustedPendingTime + selfCookingTime;
         log.info("Estimated total time for menuItemId {}: {}", menuItemId, estimatedTime);
 
-        log.info("=========================");
         return estimatedTime;
     }
 }
