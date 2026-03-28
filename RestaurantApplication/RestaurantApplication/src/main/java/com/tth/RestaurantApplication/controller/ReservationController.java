@@ -9,6 +9,7 @@ import com.tth.RestaurantApplication.dto.response.ReservationResponse;
 import com.tth.RestaurantApplication.entity.User;
 import com.tth.RestaurantApplication.service.AuthenticateService;
 import com.tth.RestaurantApplication.service.ReservationService;
+import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -57,7 +58,7 @@ public class ReservationController {
                 .build();
     }
     @PostMapping("/add")
-    ApiResponse<ReservationResponse> createReservation(@RequestBody @Valid TableBookingRequest request,@RequestHeader("Authorization") String token) throws ParseException, JOSEException {
+    ApiResponse<ReservationResponse> createReservation(@RequestBody @Valid TableBookingRequest request,@RequestHeader("Authorization") String token) throws ParseException, JOSEException, MessagingException {
         User currentUser = authenticateService.getCurrentUser(token.substring(7));
         ReservationResponse response = reservationService.bookingTable(request,currentUser);
         return ApiResponse.<ReservationResponse>builder()

@@ -23,6 +23,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -33,7 +34,7 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@FieldDefaults(level =  AccessLevel.PRIVATE,makeFinal = true)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ReservationService {
     ReservationRepository reservationRepository;
     TableRepository tableRepository;
@@ -46,7 +47,9 @@ public class ReservationService {
     TableService tableService;
     JwtService jwtService;
     EmailService emailService;
-    public ReservationResponse bookingTable(TableBookingRequest request, User currentUser){
+
+
+    public ReservationResponse bookingTable(TableBookingRequest request, User currentUser) throws MessagingException {
         log.info("Step 1: Start bookingTable");
         List<Reservation> existingReservations = reservationRepository.findByUserAndStatusIn(
                 currentUser,
@@ -65,15 +68,15 @@ public class ReservationService {
                 if (!intendCheckinTime.isAfter(latestReservationCheckinTime)) {
                     log.warn("active reservation with check-in time plus 6 hours: {}"
                             , latestReservation.getCheckinTime().plusHours(6));
-                    log.info("intend check-in time: {}", intendCheckinTime );
+                    log.info("intend check-in time: {}", intendCheckinTime);
                     throw new AppException(ErrorCode.RESERVATION_TOO_SOON);
                 }
             }
         }
         log.info("Step 4: Checking available table for capacity {}", request.getCapacity());
 
-        Optional<TableEntity> tableOpt = tableRepository.findFirstByStatusAndCapacityOrderByTableIdAsc(TableEntity.TableStatus.AVAILABLE,request.getCapacity());
-        if(tableOpt.isPresent()){
+        Optional<TableEntity> tableOpt = tableRepository.findFirstByStatusAndCapacityOrderByTableIdAsc(TableEntity.TableStatus.AVAILABLE, request.getCapacity());
+        if (tableOpt.isPresent()) {
             log.info("has table");
             TableEntity table = tableOpt.get();
             CustomerResponse customerResponse = customerMapper.toCustomerResponse(currentUser);
@@ -92,17 +95,16 @@ public class ReservationService {
 
             table.setStatus(TableEntity.TableStatus.BOOKED);
             tableRepository.save(table);
-            try {
-                emailService.sendBookingConfirmation(
-                        currentUser.getEmail(),
-                        currentUser.getFullName(),
-                        reservation.getCheckinTime().toString(),
-                        String.valueOf(table.getTableName()),
-                        reservation.getReservationId().toString()
-                );
-            } catch (MessagingException e) {
-                log.error("Không thể gửi email xác nhận cho reservation {}", reservation.getReservationId(), e);
-            }
+
+
+            emailService.sendBookingConfirmation(
+                    currentUser.getEmail(),
+                    currentUser.getFullName(),
+                    reservation.getCheckinTime().toString(),
+                    String.valueOf(table.getTableName()),
+                    reservation.getReservationId().toString()
+            );
+
 
             return reservationMapper.toReservationResponse(reservation);
         } else {
@@ -111,18 +113,19 @@ public class ReservationService {
         }
 
     }
-    public ReservationResponse updateReservation(ReservationUpdateRequest request, Integer reservationId){
+
+    public ReservationResponse updateReservation(ReservationUpdateRequest request, Integer reservationId) {
         Reservation persistedReservation = this.reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESERVATION_NOT_FOUND));
 
         LocalDateTime bookingTime = persistedReservation.getBookingTime();
         LocalDateTime expiredTime = bookingTime.plusHours(2);
         LocalDateTime now = LocalDateTime.now();
-        if(request.getCheckinTime().isBefore(now)){
+        if (request.getCheckinTime().isBefore(now)) {
             log.info("Invalid time");
             throw new AppException(ErrorCode.INVALID_CHECKIN_TIME);
         }
-        if(!now.isBefore(expiredTime)){
+        if (!now.isBefore(expiredTime)) {
             log.info("here");
             throw new AppException(ErrorCode.RESERVATION_TOO_LATE);
         } else {
@@ -133,14 +136,15 @@ public class ReservationService {
 
         return reservationMapper.toReservationResponse(persistedReservation);
     }
-    public void cancelReservation(Integer reservationId){
+
+    public void cancelReservation(Integer reservationId) {
         Reservation persistedReservation = this.reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESERVATION_NOT_FOUND));
 
         LocalDateTime bookingTime = persistedReservation.getBookingTime();
         LocalDateTime expiredTime = bookingTime.plusHours(2);
         LocalDateTime now = LocalDateTime.now();
-        if(!now.isBefore(expiredTime)){
+        if (!now.isBefore(expiredTime)) {
             throw new AppException(ErrorCode.RESERVATION_TOO_LATE);
         } else {
             this.reservationRepository.delete(persistedReservation);
@@ -152,27 +156,29 @@ public class ReservationService {
         }
 
     }
-    public List<ReservationResponse> getMyReservation(User currentUser){
+
+    public List<ReservationResponse> getMyReservation(User currentUser) {
         List<ReservationResponse> reservationResponseList = new ArrayList<>();
         List<Reservation> reservationList = this.reservationRepository.findByUserOrderByBookingTimeDesc(currentUser);
-        for(Reservation reservation : reservationList){
+        for (Reservation reservation : reservationList) {
             ReservationResponse response = reservationMapper.toReservationResponse(reservation);
             reservationResponseList.add(response);
         }
         return reservationResponseList;
     }
 
-    public List<ReservationResponse> getReservations(Map<String, String> params){
+    public List<ReservationResponse> getReservations(Map<String, String> params) {
         List<Reservation> reservationList = reservationRepository.findAll(ReservationSpecification.filterByParams(params));
 
         return reservationList.stream().map(reservationMapper::toReservationResponse).toList();
     }
+
     @Transactional
     public ReservationResponse checkIn(Integer reservationId) throws JOSEException {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESERVATION_NOT_FOUND));
 
-        if(!reservation.getStatus().toString().equals("BOOKED"))
+        if (!reservation.getStatus().toString().equals("BOOKED"))
             throw new AppException(ErrorCode.INVALID_RESERVATION_STATUS);
 
 //        LocalDateTime now = LocalDateTime.now();
@@ -202,17 +208,18 @@ public class ReservationService {
         tableService.updateTableStatus(reservation.getTable().getTableId());
         log.info("update table status sucess");
 
-        ReservationResponse reservationResponse =  reservationMapper.toReservationResponse(reservation);
+        ReservationResponse reservationResponse = reservationMapper.toReservationResponse(reservation);
         reservationResponse.setCustomerJwt(customerJwt);
         reservationResponse.setExpiresAt(expiresAt);
         reservationResponse.setSessionId(orderSession.getSessionId());
-        return  reservationResponse;
+        return reservationResponse;
     }
-    public ReservationDetailResponse getReservation(Integer reservationId,User currentUser){
+
+    public ReservationDetailResponse getReservation(Integer reservationId, User currentUser) {
 
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESERVATION_NOT_FOUND));
-        if(!currentUser.getUserId().equals(reservation.getUser().getUserId()))
+        if (!currentUser.getUserId().equals(reservation.getUser().getUserId()))
             throw new AppException(ErrorCode.FORBIDDEN);
         return reservationDetailMapper.toReservationDetailResponse(reservation);
     }

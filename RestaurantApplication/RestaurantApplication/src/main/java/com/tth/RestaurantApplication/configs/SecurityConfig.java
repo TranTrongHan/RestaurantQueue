@@ -34,7 +34,7 @@ public class SecurityConfig {
     CustomOAuth2UserService customOAuth2UserService;
     CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
 
-    private final String [] PUBLIC_ENDPOINTS = {"/api/users/**","/api/auth/**","/api/menu_items/**"};
+    private final String [] PUBLIC_ENDPOINTS = {"/api/users/**","/api/auth/**","/api/menu_items/**", "/api/menu-item-vector/**"};
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity
@@ -44,6 +44,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/oauth2/**", "/login/**").permitAll()
                         .requestMatchers(HttpMethod.POST,PUBLIC_ENDPOINTS).permitAll()
+                        .requestMatchers(HttpMethod.GET,PUBLIC_ENDPOINTS).permitAll()
                         .requestMatchers("/api/menu_items/**").permitAll()
                         .requestMatchers("/api/categories").permitAll()
                         .requestMatchers(HttpMethod.GET,"/api/users").hasRole("ADMIN")

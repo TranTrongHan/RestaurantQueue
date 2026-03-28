@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 import jakarta.persistence.*;
@@ -45,6 +46,9 @@ public class MenuItem {
 
     @Column(name = "description")
     private String description;
+
+    @Column(name = "vector_updated_at")
+    private LocalDateTime vectorUpdatedAt;
 
     @Column(name = "is_available")
     private Boolean isAvailable = Boolean.TRUE;

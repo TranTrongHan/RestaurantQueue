@@ -96,8 +96,6 @@ public class KitchenStreamListener implements StreamListener<String, MapRecord<S
                 return;
             }
         }
-
-
     }
 
 

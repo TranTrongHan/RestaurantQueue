@@ -34,7 +34,7 @@ public class UserCreationRequest {
     private String address;
 
     @NotBlank(message = "Username cannot be blank")
-    @Size(min = 4, max = 20, message = "USERNAME_INVALID")
+    @Size(min = 1, max = 20, message = "USERNAME_INVALID")
     private String username;
 
     @NotBlank(message = "Password cannot be blank")

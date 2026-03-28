@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 public class LoginRequest {
     
     @NotBlank(message = "USERNAME_BLANK")
-    @Size(min = 4, max = 20, message = "USERNAME_INVALID")
+    @Size(min = 1, max = 20, message = "USERNAME_INVALID")
     private String username;
     
     @NotBlank(message = "PASSWORD_BLANK")

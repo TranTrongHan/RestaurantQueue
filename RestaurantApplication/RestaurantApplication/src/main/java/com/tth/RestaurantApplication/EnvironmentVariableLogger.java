@@ -19,7 +19,7 @@ public class EnvironmentVariableLogger implements CommandLineRunner {
         String googleClientSecret = environment.getProperty("GOOGLE_CLIENT_SECRET");
         String contextPath = environment.getProperty("server.servlet.context-path");
 
-        String secretKey = environment.getProperty("stripe.key.secret");
+//        String secretKey = environment.getProperty("stripe.key.secret");
         String redirect_uri = environment.getProperty("spring.security.oauth2.client.registration.google.redirect-uri");
 //        System.out.println("redirect_uri: " + (redirect_uri != null ? redirect_uri : "Not configured"));
 //        System.out.println("Context Path: " + (contextPath != null ? contextPath : "Not configured"));

@@ -39,6 +39,7 @@ public class OnlineOrderController {
         User currentUser = authenticateService.getCurrentUser(token.substring(7));
         Order order = orderManagementService.createForOnlineOrder(currentUser);
         String paymentUrl = onlineOrderService.createPaymentUrl(currentUser, request,"TAKE_HOME",order,returnUrl);
+
         return ApiResponse.<String>builder()
                 .result(paymentUrl)
                 .message("Create payment url success")

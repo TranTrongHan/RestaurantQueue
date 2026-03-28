@@ -2,6 +2,7 @@ package com.tth.RestaurantApplication.repository;
 
 import com.tth.RestaurantApplication.entity.MenuItem;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -46,4 +47,8 @@ public interface MenuItemRepository extends JpaRepository<MenuItem,Integer> {
     // Lấy menu items theo thời gian nấu trung bình
     @Query("SELECT m FROM MenuItem m WHERE m.avgCookingTime <= :maxCookingTime AND m.isAvailable = true")
     List<MenuItem> findByCookingTimeLessThanEqual(@Param("maxCookingTime") Double maxCookingTime);
+
+    @Modifying
+    @Query("UPDATE MenuItem m SET m.vectorUpdatedAt = CURRENT_TIMESTAMP WHERE m.id IN :menuItemIds")
+    void updateVectorUpdatedAtForJobs(@Param("menuItemIds") List<Integer> menuItemIds);
 }

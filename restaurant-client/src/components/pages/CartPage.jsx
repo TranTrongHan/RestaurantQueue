@@ -132,8 +132,8 @@ const CartPage = () => {
             return () => clearTimeout(timer);
         }
     }, [discountError])
-    
-    const [error,setError]= useState(null);
+
+    const [error, setError] = useState(null);
     useEffect(() => {
         if (error) {
             const timer = setTimeout(() => {
@@ -141,8 +141,8 @@ const CartPage = () => {
             }, 3000)
             return () => clearTimeout(timer);
         }
-        
-    },[error])
+
+    }, [error])
     const handlePayment = async () => {
         try {
 
@@ -204,62 +204,62 @@ const CartPage = () => {
     useEffect(() => {
         handleVnPayReturn();
     }, [location])
-    const stripe = useStripe();
-    const elements = useElements();
-    const handleStripePayment = async () => {
-        if (!stripe || !elements) {
-            alert("Stripe chưa sẵn sàng");
-            return;
-        }
-        const cardElement = elements.getElement(CardElement);
-        if (!cardElement) {
-            alert("Card Element chưa mount");
-            return;
-        }
-        try {
-            setLoading(true);
-            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.stripe}/create-payment-intent/${sessionId}`;
-            console.log("url: ", url);
-            console.log("customerJwt: ", customerJwt);
-            let res = await authApis(customerJwt).post(url);
-            let clientSecret;
-            if (res.status === 200) {
-                console.log("Created payment intent");
-                clientSecret = res.data.clientSecret;
-                if (clientSecret) {
-                    console.log("Secret: ", clientSecret);
-                }
-                let result = await stripe.confirmCardPayment(clientSecret, {
-                    payment_method: {
-                        card: cardElement,
-                    },
-                    payment_method_options: {
-                        card: {
-                            setup_future_usage: 'off_session' // hoặc bỏ nếu không muốn lưu thẻ
-                        }
-                    }
-                });
-                if (result.error) {
+    // const stripe = useStripe();
+    // const elements = useElements();
+    // const handleStripePayment = async () => {
+    //     if (!stripe || !elements) {
+    //         alert("Stripe chưa sẵn sàng");
+    //         return;
+    //     }
+    //     const cardElement = elements.getElement(CardElement);
+    //     if (!cardElement) {
+    //         alert("Card Element chưa mount");
+    //         return;
+    //     }
+    //     try {
+    //         setLoading(true);
+    //         const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.stripe}/create-payment-intent/${sessionId}`;
+    //         console.log("url: ", url);
+    //         console.log("customerJwt: ", customerJwt);
+    //         let res = await authApis(customerJwt).post(url);
+    //         let clientSecret;
+    //         if (res.status === 200) {
+    //             console.log("Created payment intent");
+    //             clientSecret = res.data.clientSecret;
+    //             if (clientSecret) {
+    //                 console.log("Secret: ", clientSecret);
+    //             }
+    //             let result = await stripe.confirmCardPayment(clientSecret, {
+    //                 payment_method: {
+    //                     card: cardElement,
+    //                 },
+    //                 payment_method_options: {
+    //                     card: {
+    //                         setup_future_usage: 'off_session' // hoặc bỏ nếu không muốn lưu thẻ
+    //                     }
+    //                 }
+    //             });
+    //             if (result.error) {
 
-                    setPaymentStatus("failed");
-                    alert("Thanh toán thất bại: " + result.error.message);
-                } else {
-                    if (result.paymentIntent.status === "succeeded") {
-                        setPaymentStatus("success");
+    //                 setPaymentStatus("failed");
+    //                 alert("Thanh toán thất bại: " + result.error.message);
+    //             } else {
+    //                 if (result.paymentIntent.status === "succeeded") {
+    //                     setPaymentStatus("success");
 
-                        setShowModal(true);
-                    }
-                }
-            }
+    //                     setShowModal(true);
+    //                 }
+    //             }
+    //         }
 
 
-        } catch (error) {
-            console.log(error);
-            alert("Lỗi hệ thống khi thanh toán.");
-        } finally {
-            setLoading(false);
-        }
-    }
+    //     } catch (error) {
+    //         console.log(error);
+    //         alert("Lỗi hệ thống khi thanh toán.");
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // }
     return (
         <div style={{
             minHeight: '100vh',
@@ -369,7 +369,7 @@ const CartPage = () => {
             )}
 
             <Container style={{ maxWidth: '1200px' }}>
-                {error && <AlertComp variant="danger" lable={error}/>}
+                {error && <AlertComp variant="danger" lable={error} />}
                 <div style={{
                     textAlign: 'center',
                     marginBottom: '40px',
@@ -612,9 +612,9 @@ const CartPage = () => {
                                             onChange={handleChange}
                                             name="discount"
                                         />
-                                        <Button onClick={checkDiscount}>
+                                        {/* <Button onClick={checkDiscount}>
                                             <FaCheck />
-                                        </Button>
+                                        </Button> */}
                                     </InputGroup>
                                     {discountError && (
                                         <Alert variant="danger" style={{
