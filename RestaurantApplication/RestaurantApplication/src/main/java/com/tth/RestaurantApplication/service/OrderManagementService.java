@@ -82,8 +82,7 @@ public class OrderManagementService {
             subTotal = subTotal.add(menuItem.getPrice().multiply(new BigDecimal(orderItem.getQuantity())));
             orderItemRepository.save(orderItem);
         }
-        // Xóa danh sách cart khi tạo xong OrderItem
-        onlineCartList.forEach(cartRepository::delete);
+        // Xóa đoạn code xoá cart ở đây để giữ lại giỏ hàng cho đến khi thanh toán thành công
         return subTotal;
     }
 

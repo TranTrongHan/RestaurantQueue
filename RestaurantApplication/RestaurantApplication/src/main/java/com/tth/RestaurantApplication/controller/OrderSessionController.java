@@ -79,11 +79,10 @@ public class OrderSessionController {
     }
     @PostMapping("/createPayment/{sessionId}")
     public ApiResponse<String> createPayment(@RequestBody(required = false) PaymentRequest request,
-                                             @RequestHeader("Authorization") String token,
                                              @PathVariable(value = "sessionId") Integer sessionId,
                                              @RequestParam String returnUrl) throws Exception {
         log.info("return url received: {}",returnUrl);
-        User currentUser = authenticateService.getCurrentUser(token.substring(7));
+        User currentUser = authenticateService.getCurrentAuthenticatedUser();
         Order order = orderSessionService.getCurrentUserOrder(sessionId);
         String paymentUrl = onlineOrderService.createPaymentUrl(currentUser, request,"DINE_IN",order,returnUrl);
         return ApiResponse.<String>builder()
@@ -93,9 +92,8 @@ public class OrderSessionController {
     }
 
     @GetMapping("/vnpayReturn")
-    public ApiResponse<BillResponse> vnpayReturn(@RequestParam Map<String, String> params,
-                                                 @RequestHeader("Authorization") String token) throws Exception {
-        User currentUser = authenticateService.getCurrentUser(token.substring(7));
+    public ApiResponse<BillResponse> vnpayReturn(@RequestParam Map<String, String> params) throws Exception {
+        User currentUser = authenticateService.getCurrentAuthenticatedUser();
         BillResponse bill = onlineOrderService.handleVnpayReturn(params, currentUser);
         return ApiResponse.<BillResponse>builder()
                 .result(bill)

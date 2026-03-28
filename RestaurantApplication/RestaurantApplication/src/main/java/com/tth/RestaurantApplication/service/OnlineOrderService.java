@@ -48,6 +48,7 @@ public class OnlineOrderService {
     private final OnlineOrderMapper onlineOrderMapper;
     private final MenuItemRepository menuItemRepository;
     private final OrderSessionService orderSessionService;
+    private final com.tth.RestaurantApplication.repository.OnlineCartRepository cartRepository;
 
 
     @Value("${vnpay.secretKey}")
@@ -152,6 +153,9 @@ public class OnlineOrderService {
         if ("00".equals(responseCode)) {
             order.setIsPaid(true);
             log.info("✅ Giao dịch thành công (Mã: {}).", responseCode);
+            // Delete cart now that payment succeeded
+            cartRepository.deleteByUser(currentUser);
+
             if(order.getOrderSession() != null){
                 log.info("this order {} has no online_order",order.getOrderId());
                 return paymentService.createBillForDineInOrder(order, null, BigDecimal.valueOf(amountFromVnpay));
@@ -162,7 +166,16 @@ public class OnlineOrderService {
         } else {
             order.setIsPaid(false);
             log.warn("❌ Giao dịch thất bại (Mã: {}).", responseCode);
+            
+            // Lấy ra online order (nếu có) trước khi xóa order
+            OnlineOrder onlineOrder = order.getOnlineOrder();
+            
             orderRepository.delete(order);
+            
+            if (onlineOrder != null) {
+                onlineOrderRepository.delete(onlineOrder);
+            }
+            
             throw new AppException(ErrorCode.PAYMENT_FAILED);
         }
         return null;

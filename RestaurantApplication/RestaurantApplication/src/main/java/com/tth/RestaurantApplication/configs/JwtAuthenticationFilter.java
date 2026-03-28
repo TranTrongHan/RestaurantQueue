@@ -51,20 +51,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             final String jwt = authHeader.substring(7);
 
-            if (jwtService.validateToken(jwt)) {
-                String username = jwtService.extractUsername(jwt);
-                String role = jwtService.extractRole(jwt);
+            String username = jwtService.extractUsername(jwt);
+            String role = jwtService.extractRole(jwt);
 
-                UsernamePasswordAuthenticationToken  authToken = new UsernamePasswordAuthenticationToken(
-                        username,
-                        null,
-                        Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
-                );
+            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                    username,
+                    null,
+                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
+            );
 
-                SecurityContextHolder.getContext().setAuthentication(authToken);
-            }
+            authToken.setDetails(new org.springframework.security.web.authentication.WebAuthenticationDetailsSource().buildDetails(request));
+
+            SecurityContextHolder.getContext().setAuthentication(authToken);
         } catch (Exception e) {
-            // Token không hợp lệ, không set authentication
+            log.error("JWT Authentication failed: {}", e.getMessage());
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"code\": 401, \"message\": \"Token không hợp lệ hoặc đã hết hạn\"}");
+            return;
         }
 
         filterChain.doFilter(request, response);

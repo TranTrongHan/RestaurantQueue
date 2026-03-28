@@ -35,4 +35,12 @@ public class MenuItemController {
         menuItemService.deleteMenuItem(menuItemId);
 
     }
+
+    @GetMapping("/search")
+    public ApiResponse<List<MenuItemResponse>> searchMenuItems(@RequestParam(value = "q", required = false) String keyword) {
+        return ApiResponse.<List<MenuItemResponse>>builder()
+                .result(menuItemService.searchMenuItemByName(keyword))
+                .message("Search menu items successfully")
+                .build();
+    }
 }

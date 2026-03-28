@@ -33,10 +33,9 @@ public class OnlineOrderController {
 
     @PostMapping("/createPayment")
     public ApiResponse<String> createPayment(@RequestBody(required = false) PaymentRequest request,
-                                             @RequestHeader("Authorization") String token,
                                              @RequestParam String returnUrl) throws Exception {
         log.info("return url received: {}",returnUrl);
-        User currentUser = authenticateService.getCurrentUser(token.substring(7));
+        User currentUser = authenticateService.getCurrentAuthenticatedUser();
         Order order = orderManagementService.createForOnlineOrder(currentUser);
         String paymentUrl = onlineOrderService.createPaymentUrl(currentUser, request,"TAKE_HOME",order,returnUrl);
 
@@ -47,9 +46,8 @@ public class OnlineOrderController {
     }
 
     @GetMapping("/vnpayReturn")
-    public ApiResponse<BillResponse> vnpayReturn(@RequestParam Map<String, String> params,
-                                                 @RequestHeader("Authorization") String token) throws Exception {
-        User currentUser = authenticateService.getCurrentUser(token.substring(7));
+    public ApiResponse<BillResponse> vnpayReturn(@RequestParam Map<String, String> params) throws Exception {
+        User currentUser = authenticateService.getCurrentAuthenticatedUser();
         BillResponse bill = onlineOrderService.handleVnpayReturn(params, currentUser);
         return ApiResponse.<BillResponse>builder()
                 .result(bill)
@@ -57,8 +55,8 @@ public class OnlineOrderController {
                 .build();
     }
     @PostMapping
-    ApiResponse<BillResponse> payment(@RequestBody(required = false) PaymentRequest request, @RequestHeader("Authorization") String token) throws ParseException, JOSEException {
-        User currentUser = authenticateService.getCurrentUser(token.substring(7));
+    ApiResponse<BillResponse> payment(@RequestBody(required = false) PaymentRequest request) throws ParseException, JOSEException {
+        User currentUser = authenticateService.getCurrentAuthenticatedUser();
         log.info("in controller");
         return ApiResponse.<BillResponse>builder()
                 .result(onlineOrderService.processOnlinePayment(currentUser,request))
@@ -67,8 +65,8 @@ public class OnlineOrderController {
     }
 
     @GetMapping("/my")
-    ApiResponse<List<OnlineOrderResponse>> getMyOrders(@RequestHeader("Authorization") String token) throws ParseException, JOSEException {
-        User currentUser = authenticateService.getCurrentUser(token.substring(7));
+    ApiResponse<List<OnlineOrderResponse>> getMyOrders() throws ParseException, JOSEException {
+        User currentUser = authenticateService.getCurrentAuthenticatedUser();
 
         return ApiResponse.<List<OnlineOrderResponse>>builder()
                 .result(onlineOrderService.getOnlineOrder(currentUser))

@@ -28,9 +28,8 @@ public class CartController {
     AuthenticateService authenticateService;
 
     @PostMapping("/add")
-    public ApiResponse<CartResponse> addToCart(@RequestBody @Valid AddToCartRequest request,@RequestHeader("Authorization") String token) throws ParseException, JOSEException {
-        log.info("token: {}",token.substring(7));
-        User currentUser = authenticateService.getCurrentUser(token.substring(7));
+    public ApiResponse<CartResponse> addToCart(@RequestBody @Valid AddToCartRequest request) throws ParseException, JOSEException {
+        User currentUser = authenticateService.getCurrentAuthenticatedUser();
         log.info("username: {}",currentUser.getUsername());
         CartResponse cartResponse = cartService.addToCart(request,currentUser);
         log.info("message: {}",cartResponse.getMessage());
@@ -39,8 +38,8 @@ public class CartController {
                 .build();
     }
     @GetMapping
-    public ApiResponse<CartResponse> getCart(@RequestHeader("Authorization") String token) throws ParseException, JOSEException {
-        User currentUser = authenticateService.getCurrentUser(token.substring(7));
+    public ApiResponse<CartResponse> getCart() throws ParseException, JOSEException {
+        User currentUser = authenticateService.getCurrentAuthenticatedUser();
         CartResponse cartResponse = cartService.getCart(currentUser);
 
         return ApiResponse.<CartResponse>builder()
@@ -49,11 +48,9 @@ public class CartController {
     }
     @PutMapping("/items/{menuItemId}")
     public ApiResponse<CartResponse> updateCartItem(
-            @PathVariable Integer menuItemId,
+            @PathVariable Integer menuItemId) throws ParseException, JOSEException {
 
-            @RequestHeader("Authorization") String token) throws ParseException, JOSEException {
-
-        User currentUser = authenticateService.getCurrentUser(token.substring(7));
+        User currentUser = authenticateService.getCurrentAuthenticatedUser();
         log.info("menuItemId : {}",menuItemId);
 
         CartResponse response = cartService.updateCartItem(menuItemId, currentUser);
@@ -64,14 +61,14 @@ public class CartController {
     }
 
     @DeleteMapping("/items/{cartItemId}")
-    public void deleteCartItem(@PathVariable(value = "cartItemId") Integer cartItemId, @RequestHeader("Authorization") String token) throws ParseException, JOSEException {
-        User currentUser = authenticateService.getCurrentUser(token.substring(7));
+    public void deleteCartItem(@PathVariable(value = "cartItemId") Integer cartItemId) throws ParseException, JOSEException {
+        User currentUser = authenticateService.getCurrentAuthenticatedUser();
 
         cartService.deleteCart(currentUser,cartItemId);
     }
     @DeleteMapping("/clear")
-    public ApiResponse<CartResponse> clearCart(@RequestHeader("Authorization") String token) throws ParseException, JOSEException {
-        User currentUser = authenticateService.getCurrentUser(token.substring(7));
+    public ApiResponse<CartResponse> clearCart() throws ParseException, JOSEException {
+        User currentUser = authenticateService.getCurrentAuthenticatedUser();
         CartResponse response = cartService.clearCart(currentUser);
 
         return ApiResponse.<CartResponse>builder()

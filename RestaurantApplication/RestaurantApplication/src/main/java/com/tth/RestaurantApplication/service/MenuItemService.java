@@ -108,6 +108,18 @@ public class MenuItemService {
         return menuItem.getAvgCookingTime();
     }
 
+    public List<MenuItemResponse> searchMenuItemByName(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return getListMenuItem(null);
+        }
+        
+        List<MenuItem> menuItems = menuItemRepository.searchByNameFts(keyword.trim());
+        
+        return menuItems.stream()
+                .map(menuItemMapper::toMenuItemResponse)
+                .collect(Collectors.toList());
+    }
+
 
 
 }

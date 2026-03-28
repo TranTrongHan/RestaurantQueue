@@ -28,8 +28,8 @@ public class CommentController {
     CommentService commentService;
     AuthenticateService authenticateService;
     @PostMapping("/add")
-    public ApiResponse<CommentResponse> addComment(@RequestBody CommentRequest commentRequest, @RequestHeader("Authorization") String token) throws ParseException, JOSEException {
-        User currentUser = authenticateService.getCurrentUser(token.substring(7));
+    public ApiResponse<CommentResponse> addComment(@RequestBody CommentRequest commentRequest) throws ParseException, JOSEException {
+        User currentUser = authenticateService.getCurrentAuthenticatedUser();
 
         return ApiResponse.<CommentResponse>builder()
                 .result(commentService.addComment(currentUser,commentRequest))

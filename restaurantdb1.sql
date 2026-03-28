@@ -38,25 +38,25 @@ INSERT INTO `chef` (`user_id`, `is_available`) VALUES
 (2, TRUE);
 
 -- Bảng bình luận
-CREATE TABLE `comments` (
-    `id` INT PRIMARY KEY AUTO_INCREMENT,
-    `user_id` INT NOT NULL,
-    `content` VARCHAR(500) NOT NULL,
-    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `rating` TINYINT UNSIGNED NOT NULL CHECK (`rating` BETWEEN 1 AND 5),
-    `status` ENUM('PENDING', 'APPROVED', 'REJECTED') NOT NULL DEFAULT 'PENDING',
-    `is_spam` BOOLEAN NOT NULL DEFAULT FALSE,
-    FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
-);
-INSERT INTO `comments` (`user_id`, `content`, `created_at`, `rating`, `status`, `is_spam`) VALUES
-(1, 'Món ăn rất ngon, phục vụ nhanh chóng!', NOW() - INTERVAL 2 DAY, 5, 'APPROVED', FALSE),
-(2, 'Không gian quán hơi ồn nhưng đồ ăn ok.', NOW() - INTERVAL 1 DAY, 4, 'APPROVED', FALSE),
-(3, 'Phục vụ chưa được nhiệt tình lắm.', NOW() - INTERVAL 5 HOUR, 3, 'PENDING', FALSE),
-(4, 'Tôi bị phục vụ nhầm món, khá thất vọng.', NOW() - INTERVAL 3 DAY, 2, 'APPROVED', FALSE),
-(1, 'Đồ ăn dở, không quay lại nữa.', NOW() - INTERVAL 7 DAY, 1, 'REJECTED', TRUE),
-(2, 'Mình rất thích lẩu Đài Bắc ở đây, sẽ giới thiệu bạn bè.', NOW() - INTERVAL 10 HOUR, 5, 'APPROVED', FALSE),
-(3, 'Quán đẹp, nhân viên thân thiện.', NOW() - INTERVAL 15 HOUR, 4, 'APPROVED', FALSE),
-(4, 'Món Bò ra hơi chậm, mong quán cải thiện.', NOW() - INTERVAL 20 HOUR, 3, 'PENDING', FALSE);
+-- CREATE TABLE `comments` (
+--     `id` INT PRIMARY KEY AUTO_INCREMENT,
+--     `user_id` INT NOT NULL,
+--     `content` VARCHAR(500) NOT NULL,
+--     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--     `rating` TINYINT UNSIGNED NOT NULL CHECK (`rating` BETWEEN 1 AND 5),
+--     `status` ENUM('PENDING', 'APPROVED', 'REJECTED') NOT NULL DEFAULT 'PENDING',
+--     `is_spam` BOOLEAN NOT NULL DEFAULT FALSE,
+--     FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
+-- );
+-- INSERT INTO `comments` (`user_id`, `content`, `created_at`, `rating`, `status`, `is_spam`) VALUES
+-- (1, 'Món ăn rất ngon, phục vụ nhanh chóng!', NOW() - INTERVAL 2 DAY, 5, 'APPROVED', FALSE),
+-- (2, 'Không gian quán hơi ồn nhưng đồ ăn ok.', NOW() - INTERVAL 1 DAY, 4, 'APPROVED', FALSE),
+-- (3, 'Phục vụ chưa được nhiệt tình lắm.', NOW() - INTERVAL 5 HOUR, 3, 'PENDING', FALSE),
+-- (4, 'Tôi bị phục vụ nhầm món, khá thất vọng.', NOW() - INTERVAL 3 DAY, 2, 'APPROVED', FALSE),
+-- (1, 'Đồ ăn dở, không quay lại nữa.', NOW() - INTERVAL 7 DAY, 1, 'REJECTED', TRUE),
+-- (2, 'Mình rất thích lẩu Đài Bắc ở đây, sẽ giới thiệu bạn bè.', NOW() - INTERVAL 10 HOUR, 5, 'APPROVED', FALSE),
+-- (3, 'Quán đẹp, nhân viên thân thiện.', NOW() - INTERVAL 15 HOUR, 4, 'APPROVED', FALSE),
+-- (4, 'Món Bò ra hơi chậm, mong quán cải thiện.', NOW() - INTERVAL 20 HOUR, 3, 'PENDING', FALSE);
 
 -- Bảng Table (quản lý thông tin các bàn ăn)
 CREATE TABLE `table` (
@@ -192,7 +192,8 @@ CREATE TABLE `menu_item` (
     `is_available` BOOLEAN DEFAULT TRUE,
     `avg_cooking_time` DOUBLE PRECISION,
     `base_cooking_time` DOUBLE PRECISION,
-    FOREIGN KEY (`category_id`) REFERENCES `category` (`category_id`) ON DELETE CASCADE ON UPDATE CASCADE
+    FOREIGN KEY (`category_id`) REFERENCES `category` (`category_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+    FULLTEXT(name) WITH PARSER ngram
 ) ENGINE=InnoDB;
 INSERT INTO `menu_item` (`category_id`, `name`, `price`,`image`, `is_available`, `avg_cooking_time`, `base_cooking_time`)
 VALUES
@@ -312,13 +313,13 @@ INSERT INTO `bill` (`order_id`, `create_at`, `sub_total`, `discount_amount`, `to
 (11,'2025-12-25 21:30:00', 89000.00, 0.00, 89000.00, 'PAID', '2025-12-25 21:35:00');
 ;
 -- Bảng Promotion
-CREATE TABLE `promotions`(
-    `id`INT AUTO_INCREMENT PRIMARY KEY,
-    `name` VARCHAR(255) NOT NULL,
-    `value` DECIMAL(10, 2) NOT NULL,
-    `usage_count` INT DEFAULT 0
-);
-INSERT INTO promotions (name, value, usage_count)
-VALUES
-('DISCOUNT10', 0.10, 2),
-('DISCOUNT15', 0.15, 2);CREATE TABLE `comments` (     `id` INT PRIMARY KEY AUTO_INCREMENT,     `user_id` INT NOT NULL,     `content` VARCHAR(500) NOT NULL,     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,     `rating ` TINYINT UNSIGNED NOT NULL CHECK (`rating` BETWEEN 1 AND 5),     `status` ENUM('PENDING', 'APPROVED', 'REJECTED') NOT NULL DEFAULT 'PENDING',     `is_spam` BOOLEAN NOT NULL DEFAULT FALSE,     FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE )
+-- CREATE TABLE `promotions`(
+--     `id`INT AUTO_INCREMENT PRIMARY KEY,
+--     `name` VARCHAR(255) NOT NULL,
+--     `value` DECIMAL(10, 2) NOT NULL,
+--     `usage_count` INT DEFAULT 0
+-- );
+-- INSERT INTO promotions (name, value, usage_count)
+-- VALUES
+-- ('DISCOUNT10', 0.10, 2),
+-- ('DISCOUNT15', 0.15, 2);CREATE TABLE `comments` (     `id` INT PRIMARY KEY AUTO_INCREMENT,     `user_id` INT NOT NULL,     `content` VARCHAR(500) NOT NULL,     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,     `rating ` TINYINT UNSIGNED NOT NULL CHECK (`rating` BETWEEN 1 AND 5),     `status` ENUM('PENDING', 'APPROVED', 'REJECTED') NOT NULL DEFAULT 'PENDING',     `is_spam` BOOLEAN NOT NULL DEFAULT FALSE,     FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE )

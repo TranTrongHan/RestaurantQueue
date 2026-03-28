@@ -41,8 +41,8 @@ public class ReservationController {
     }
 
     @GetMapping("/my")
-    ApiResponse<List<ReservationResponse>> getMyReservation(@RequestHeader("Authorization") String token) throws ParseException, JOSEException {
-        User currentUser = authenticateService.getCurrentUser(token.substring(7));
+    ApiResponse<List<ReservationResponse>> getMyReservation() throws ParseException, JOSEException {
+        User currentUser = authenticateService.getCurrentAuthenticatedUser();
 
         return ApiResponse.<List<ReservationResponse>>builder()
                 .result(reservationService.getMyReservation(currentUser))
@@ -50,16 +50,16 @@ public class ReservationController {
                 .build();
     }
     @GetMapping("/{id}")
-    ApiResponse<ReservationDetailResponse> getReservationDetails(@PathVariable(value = "id") Integer reservationId, @RequestHeader("Authorization") String token) throws ParseException, JOSEException {
-        User currentUser = authenticateService.getCurrentUser(token.substring(7));
+    ApiResponse<ReservationDetailResponse> getReservationDetails(@PathVariable(value = "id") Integer reservationId) throws ParseException, JOSEException {
+        User currentUser = authenticateService.getCurrentAuthenticatedUser();
 
         return ApiResponse.<ReservationDetailResponse>builder()
                 .result(reservationService.getReservation(reservationId,currentUser))
                 .build();
     }
     @PostMapping("/add")
-    ApiResponse<ReservationResponse> createReservation(@RequestBody @Valid TableBookingRequest request,@RequestHeader("Authorization") String token) throws ParseException, JOSEException, MessagingException {
-        User currentUser = authenticateService.getCurrentUser(token.substring(7));
+    ApiResponse<ReservationResponse> createReservation(@RequestBody @Valid TableBookingRequest request) throws ParseException, JOSEException, MessagingException {
+        User currentUser = authenticateService.getCurrentAuthenticatedUser();
         ReservationResponse response = reservationService.bookingTable(request,currentUser);
         return ApiResponse.<ReservationResponse>builder()
                 .result(response)
