@@ -1,743 +1,357 @@
-// src/components/pages/CartPage.js
 import React, { useContext, useEffect, useRef, useState } from "react";
-import { Button, Container, Image, Card, Row, Col, InputGroup, Form, Alert } from "react-bootstrap";
-import { MyCartContext } from "../configs/Context";
+import useCartStore from "../../store/useCartStore";
 import { authApis, endpoints } from "../configs/Apis";
 import { useCookies } from "react-cookie";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import SpinnerComp from "../common/SpinnerComp";
-import { FaCheck } from "react-icons/fa6";
-import { CardElement, useStripe } from "@stripe/react-stripe-js";
-import { useElements } from "@stripe/react-stripe-js";
-import AlertComp from "../common/AlertComp";
+import { ShoppingCart, Trash2, ArrowLeft, CheckCircle, XCircle, Minus, Plus, ShoppingBag, Tag } from "lucide-react";
+import Header from "../layout/Header";
+import Footer from "../layout/Footer";
+import toast from 'react-hot-toast';
 
 const CartPage = () => {
-    const [cart, cartDispatch] = useContext(MyCartContext);
-    const [cookies, setCookies] = useCookies(["token"]);
+    const { cart, addItem, removeItem: storeRemoveItem, clearCart: storeClearCart, updateItemId } = useCartStore();
+    const [cookies] = useCookies(["token"]);
     const [loading, setLoading] = useState(false);
-    const updateQuantity = async (itemId, delta) => {
-        cartDispatch({
-            type: "add",
-            payload: { menuItemId: itemId, quantity: delta },
-        });
-        if (delta > 0) {
-            try {
-                let payload = {
-                    "items": [
-                        {
-                            "menuItemId": itemId,
-                            "quantity": 1
-                        }
-                    ]
-                }
-                const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['cart']}/add`;
-                let res = await authApis(cookies.token).post(url, payload);
-                if (res.status === 200) {
-                    const updatedCart = res.data.results.items;
-                    updatedCart.map(item => {
-                        if (item.menuItemId == itemId) {
-                            cartDispatch({
-                                type: "updateId",
-                                payload: {
-                                    menuItemId: item.menuItemId,
-                                    cartItemId: item.cartItemId
-                                }
-                            })
-                        }
-                    })
+    // const [error, setError] = useState(null);
+    const [discount, setDiscount] = useState("");
+    const [discountError, setDiscountError] = useState(null);
+    const [discountAmount] = useState(0);
+    const [paymentStatus, setPaymentStatus] = useState(null);
+    const [bill, setBill] = useState(null);
+    const [showModal, setShowModal] = useState(false);
+    const hasCalled = useRef(false);
+    const location = useLocation();
 
-                }
-            } catch (error) {
-                if (error.response) {
-                    console.error("Backend error:", error.response.data);
-                } else {
-                    console.error("Axios error:", error.message);
-                }
-            }
-        } else if (delta < 0) {
-            try {
-                console.log("itemId: ", itemId);
-                const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['cart']}/items/${itemId}`;
-                let res = await authApis(cookies.token).put(url);
+    const formatPrice = (price) =>
+        price.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
+
+    const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const totalQty = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+    // --- Handlers ---
+    const updateQuantity = async (itemId, delta) => {
+        addItem({ menuItemId: itemId, quantity: delta });
+        try {
+            if (delta > 0) {
+                const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['cart']}/add`;
+                const res = await authApis(cookies.token).post(url, { items: [{ menuItemId: itemId, quantity: 1 }] });
                 if (res.status === 200) {
-                    console.log("success delete")
+                    res.data.results?.items?.forEach(item => {
+                        if (item.menuItemId === itemId) {
+                            updateItemId({ menuItemId: item.menuItemId, cartItemId: item.cartItemId });
+                        }
+                    });
                 }
-            } catch (error) {
-                if (error.response) {
-                    console.error("Backend error:", error.response.data);
-                } else {
-                    console.error("Axios error:", error.message);
-                }
+            } else {
+                const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['cart']}/items/${itemId}`;
+                await authApis(cookies.token).put(url);
             }
+        } catch (err) {
+            console.error("Update qty error:", err.message);
+            toast.error("Lỗi cập nhật số lượng");
         }
     };
 
-
     const removeItem = async (item) => {
-        cartDispatch({ type: "remove", payload: { menuItemId: item.menuItemId } });
+        storeRemoveItem(item.menuItemId);
         try {
-            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['cart']}/items/${item.cartItemId}`
-            let res = await authApis(cookies.token).delete(url);
-            if (res.status === 200) {
-                console.log("success delete")
-            }
-
-        } catch (error) {
-            if (error.response) {
-                console.error("Backend error:", error.response.data);
-            } else {
-                console.error("Axios error:", error.message);
-            }
+            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['cart']}/items/${item.cartItemId}`;
+            await authApis(cookies.token).delete(url);
+        } catch (err) {
+            console.error("Remove item error:", err.message);
+            toast.error("Lỗi xóa món ăn");
         }
     };
 
     const clearCart = async () => {
-        cartDispatch({ type: "clear" });
+        storeClearCart();
         try {
-            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['cart']}/clear`
-            let res = await authApis(cookies.token).delete(url);
-            if (res.data.code === 200) {
-                console.log("success delete all")
-            }
-        } catch (error) {
-            if (error.response) {
-                console.error("Backend error:", error.response.data);
-            } else {
-                console.error("Axios error:", error.message);
-            }
+            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['cart']}/clear`;
+            await authApis(cookies.token).delete(url);
+        } catch (err) {
+            console.error("Clear cart error:", err.message);
+            toast.error("Lỗi xóa giỏ hàng");
         }
     };
 
-    const total = cart.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0
-    );
-    const [discountAmount, setDiscountAmount] = useState(0);
-    const [isValidDiscount, setIsValidDiscount] = useState(false);
-    const [discountError, setDiscountError] = useState(null);
-    const [discount, setDiscount] = useState("");
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-
-        setDiscount(value);
-
-
-        console.log(`${name} : ${value}`);
-    }
-    useEffect(() => {
-        if (discountError) {
-            const timer = setTimeout(() => {
-                setDiscountError(null);
-            }, 3000)
-            return () => clearTimeout(timer);
-        }
-    }, [discountError])
-
-    const [error, setError] = useState(null);
-    useEffect(() => {
-        if (error) {
-            const timer = setTimeout(() => {
-                setError(null);
-            }, 3000)
-            return () => clearTimeout(timer);
-        }
-
-    }, [error])
     const handlePayment = async () => {
         try {
-
             setLoading(true);
             const returnUrl = window.location.href;
             const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['online_order']}/createPayment?returnUrl=${returnUrl}`;
-            console.log("posting url: ", url)
-            let res = await authApis(cookies.token).post(url);
+            const res = await authApis(cookies.token).post(url);
             if (res.status === 200 && res.data.result) {
-                console.log("Thanh toán thành công");
-                const paymentUrl = res.data.result;
-                console.log("Redirecting to VNPAY:", paymentUrl);
-                window.location.href = paymentUrl;
-                cartDispatch({ type: "clear" });
+                window.location.href = res.data.result;
+                clearCart();
             }
-        } catch (error) {
-            if (error.response) {
-                console.error("Backend error:", error.response.data);
-                if (Number(error.response.data.code) === 1030) {
-                    setError("Vui lòng cập nhật địa chỉ trước khi thanh toán");
+        } catch (err) {
+            if (err.response) {
+                if (Number(err.response.data.code) === 1030) {
+                    // setError("Vui lòng cập nhật địa chỉ trước khi thanh toán");
+                    toast.error("Vui lòng cập nhật địa chỉ trước khi thanh toán");
                 } else {
-                    setError(error.response.data.message);
+                    // setError(err.response.data.message || "Có lỗi xảy ra");
+                    toast.error(err.response.data.message || "Có lỗi xảy ra");
                 }
-            } else {
-                console.error("Axios error:", error.message);
             }
         } finally {
             setLoading(false);
         }
-    }
-    const location = useLocation();
-    const [paymentStatus, setPaymentStatus] = useState(null);
-    const [bill, setBill] = useState(null);
-    const hasCalled = useRef(false);
-    const [showModal, setShowModal] = useState(false);
+    };
+
     const handleVnPayReturn = async () => {
         const query = location.search;
-        if (!query.includes("vnp_")) return;
-        if (hasCalled.current) return;
+        if (!query.includes("vnp_") || hasCalled.current) return;
         hasCalled.current = true;
         try {
             const res = await authApis(cookies.token).get(
-                `${import.meta.env.VITE_API_BASE_URL}${endpoints['online_order']}/vnpayReturn${query}`,
+                `${import.meta.env.VITE_API_BASE_URL}${endpoints['online_order']}/vnpayReturn${query}`
             );
-
             setPaymentStatus("success");
             setBill(res.data.result);
             setShowModal(true);
-        } catch (err) {
-            console.error("Payment verify error:", err);
+        } catch {
             setPaymentStatus("failed");
             setShowModal(true);
         }
     };
-    const closeModal = () => {
-        setShowModal(false);
-    };
 
+    useEffect(() => { handleVnPayReturn(); }, [location]);
+    // useEffect(() => {
+    //     if (error) { const t = setTimeout(() => setError(null), 3000); return () => clearTimeout(t); }
+    // }, [error]);
     useEffect(() => {
-        handleVnPayReturn();
-    }, [location])
-    // const stripe = useStripe();
-    // const elements = useElements();
-    // const handleStripePayment = async () => {
-    //     if (!stripe || !elements) {
-    //         alert("Stripe chưa sẵn sàng");
-    //         return;
-    //     }
-    //     const cardElement = elements.getElement(CardElement);
-    //     if (!cardElement) {
-    //         alert("Card Element chưa mount");
-    //         return;
-    //     }
-    //     try {
-    //         setLoading(true);
-    //         const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.stripe}/create-payment-intent/${sessionId}`;
-    //         console.log("url: ", url);
-    //         console.log("customerJwt: ", customerJwt);
-    //         let res = await authApis(customerJwt).post(url);
-    //         let clientSecret;
-    //         if (res.status === 200) {
-    //             console.log("Created payment intent");
-    //             clientSecret = res.data.clientSecret;
-    //             if (clientSecret) {
-    //                 console.log("Secret: ", clientSecret);
-    //             }
-    //             let result = await stripe.confirmCardPayment(clientSecret, {
-    //                 payment_method: {
-    //                     card: cardElement,
-    //                 },
-    //                 payment_method_options: {
-    //                     card: {
-    //                         setup_future_usage: 'off_session' // hoặc bỏ nếu không muốn lưu thẻ
-    //                     }
-    //                 }
-    //             });
-    //             if (result.error) {
+        if (discountError) { const t = setTimeout(() => setDiscountError(null), 3000); return () => clearTimeout(t); }
+    }, [discountError]);
 
-    //                 setPaymentStatus("failed");
-    //                 alert("Thanh toán thất bại: " + result.error.message);
-    //             } else {
-    //                 if (result.paymentIntent.status === "succeeded") {
-    //                     setPaymentStatus("success");
-
-    //                     setShowModal(true);
-    //                 }
-    //             }
-    //         }
-
-
-    //     } catch (error) {
-    //         console.log(error);
-    //         alert("Lỗi hệ thống khi thanh toán.");
-    //     } finally {
-    //         setLoading(false);
-    //     }
-    // }
     return (
-        <div style={{
-            minHeight: '100vh',
-            background: 'linear-gradient(135deg, #912910 0%, #b8401f 100%)',
-            padding: '20px 0'
-        }}>
-            {/* Modal Overlay */}
-            {showModal && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    zIndex: 1000
-                }}>
-                    {/* Modal Content */}
-                    <div style={{
-                        backgroundColor: 'white',
-                        borderRadius: '12px',
-                        padding: '30px',
-                        maxWidth: '400px',
-                        width: '90%',
-                        textAlign: 'center',
-                        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
-                        transform: showModal ? 'scale(1)' : 'scale(0.9)',
-                        transition: 'transform 0.3s ease'
-                    }}>
-                        {paymentStatus === "success" && (
-                            <>
-                                <div style={{
-                                    fontSize: '60px',
-                                    marginBottom: '20px'
-                                }}></div>
-                                <h2 style={{
-                                    color: '#28a745',
-                                    margin: '0 0 15px 0',
-                                    fontSize: '24px',
-                                    fontWeight: 'bold'
-                                }}>
-                                    Thanh toán thành công!
-                                </h2>
-                                <p style={{
-                                    color: '#666',
-                                    margin: '0 0 25px 0',
-                                    fontSize: '16px'
-                                }}>
-                                    Cảm ơn bạn đã thanh toán. Đơn hàng của bạn đã được xử lý thành công.
-                                </p>
-                            </>
-                        )}
+        <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-950">
+            <Header />
 
-                        {paymentStatus === "failed" && (
-                            <>
-                                <div style={{
-                                    fontSize: '60px',
-                                    marginBottom: '20px'
-                                }}></div>
-                                <h2 style={{
-                                    color: '#dc3545',
-                                    margin: '0 0 15px 0',
-                                    fontSize: '24px',
-                                    fontWeight: 'bold'
-                                }}>
-                                    Thanh toán thất bại!
-                                </h2>
-                                <p style={{
-                                    color: '#666',
-                                    margin: '0 0 25px 0',
-                                    fontSize: '16px'
-                                }}>
-                                    Đã xảy ra lỗi trong quá trình thanh toán. Vui lòng thử lại.
-                                </p>
-                            </>
-                        )}
-
-                        {/* Close Button */}
-                        <button
-                            onClick={closeModal}
-                            style={{
-                                backgroundColor: paymentStatus === "success" ? '#28a745' : '#dc3545',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                padding: '12px 24px',
-                                fontSize: '16px',
-                                fontWeight: '500',
-                                cursor: 'pointer',
-                                transition: 'background-color 0.3s ease',
-                                minWidth: '100px'
-                            }}
-                            onMouseEnter={(e) => {
-                                e.target.style.backgroundColor = paymentStatus === "success" ? '#218838' : '#c82333';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.target.style.backgroundColor = paymentStatus === "success" ? '#28a745' : '#dc3545';
-                            }}
-                        >
-                            Đóng
-                        </button>
+            <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
+                {/* Error Toast 
+                {error && (
+                    <div className="mb-6 flex items-center gap-3 bg-danger/10 border border-danger/30 text-danger px-5 py-4 rounded-2xl font-medium text-sm">
+                        <XCircle size={18} className="shrink-0" />
+                        {error}
                     </div>
-                </div>
-            )}
+                )}
+                */}
 
-            <Container style={{ maxWidth: '1200px' }}>
-                {error && <AlertComp variant="danger" lable={error} />}
-                <div style={{
-                    textAlign: 'center',
-                    marginBottom: '40px',
-                    padding: '20px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: '20px',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)'
-                }}>
-                    <h1 style={{
-                        color: 'white',
-                        fontSize: '2.5rem',
-                        fontWeight: '700',
-                        marginBottom: '10px',
-                        textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
-                    }}>
-                        Giỏ hàng của bạn
-                    </h1>
-                    <p style={{
-                        color: 'rgba(255, 255, 255, 0.8)',
-                        fontSize: '1.1rem',
-                        margin: 0
-                    }}>
-                        {cart.length} sản phẩm trong giỏ hàng
-                    </p>
+                {/* Page Header */}
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 className="text-2xl font-extrabold text-gray-900 dark:text-gray-100 flex items-center gap-3">
+                            <ShoppingCart size={26} className="text-primary" />
+                            Giỏ hàng của bạn
+                        </h1>
+                        <p className="text-sm text-gray-500 mt-1">
+                            {cart.length} loại món · {totalQty} phần
+                        </p>
+                    </div>
+                    <Link
+                        to="/menu"
+                        className="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+                    >
+                        <ArrowLeft size={16} />
+                        Tiếp tục mua
+                    </Link>
                 </div>
 
                 {cart.length === 0 ? (
-                    <Card style={{
-                        background: 'rgba(255, 255, 255, 0.95)',
-                        borderRadius: '20px',
-                        border: 'none',
-                        boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-                        padding: '60px 40px',
-                        textAlign: 'center'
-                    }}>
-                        <h3 style={{ color: '#666', marginBottom: '20px' }}>Giỏ hàng của bạn đang trống</h3>
-                        <p style={{ color: '#999', marginBottom: '30px' }}>Hãy thêm một số món ăn ngon để bắt đầu!</p>
+                    /* Empty Cart */
+                    <div className="text-center py-24 bg-white dark:bg-gray-900 rounded-3xl shadow-card border border-gray-100 dark:border-gray-800">
+                        <ShoppingBag size={64} className="text-gray-200 dark:text-gray-700 mx-auto mb-5" />
+                        <h3 className="text-xl font-bold text-gray-400 dark:text-gray-500 mb-2">Giỏ hàng của bạn đang trống</h3>
+                        <p className="text-sm text-gray-400 mb-8">Hãy thêm một số món ăn ngon để bắt đầu!</p>
                         <Link
                             to="/menu"
-                            style={{
-                                textDecoration: 'none',
-                                background: 'linear-gradient(135deg, #912910 0%, #b8401f 100%)',
-                                color: 'white',
-                                padding: '12px 30px',
-                                borderRadius: '25px',
-                                fontWeight: '600',
-                                display: 'inline-block',
-                                transition: 'all 0.3s ease',
-                                boxShadow: '0 4px 15px rgba(145, 41, 16, 0.4)'
-                            }}
+                            className="inline-flex items-center gap-2 px-8 py-3 rounded-full bg-primary hover:bg-primary-active text-white font-bold text-sm transition-all shadow-lg shadow-primary/20"
                         >
+                            <ShoppingBag size={16} />
                             Xem thực đơn
                         </Link>
-                    </Card>
+                    </div>
                 ) : (
-                    <Row>
-                        <Col lg={8}>
-                            <Card style={{
-                                background: 'rgba(255, 255, 255, 0.95)',
-                                borderRadius: '20px',
-                                border: 'none',
-                                boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-                                overflow: 'hidden'
-                            }}>
-                                {cart.map((item, index) => (
-                                    <div key={item.menuItemId} style={{
-                                        padding: '20px',
-                                        borderBottom: index < cart.length - 1 ? '1px solid #f0f0f0' : 'none',
-                                        transition: 'all 0.3s ease'
-                                    }}>
-                                        <Row style={{ alignItems: 'center' }}>
-                                            <Col xs={3} md={2}>
-                                                <Image
-                                                    src={item.image}
-                                                    style={{
-                                                        width: '80px',
-                                                        height: '80px',
-                                                        borderRadius: '15px',
-                                                        objectFit: 'cover',
-                                                        boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
-                                                    }}
-                                                />
-                                            </Col>
-                                            <Col xs={5} md={4}>
-                                                <h5 style={{
-                                                    marginBottom: '5px',
-                                                    fontWeight: '600',
-                                                    color: '#333',
-                                                    fontSize: '1.1rem'
-                                                }}>
-                                                    {item.name}
-                                                </h5>
-                                                <p style={{
-                                                    color: '#912910',
-                                                    fontWeight: '600',
-                                                    fontSize: '1rem',
-                                                    margin: 0
-                                                }}>
-                                                    {item.price.toLocaleString()}đ
-                                                </p>
-                                            </Col>
-                                            <Col xs={4} md={3}>
-                                                <div style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    background: '#f8f9fa',
-                                                    borderRadius: '25px',
-                                                    padding: '5px',
-                                                    width: 'fit-content'
-                                                }}>
-                                                    <Button
-                                                        variant="outline-secondary"
-                                                        size="sm"
-                                                        onClick={() => updateQuantity(item.menuItemId, -1)}
-                                                        disabled={item.quantity <= 1}
-                                                        style={{
-                                                            width: '30px',
-                                                            height: '30px',
-                                                            borderRadius: '50%',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            border: 'none',
-                                                            background: item.quantity <= 1 ? '#e9ecef' : '#dc3545',
-                                                            color: item.quantity <= 1 ? '#6c757d' : 'white',
-                                                            fontSize: '16px',
-                                                            fontWeight: 'bold'
-                                                        }}
-                                                    >
-                                                        -
-                                                    </Button>
-                                                    <span style={{
-                                                        margin: '0 15px',
-                                                        fontWeight: '600',
-                                                        fontSize: '1.1rem',
-                                                        minWidth: '20px',
-                                                        textAlign: 'center'
-                                                    }}>
-                                                        {item.quantity}
-                                                    </span>
-                                                    <Button
-                                                        variant="outline-secondary"
-                                                        size="sm"
-                                                        onClick={() => updateQuantity(item.menuItemId, 1)}
-                                                        style={{
-                                                            width: '30px',
-                                                            height: '30px',
-                                                            borderRadius: '50%',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            border: 'none',
-                                                            background: '#28a745',
-                                                            color: 'white',
-                                                            fontSize: '16px',
-                                                            fontWeight: 'bold'
-                                                        }}
-                                                    >
-                                                        +
-                                                    </Button>
-                                                </div>
-                                            </Col>
-                                            <Col xs={12} md={2} style={{ textAlign: 'right' }}>
-                                                <div style={{
-                                                    fontSize: '1.2rem',
-                                                    fontWeight: '700',
-                                                    color: '#912910',
-                                                    marginBottom: '10px'
-                                                }}>
-                                                    {(item.price * item.quantity).toLocaleString()}đ
-                                                </div>
-                                                <Button
-                                                    variant="outline-danger"
-                                                    size="sm"
-                                                    onClick={() => removeItem(item)}
-                                                    style={{
-                                                        borderRadius: '15px',
-                                                        fontSize: '12px',
-                                                        padding: '5px 10px'
-                                                    }}
-                                                >
-                                                    Xóa
-                                                </Button>
-                                            </Col>
-                                        </Row>
+                    <div className="flex flex-col lg:flex-row gap-6">
+                        {/* Left: Cart Items */}
+                        <div className="flex-1 bg-white dark:bg-gray-900 rounded-3xl shadow-card border border-gray-100 dark:border-gray-800 overflow-hidden">
+                            {/* Header row */}
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                                <h2 className="font-bold text-gray-900 dark:text-gray-100">Món đã chọn</h2>
+                                <button
+                                    onClick={clearCart}
+                                    className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-danger transition-colors"
+                                >
+                                    <Trash2 size={14} />
+                                    Xóa tất cả
+                                </button>
+                            </div>
+
+                            {/* Item rows */}
+                            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                                {cart.map((item) => (
+                                    <div key={item.menuItemId} className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition-colors">
+                                        {/* Image */}
+                                        <img
+                                            src={item.image}
+                                            alt={item.name}
+                                            className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-sm shrink-0"
+                                        />
+
+                                        {/* Name + Price */}
+                                        <div className="flex-1 min-w-0">
+                                            <h5 className="font-bold text-gray-900 dark:text-gray-100 truncate">{item.name}</h5>
+                                            <p className="text-sm font-semibold text-primary">{formatPrice(item.price)}</p>
+                                        </div>
+
+                                        {/* Quantity Stepper */}
+                                        <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-full px-2 py-1 shrink-0">
+                                            <button
+                                                onClick={() => updateQuantity(item.menuItemId, -1)}
+                                                disabled={item.quantity <= 1}
+                                                className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold transition-all bg-danger disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
+                                            >
+                                                <Minus size={12} strokeWidth={3} />
+                                            </button>
+                                            <span className="w-6 text-center font-bold text-gray-900 dark:text-gray-100 text-sm">{item.quantity}</span>
+                                            <button
+                                                onClick={() => updateQuantity(item.menuItemId, 1)}
+                                                className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold transition-all bg-success"
+                                            >
+                                                <Plus size={12} strokeWidth={3} />
+                                            </button>
+                                        </div>
+
+                                        {/* Subtotal + Remove */}
+                                        <div className="text-right shrink-0 min-w-[90px]">
+                                            <p className="font-extrabold text-gray-900 dark:text-gray-100 text-sm">
+                                                {formatPrice(item.price * item.quantity)}
+                                            </p>
+                                            <button
+                                                onClick={() => removeItem(item)}
+                                                className="text-xs text-gray-400 hover:text-danger transition-colors mt-1 flex items-center gap-1 ml-auto"
+                                            >
+                                                <Trash2 size={11} /> Xóa
+                                            </button>
+                                        </div>
                                     </div>
                                 ))}
-                            </Card>
-                        </Col>
+                            </div>
+                        </div>
 
-                        <Col lg={4}>
-                            <Card style={{
-                                background: 'rgba(255, 255, 255, 0.95)',
-                                borderRadius: '20px',
-                                border: 'none',
-                                boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-                                position: 'sticky',
-                                top: '20px'
-                            }}>
-                                <div style={{ padding: '30px' }}>
-                                    <h4 style={{
-                                        marginBottom: '25px',
-                                        fontWeight: '700',
-                                        color: '#333',
-                                        textAlign: 'center'
-                                    }}>
-                                        Tóm tắt đơn hàng
-                                    </h4>
+                        {/* Right: Order Summary */}
+                        <div className="lg:w-80 xl:w-96 shrink-0">
+                            <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-card border border-gray-100 dark:border-gray-800 p-6 sticky top-6">
+                                <h4 className="font-extrabold text-gray-900 dark:text-gray-100 text-center mb-5">Tóm tắt đơn hàng</h4>
 
-                                    <div style={{
-                                        borderBottom: '2px dashed #e9ecef',
-                                        paddingBottom: '20px',
-                                        marginBottom: '20px'
-                                    }}>
-                                        <div style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            marginBottom: '10px'
-                                        }}>
-                                            <span style={{ color: '#666' }}>Số món:</span>
-                                            <span style={{ fontWeight: '600' }}>{cart.length} món</span>
-                                        </div>
-                                        <div style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            marginBottom: '10px'
-                                        }}>
-                                            <span style={{ color: '#666' }}>Tổng số lượng:</span>
-                                            <span style={{ fontWeight: '600' }}>
-                                                {cart.reduce((sum, item) => sum + item.quantity, 0)} phần
-                                            </span>
-                                        </div>
+                                {/* Stats */}
+                                <div className="space-y-2 pb-4 mb-4 border-b-2 border-dashed border-gray-200 dark:border-gray-700">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500">Số món:</span>
+                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{cart.length} món</span>
                                     </div>
-                                    <InputGroup className="mb-3">
-                                        <Form.Control
-                                            aria-label="Default"
-                                            aria-describedby="inputGroup-sizing-default"
-                                            value={discount}
-                                            onChange={handleChange}
-                                            name="discount"
-                                        />
-                                        {/* <Button onClick={checkDiscount}>
-                                            <FaCheck />
-                                        </Button> */}
-                                    </InputGroup>
-                                    {discountError && (
-                                        <Alert variant="danger" style={{
-                                            marginTop: '5px',
-                                            marginBottom: '5px',
-                                            padding: '8px 12px',
-                                            fontSize: '13px',
-                                            borderRadius: '8px'
-                                        }}>
-                                            {discountError}
-                                        </Alert>
-                                    )}
-                                    <div style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        background: 'linear-gradient(135deg, #912910 0%, #b8401f 100%)',
-                                        padding: '15px 20px',
-                                        borderRadius: '15px',
-                                        color: 'white',
-                                        marginBottom: '25px'
-                                    }}>
-                                        <span style={{ fontSize: '1.2rem', fontWeight: '600' }}>
-                                            Tổng cộng:
-                                        </span>
-                                        <span style={{ fontSize: '1.5rem', fontWeight: '700' }}>
-                                            {total.toLocaleString()}đ
-                                        </span>
-                                    </div>
-
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                        <Button
-                                            variant="success"
-                                            size="lg"
-                                            onClick={handlePayment}
-                                            disabled={loading}
-                                            style={{
-                                                borderRadius: '15px',
-                                                fontWeight: '600',
-                                                fontSize: '1.1rem',
-                                                padding: '12px',
-                                                background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)',
-                                                border: 'none',
-                                                boxShadow: '0 4px 15px rgba(40, 167, 69, 0.4)',
-                                                transition: 'all 0.3s ease'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.target.style.transform = 'translateY(-2px)';
-                                                e.target.style.boxShadow = '0 6px 20px rgba(40, 167, 69, 0.6)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.target.style.transform = 'translateY(0)';
-                                                e.target.style.boxShadow = '0 4px 15px rgba(40, 167, 69, 0.4)';
-                                            }}
-                                        >
-                                            {loading ? (<SpinnerComp />) : ("Thanh toán ngay")}
-                                        </Button>
-
-                                        <Button
-                                            variant="outline-danger"
-                                            onClick={clearCart}
-                                            style={{
-                                                borderRadius: '15px',
-                                                fontWeight: '600',
-                                                borderColor: '#dc3545',
-                                                color: '#dc3545',
-                                                transition: 'all 0.3s ease'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                e.target.style.backgroundColor = '#dc3545';
-                                                e.target.style.color = 'white';
-                                                e.target.style.transform = 'translateY(-1px)';
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                e.target.style.backgroundColor = 'transparent';
-                                                e.target.style.color = '#dc3545';
-                                                e.target.style.transform = 'translateY(0)';
-                                            }}
-                                        >
-                                            Xóa toàn bộ
-                                        </Button>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500">Tổng số lượng:</span>
+                                        <span className="font-semibold text-gray-900 dark:text-gray-100">{totalQty} phần</span>
                                     </div>
                                 </div>
-                            </Card>
-                        </Col>
-                    </Row>
-                )}
 
-                <div style={{
-                    textAlign: 'center',
-                    marginTop: '40px',
-                    padding: '20px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: '15px',
-                    backdropFilter: 'blur(10px)'
-                }}>
-                    <Link
-                        to="/menu"
-                        style={{
-                            color: 'white',
-                            textDecoration: 'none',
-                            fontSize: '1.1rem',
-                            fontWeight: '600',
-                            padding: '10px 20px',
-                            borderRadius: '25px',
-                            background: 'rgba(255, 255, 255, 0.2)',
-                            border: '1px solid rgba(255, 255, 255, 0.3)',
-                            display: 'inline-block',
-                            transition: 'all 0.3s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.target.style.background = 'rgba(255, 255, 255, 0.3)';
-                            e.target.style.transform = 'translateY(-2px)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                            e.target.style.transform = 'translateY(0)';
-                        }}
-                    >
-                        Quay về thực đơn
-                    </Link>
+                                {/* Discount Input */}
+                                <div className="mb-4">
+                                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                        <Tag size={12} /> Mã ưu đãi
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={discount}
+                                            onChange={(e) => setDiscount(e.target.value)}
+                                            name="discount"
+                                            placeholder="Nhập mã giảm giá..."
+                                            className="flex-1 px-3 py-2 text-sm rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-primary transition"
+                                        />
+                                    </div>
+                                    {discountError && (
+                                        <p className="text-xs text-danger mt-1.5 font-medium">{discountError}</p>
+                                    )}
+                                </div>
+
+                                {/* Total */}
+                                <div className="flex items-center justify-between bg-primary/10 dark:bg-primary/20 border border-primary/20 rounded-2xl px-5 py-4 mb-5">
+                                    <span className="font-bold text-gray-900 dark:text-gray-100">Tổng cộng:</span>
+                                    <span className="text-xl font-extrabold text-primary">{formatPrice(total)}</span>
+                                </div>
+
+                                {/* CTA Buttons */}
+                                <div className="flex flex-col gap-3">
+                                    <button
+                                        onClick={handlePayment}
+                                        disabled={loading}
+                                        className="w-full py-3.5 rounded-2xl font-bold text-white bg-success hover:bg-success-active transition-all shadow-lg shadow-success/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                                    >
+                                        {loading ? (
+                                            <SpinnerComp className="w-5 h-5 border-2" />
+                                        ) : (
+                                            <>
+                                                <CheckCircle size={18} />
+                                                Thanh toán ngay
+                                            </>
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={clearCart}
+                                        className="w-full py-3 rounded-2xl font-semibold text-sm text-danger border-2 border-danger/30 hover:bg-danger hover:text-white hover:border-danger transition-all"
+                                    >
+                                        Xóa toàn bộ giỏ hàng
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </main>
+
+            <Footer />
+
+            {/* VNPay Return Modal */}
+            {showModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowModal(false)} />
+                    <div className="relative z-10 bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-sm mx-4 p-8 border border-gray-100 dark:border-gray-800 text-center">
+                        {paymentStatus === "success" ? (
+                            <>
+                                <CheckCircle size={64} className="text-success mx-auto mb-5 animate-bounce" />
+                                <h2 className="text-2xl font-extrabold text-success mb-3">Thanh toán thành công!</h2>
+                                <p className="text-sm text-gray-500 mb-6">
+                                    Cảm ơn bạn đã thanh toán. Đơn hàng đã được xử lý thành công.
+                                </p>
+                                <button
+                                    onClick={() => setShowModal(false)}
+                                    className="w-full py-3 rounded-2xl font-bold text-white bg-success hover:bg-success-active transition shadow-lg shadow-success/20"
+                                >
+                                    Xác nhận
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <XCircle size={64} className="text-danger mx-auto mb-5" />
+                                <h2 className="text-2xl font-extrabold text-danger mb-3">Thanh toán thất bại!</h2>
+                                <p className="text-sm text-gray-500 mb-6">
+                                    Đã xảy ra lỗi trong quá trình thanh toán. Vui lòng thử lại.
+                                </p>
+                                <button
+                                    onClick={() => setShowModal(false)}
+                                    className="w-full py-3 rounded-2xl font-bold text-white bg-danger hover:bg-danger-active transition shadow-lg shadow-danger/20"
+                                >
+                                    Đóng
+                                </button>
+                            </>
+                        )}
+                    </div>
                 </div>
-            </Container>
+            )}
         </div>
     );
 };

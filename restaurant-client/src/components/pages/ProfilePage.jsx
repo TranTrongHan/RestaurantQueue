@@ -1,59 +1,39 @@
-import { useState, useEffect, useRef } from 'react';
-import { Container, Row, Col, Card, Form, Button, Image, Badge, Alert, Modal } from 'react-bootstrap';
 import {
-    FaUser,
-    FaEdit,
-    FaSave,
-    FaTimes,
-    FaPhone,
-    FaEnvelope,
-    FaMapMarkerAlt,
-    FaCalendarAlt,
-    FaCamera,
-    FaEye,
-    FaEyeSlash
+    FaUser, FaEdit, FaSave, FaTimes, FaPhone,
+    FaEnvelope, FaMapMarkerAlt, FaCalendarAlt, FaCamera, FaEye, FaEyeSlash
 } from 'react-icons/fa';
 import Header from '../layout/Header';
 import Footer from '../layout/Footer';
 import SpinnerComp from '../common/SpinnerComp';
 import { authApis, endpoints } from '../configs/Apis';
 import { useCookies } from 'react-cookie';
-import { useContext } from 'react';
-import { MyUserContext } from '../configs/Context';
+import { useState, useEffect } from 'react';
+import useUserStore from '../../store/useUserStore';
+import toast from 'react-hot-toast';
+
+const inputCls = "w-full px-4 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed";
+const labelCls = "block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-2";
 
 const ProfilePage = () => {
     const [userInfo, setUserInfo] = useState(null);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+    // --- Start Old Alert State ---
+    // const [error, setError] = useState('');
+    // const [success, setSuccess] = useState('');
+    // --- End Old Alert State ---
     const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-
-    // Form states
-    const [formData, setFormData] = useState({
-        fullName: '',
-        phone: '',
-        email: '',
-        address: '',
-        dob: '',
-    });
+    const [formData, setFormData] = useState({ fullName: '', phone: '', email: '', address: '', dob: '' });
     const [avatar, setAvatar] = useState();
-    const [passwordData, setPasswordData] = useState({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-    });
+    const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
     const [cookie,] = useCookies(['token']);
 
     const fetchUserProfile = async () => {
         try {
             setLoading(true);
-
             const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.profile}`;
-            console.log("url : ", url);
-            console.log("token: ", cookie.token);
             let res = await authApis(cookie.token).get(url);
             if (res.status === 200) {
                 setUserInfo(res.data.result);
@@ -66,9 +46,9 @@ const ProfilePage = () => {
                 });
                 setAvatar(res.data.result.image);
             }
-
         } catch (err) {
-            setError('Không thể tải thông tin người dùng');
+            // setError('Không thể tải thông tin người dùng');
+            toast.error('Không thể tải thông tin người dùng');
         } finally {
             setLoading(false);
         }
@@ -76,106 +56,69 @@ const ProfilePage = () => {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-        console.log(`${name} : ${value}`);
-
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
     const handlePasswordChange = (e) => {
         const { name, value } = e.target;
-        setPasswordData(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        setPasswordData(prev => ({ ...prev, [name]: value }));
     };
 
     const handleSave = async (userId) => {
         try {
             setSaving(true);
-            setError('');
-
-            // Validation
+            // setError('');
             if (!formData.fullName || !formData.phone || !formData.email) {
-                setError('Vui lòng điền đầy đủ thông tin bắt buộc');
+                // setError('Vui lòng điền đầy đủ thông tin bắt buộc');
+                toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
                 return;
             }
-            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.register}/${userId}`
+            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.register}/${userId}`;
             let data = new FormData();
             Object.entries(formData).forEach(([key, value]) => {
-                if (value !== userInfo[key]) {
-                    console.log(`newVal :${value} old:${userInfo[key]} `)
-                    data.append(key, value);
-                }
+                if (value !== userInfo[key]) data.append(key, value);
             });
-
-            console.log(Object.fromEntries(data.entries()));
-            console.log('url: ', url);
-            let res = await authApis(cookie.token).put(url, data, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
+            let res = await authApis(cookie.token).put(url, data, { headers: { "Content-Type": "multipart/form-data" } });
             if (res.status === 200) {
-                setSuccess('Cập nhật thông tin thành công!');
+                // setSuccess('Cập nhật thông tin thành công!');
+                toast.success('Cập nhật thông tin thành công!');
                 fetchUserProfile();
                 setIsEditing(false);
             }
-
-
         } catch (err) {
-            if (error.response) {
-                console.error("Backend error:", error.response.data);
-                setError("Có lỗi xảy ra");
-            } else {
-                console.error("Axios error:", error.message);
-                setError("Lỗi kết nối mạng");
-            }
+            // setError(err.response?.data?.message || 'Có lỗi xảy ra');
+            toast.error(err.response?.data?.message || 'Có lỗi xảy ra');
         } finally {
             setSaving(false);
         }
     };
 
     const handleChangePassword = async () => {
+        if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+            toast.error('Vui lòng điền đầy đủ thông tin mật khẩu'); return;
+        }
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            toast.error('Mật khẩu xác nhận không khớp'); return;
+        }
+        if (passwordData.newPassword.length < 6) {
+            toast.error('Mật khẩu mới phải có ít nhất 6 ký tự'); return;
+        }
         try {
-            if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
-                setError('Vui lòng điền đầy đủ thông tin mật khẩu');
-                return;
-            }
-
-            if (passwordData.newPassword !== passwordData.confirmPassword) {
-                setError('Mật khẩu xác nhận không khớp');
-                return;
-            }
-
-            if (passwordData.newPassword.length < 6) {
-                setError('Mật khẩu mới phải có ít nhất 6 ký tự');
-                return;
-            }
-
             setSaving(true);
-            setError('');
+            // setError('');
             const data = new FormData();
-            data.append("password", passwordData.newPassword)
-            console.log(data);
+            data.append("password", passwordData.newPassword);
             const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.register}/${userInfo.userId}`;
-            console.log("url :", url);
-            let res = await authApis(cookie.token).put(url, data, {
-                headers: { "Content-Type": "multipart/form-data" }
-            });
+            let res = await authApis(cookie.token).put(url, data, { headers: { "Content-Type": "multipart/form-data" } });
             if (res.status === 200) {
-                setSuccess('Đổi mật khẩu thành công!');
-                setPasswordData({
-                    currentPassword: '',
-                    newPassword: '',
-                    confirmPassword: ''
-                });
+                // setSuccess('Đổi mật khẩu thành công!');
+                toast.success('Đổi mật khẩu thành công!');
+                setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
                 setShowPasswordModal(false);
             }
-
-
         } catch (err) {
-            setError('Có lỗi xảy ra khi đổi mật khẩu');
+            // setError('Có lỗi xảy ra khi đổi mật khẩu');
+            toast.error('Có lỗi xảy ra khi đổi mật khẩu');
         } finally {
             setSaving(false);
         }
@@ -183,457 +126,193 @@ const ProfilePage = () => {
 
     const handleImageUpload = async (e) => {
         const file = e.target.files[0];
-       
-        if (file) {
-            console.log("file :",file);
-            try {
-                const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.register}/${userInfo.userId}`;
-                const data = new FormData();
-                data.append("avatar", file);
-                console.log(Object.fromEntries(data.entries()));
-                console.log('url: ', url);
-                let res = await authApis(cookie.token).patch(url, data, {
-                    headers: { "Content-Type": "multipart/form-data" },
-                });
-                if (res.status === 200) {
-                    setSuccess('Cập nhật thông tin thành công!');
-                    setIsEditing(false);
-                    fetchUserProfile();
-                }
-            } catch (error) {
-                if (error.response) {
-                    console.error("Backend error:", error.response.data);
-                    setError("Có lỗi xảy ra");
-                } else {
-                    console.error("Axios error:", error.message);
-                    setError("Lỗi kết nối mạng");
-                }
+        if (!file) return;
+        try {
+            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.register}/${userInfo.userId}`;
+            const data = new FormData();
+            data.append("avatar", file);
+            let res = await authApis(cookie.token).patch(url, data, { headers: { "Content-Type": "multipart/form-data" } });
+            if (res.status === 200) { 
+                // setSuccess('Cập nhật ảnh thành công!'); 
+                toast.success('Cập nhật ảnh thành công!'); 
+                fetchUserProfile(); 
             }
+        } catch (error) {
+            // setError(error.response ? "Có lỗi xảy ra" : "Lỗi kết nối mạng");
+            toast.error(error.response ? "Có lỗi xảy ra" : "Lỗi kết nối mạng");
         }
     };
 
     const cancelEdit = () => {
-        setFormData({
-            fullName: userInfo.fullName,
-            phone: userInfo.phone,
-            email: userInfo.email,
-            address: userInfo.address,
-            dob: userInfo.dob,
-            image: userInfo.image
-        });
+        setFormData({ fullName: userInfo.fullName, phone: userInfo.phone, email: userInfo.email, address: userInfo.address, dob: userInfo.dob });
         setIsEditing(false);
-        setError('');
+        // setError('');
     };
 
-    useEffect(() => {
-        fetchUserProfile();
-    }, []);
+    useEffect(() => { fetchUserProfile(); }, []);
 
-    useEffect(() => {
-        if (error || success) {
-            const timer = setTimeout(() => {
-                setError('');
-                setSuccess('');
-            }, 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [error, success]);
+    // --- Start Old Alert Effect ---
+    // useEffect(() => {
+    //     if (error || success) {
+    //         const timer = setTimeout(() => { setError(''); setSuccess(''); }, 3000);
+    //         return () => clearTimeout(timer);
+    //     }
+    // }, [error, success]);
+    // --- End Old Alert Effect ---
 
-    if (loading) {
-        return (
-            <div className="d-flex flex-column min-vh-100">
-                <Header />
-                <Container className="flex-grow-1 d-flex justify-content-center align-items-center">
-                    <SpinnerComp />
-                </Container>
-                <Footer />
-            </div>
-        );
-    }
+    if (loading) return (
+        <div className="flex flex-col min-h-screen">
+            <Header />
+            <div className="flex-1 flex items-center justify-center"><SpinnerComp /></div>
+            <Footer />
+        </div>
+    );
 
     return (
-        <div className="d-flex flex-column min-vh-100">
+        <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-950">
             <Header />
-            <Container className="flex-grow-1 my-5">
-                {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
-                {success && <Alert variant="success" className="mb-4">{success}</Alert>}
+            <main className="flex-1 container mx-auto px-4 py-10 max-w-3xl">
+                {/* Toast Alerts 
+                {error && (
+                    <div className="mb-4 flex items-center gap-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl font-medium text-sm">
+                        <span>⚠</span> {error}
+                    </div>
+                )}
+                {success && (
+                    <div className="mb-4 flex items-center gap-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 px-4 py-3 rounded-xl font-medium text-sm">
+                        <span>✓</span> {success}
+                    </div>
+                )}
+                */}
 
                 {userInfo && (
-                    <Row className="justify-content-center">
-                        <Col lg={8}>
-                            <Card style={{
-                                borderRadius: '20px',
-                                border: 'none',
-                                boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-                                overflow: 'hidden'
-                            }}>
-                                {/* Header */}
-                                <div style={{
-                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                    padding: '30px',
-                                    color: 'white',
-                                    position: 'relative'
-                                }}>
-                                    <div className="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <h3 style={{ marginBottom: '10px', fontWeight: '700' }}>
-                                                <FaUser className="me-3" />
-                                                Thông tin cá nhân
-                                            </h3>
-                                            <Badge
-                                                bg="light"
-                                                text="dark"
-                                                style={{ fontSize: '12px', padding: '5px 10px' }}
-                                            >
-                                                {userInfo.role === 'CUSTOMER' ? 'Khách hàng' : userInfo.role}
-                                            </Badge>
-                                        </div>
+                    <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-800">
+                        {/* Card Header */}
+                        <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-purple-700 p-8 text-white">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <h3 className="text-2xl font-extrabold flex items-center gap-3 mb-3">
+                                        <FaUser /> Thông tin cá nhân
+                                    </h3>
+                                    <span className="bg-white/20 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1.5 rounded-full">
+                                        {userInfo.role === 'CUSTOMER' ? 'Khách hàng' : userInfo.role}
+                                    </span>
+                                </div>
+                                <div className="flex gap-2">
+                                    {!isEditing ? (
+                                        <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-sm font-semibold px-4 py-2 rounded-xl transition">
+                                            <FaEdit /> Chỉnh sửa
+                                        </button>
+                                    ) : (
+                                        <>
+                                            <button onClick={() => handleSave(userInfo.userId)} disabled={saving} className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition disabled:opacity-70">
+                                                {saving ? <SpinnerComp className="w-4 h-4 border-2" /> : <><FaSave /> Lưu</>}
+                                            </button>
+                                            <button onClick={cancelEdit} className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white text-sm font-semibold px-4 py-2 rounded-xl transition">
+                                                <FaTimes /> Hủy
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
 
-                                        <div className="d-flex gap-2">
-                                            {!isEditing ? (
-                                                <Button
-                                                    variant="light"
-                                                    size="sm"
-                                                    onClick={() => setIsEditing(true)}
-                                                    style={{
-                                                        borderRadius: '10px',
-                                                        fontWeight: '600',
-                                                        padding: '8px 15px'
-                                                    }}
-                                                >
-                                                    <FaEdit className="me-1" />
-                                                    Chỉnh sửa
-                                                </Button>
-                                            ) : (
-                                                <>
-                                                    <Button
-                                                        variant="success"
-                                                        size="sm"
-                                                        onClick={() => handleSave(userInfo.userId)}
-                                                        disabled={saving}
-                                                        style={{
-                                                            borderRadius: '10px',
-                                                            fontWeight: '600',
-                                                            padding: '8px 15px'
-                                                        }}
-                                                    >
-                                                        {saving ? <SpinnerComp size="sm" /> : <><FaSave className="me-1" />Lưu</>}
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline-light"
-                                                        size="sm"
-                                                        onClick={cancelEdit}
-                                                        style={{
-                                                            borderRadius: '10px',
-                                                            fontWeight: '600',
-                                                            padding: '8px 15px'
-                                                        }}
-                                                    >
-                                                        <FaTimes className="me-1" />
-                                                        Hủy
-                                                    </Button>
-                                                </>
-                                            )}
-                                        </div>
+                        <div className="p-8">
+                            <div className="flex flex-col md:flex-row gap-8">
+                                {/* Avatar */}
+                                <div className="md:w-1/3 flex flex-col items-center shrink-0">
+                                    <div className="relative inline-block">
+                                        <img
+                                            src={avatar || 'https://via.placeholder.com/150'}
+                                            alt="Avatar"
+                                            className="w-36 h-36 rounded-full object-cover border-4 border-white shadow-xl"
+                                        />
+                                        {isEditing && (
+                                            <label className="absolute bottom-2 right-2 w-10 h-10 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg transition-transform hover:scale-110">
+                                                <FaCamera />
+                                                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                                            </label>
+                                        )}
+                                    </div>
+                                    <div className="text-center mt-4">
+                                        <h5 className="font-bold text-gray-900 dark:text-gray-100">{formData.fullName}</h5>
+                                        <p className="text-sm text-gray-500">@{userInfo.username}</p>
                                     </div>
                                 </div>
 
-                                <Card.Body style={{ padding: '40px' }}>
-                                    <Row>
-                                        {/* Avatar Section */}
-                                        <Col md={4} className="text-center mb-4">
-                                            <div style={{ position: 'relative', display: 'inline-block' }}>
-                                                <Image
-                                                    src={avatar || 'https://via.placeholder.com/150'}
-                                                    roundedCircle
-                                                    style={{
-                                                        width: '150px',
-                                                        height: '150px',
-                                                        objectFit: 'cover',
-                                                        border: '4px solid #f8f9fa',
-                                                        boxShadow: '0 8px 20px rgba(0,0,0,0.1)'
-                                                    }}
-                                                />
-                                                {isEditing && (
-                                                    <label
-                                                        style={{
-                                                            position: 'absolute',
-                                                            bottom: '10px',
-                                                            right: '10px',
-                                                            background: '#007bff',
-                                                            color: 'white',
-                                                            borderRadius: '50%',
-                                                            width: '40px',
-                                                            height: '40px',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            cursor: 'pointer',
-                                                            boxShadow: '0 4px 12px rgba(0,123,255,0.3)',
-                                                            transition: 'all 0.3s ease'
-                                                        }}
-                                                        onMouseEnter={(e) => {
-                                                            e.target.style.transform = 'scale(1.1)';
-                                                        }}
-                                                        onMouseLeave={(e) => {
-                                                            e.target.style.transform = 'scale(1)';
-                                                        }}
-                                                    >
-                                                        <FaCamera />
-                                                        <input
-                                                            type="file"
-                                                            accept="image/*"
-                                                            style={{ display: 'none' }}
-                                                            onChange={handleImageUpload}
-                                                        />
-                                                    </label>
-                                                )}
-                                            </div>
-                                            <div className="mt-3">
-                                                <h5 style={{ fontWeight: '600', color: '#333' }}>
-                                                    {formData.fullName}
-                                                </h5>
-                                                <p style={{ color: '#666', marginBottom: '0' }}>
-                                                    @{userInfo.username}
-                                                </p>
-                                            </div>
-                                        </Col>
-
-                                        {/* Form Section */}
-                                        <Col md={8}>
-                                            <Form>
-                                                <Row>
-                                                    <Col md={6}>
-                                                        <Form.Group className="mb-3">
-                                                            <Form.Label style={{ fontWeight: '600', color: '#333' }}>
-                                                                <FaUser className="me-2 text-primary" />
-                                                                Họ và tên *
-                                                            </Form.Label>
-                                                            <Form.Control
-                                                                type="text"
-                                                                name="fullName"
-                                                                value={formData.fullName}
-                                                                onChange={handleInputChange}
-                                                                disabled={!isEditing}
-                                                                style={{
-                                                                    borderRadius: '10px',
-                                                                    border: '2px solid #e9ecef',
-                                                                    fontSize: '15px',
-                                                                    padding: '12px 15px'
-                                                                }}
-                                                            />
-                                                        </Form.Group>
-                                                    </Col>
-                                                    <Col md={6}>
-                                                        <Form.Group className="mb-3">
-                                                            <Form.Label style={{ fontWeight: '600', color: '#333' }}>
-                                                                <FaPhone className="me-2 text-success" />
-                                                                Số điện thoại *
-                                                            </Form.Label>
-                                                            <Form.Control
-                                                                type="tel"
-                                                                name="phone"
-                                                                value={formData.phone}
-                                                                onChange={handleInputChange}
-                                                                disabled={!isEditing}
-                                                                style={{
-                                                                    borderRadius: '10px',
-                                                                    border: '2px solid #e9ecef',
-                                                                    fontSize: '15px',
-                                                                    padding: '12px 15px'
-                                                                }}
-                                                            />
-                                                        </Form.Group>
-                                                    </Col>
-                                                </Row>
-
-                                                <Row>
-                                                    <Col md={6}>
-                                                        <Form.Group className="mb-3">
-                                                            <Form.Label style={{ fontWeight: '600', color: '#333' }}>
-                                                                <FaEnvelope className="me-2 text-danger" />
-                                                                Email *
-                                                            </Form.Label>
-                                                            <Form.Control
-                                                                type="email"
-                                                                name="email"
-                                                                value={formData.email}
-                                                                onChange={handleInputChange}
-                                                                disabled={!isEditing}
-                                                                style={{
-                                                                    borderRadius: '10px',
-                                                                    border: '2px solid #e9ecef',
-                                                                    fontSize: '15px',
-                                                                    padding: '12px 15px'
-                                                                }}
-                                                            />
-                                                        </Form.Group>
-                                                    </Col>
-                                                    <Col md={6}>
-                                                        <Form.Group className="mb-3">
-                                                            <Form.Label style={{ fontWeight: '600', color: '#333' }}>
-                                                                <FaCalendarAlt className="me-2 text-warning" />
-                                                                Ngày sinh
-                                                            </Form.Label>
-                                                            <Form.Control
-                                                                type="date"
-                                                                name="dob"
-                                                                value={formData.dob}
-                                                                onChange={handleInputChange}
-                                                                disabled={!isEditing}
-                                                                style={{
-                                                                    borderRadius: '10px',
-                                                                    border: '2px solid #e9ecef',
-                                                                    fontSize: '15px',
-                                                                    padding: '12px 15px'
-                                                                }}
-                                                            />
-                                                        </Form.Group>
-                                                    </Col>
-                                                </Row>
-
-                                                <Form.Group className="mb-4">
-                                                    <Form.Label style={{ fontWeight: '600', color: '#333' }}>
-                                                        <FaMapMarkerAlt className="me-2 text-info" />
-                                                        Địa chỉ
-                                                    </Form.Label>
-                                                    <Form.Control
-                                                        as="textarea"
-                                                        rows={2}
-                                                        name="address"
-                                                        value={formData.address}
-                                                        onChange={handleInputChange}
-                                                        disabled={!isEditing}
-                                                        style={{
-                                                            borderRadius: '10px',
-                                                            border: '2px solid #e9ecef',
-                                                            fontSize: '15px',
-                                                            padding: '12px 15px',
-                                                            resize: 'none'
-                                                        }}
-                                                    />
-                                                </Form.Group>
-
-                                                <div className="text-center">
-                                                    <Button
-                                                        variant="outline-secondary"
-                                                        onClick={() => setShowPasswordModal(true)}
-                                                        style={{
-                                                            borderRadius: '10px',
-                                                            fontWeight: '600',
-                                                            padding: '10px 20px'
-                                                        }}
-                                                    >
-                                                        Đổi mật khẩu
-                                                    </Button>
-                                                </div>
-                                            </Form>
-                                        </Col>
-                                    </Row>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                    </Row>
-                )}
-
-                {/* Password Change Modal */}
-                <Modal show={showPasswordModal} onHide={() => setShowPasswordModal(false)} centered>
-                    <Modal.Header closeButton style={{ borderRadius: '20px 20px 0 0' }}>
-                        <Modal.Title> Đổi mật khẩu</Modal.Title>
-                    </Modal.Header>
-                    <Modal.Body style={{ padding: '30px' }}>
-                        <Form>
-                            <Form.Group className="mb-3">
-                                <Form.Label style={{ fontWeight: '600' }}>Mật khẩu hiện tại *</Form.Label>
-                                <div style={{ position: 'relative' }}>
-                                    <Form.Control
-                                        type={showPassword ? 'text' : 'password'}
-                                        name="currentPassword"
-                                        value={passwordData.currentPassword}
-                                        onChange={handlePasswordChange}
-                                        style={{
-                                            borderRadius: '10px',
-                                            border: '2px solid #e9ecef',
-                                            fontSize: '15px',
-                                            padding: '12px 45px 12px 15px'
-                                        }}
-                                    />
-                                    <Button
-                                        variant="link"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        style={{
-                                            position: 'absolute',
-                                            right: '10px',
-                                            top: '50%',
-                                            transform: 'translateY(-50%)',
-                                            border: 'none',
-                                            color: '#666'
-                                        }}
-                                    >
-                                        {showPassword ? <FaEyeSlash /> : <FaEye />}
-                                    </Button>
+                                {/* Form */}
+                                <div className="flex-1 space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className={labelCls}><FaUser className="text-primary" /> Họ và tên *</label>
+                                            <input type="text" name="fullName" value={formData.fullName} onChange={handleInputChange} disabled={!isEditing} className={inputCls} />
+                                        </div>
+                                        <div>
+                                            <label className={labelCls}><FaPhone className="text-green-500" /> Số điện thoại *</label>
+                                            <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} disabled={!isEditing} className={inputCls} />
+                                        </div>
+                                        <div>
+                                            <label className={labelCls}><FaEnvelope className="text-red-500" /> Email *</label>
+                                            <input type="email" name="email" value={formData.email} onChange={handleInputChange} disabled={!isEditing} className={inputCls} />
+                                        </div>
+                                        <div>
+                                            <label className={labelCls}><FaCalendarAlt className="text-yellow-500" /> Ngày sinh</label>
+                                            <input type="date" name="dob" value={formData.dob} onChange={handleInputChange} disabled={!isEditing} className={inputCls} />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className={labelCls}><FaMapMarkerAlt className="text-blue-500" /> Địa chỉ</label>
+                                        <textarea name="address" value={formData.address} onChange={handleInputChange} disabled={!isEditing} rows={2} className={`${inputCls} resize-none`} />
+                                    </div>
+                                    <div className="pt-2">
+                                        <button onClick={() => setShowPasswordModal(true)} className="text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition border border-gray-200 dark:border-gray-700 px-4 py-2 rounded-xl">
+                                            🔑 Đổi mật khẩu
+                                        </button>
+                                    </div>
                                 </div>
-                            </Form.Group>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </main>
 
-                            <Form.Group className="mb-3">
-                                <Form.Label style={{ fontWeight: '600' }}>Mật khẩu mới *</Form.Label>
-                                <Form.Control
-                                    type="password"
-                                    name="newPassword"
-                                    value={passwordData.newPassword}
-                                    onChange={handlePasswordChange}
-                                    style={{
-                                        borderRadius: '10px',
-                                        border: '2px solid #e9ecef',
-                                        fontSize: '15px',
-                                        padding: '12px 15px'
-                                    }}
-                                />
-                            </Form.Group>
+            {/* Password Modal */}
+            {showPasswordModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowPasswordModal(false)}></div>
+                    <div className="relative z-10 bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-md mx-4 p-8 border border-gray-100 dark:border-gray-800">
+                        <h3 className="text-xl font-extrabold text-gray-900 dark:text-gray-100 mb-6">🔑 Đổi mật khẩu</h3>
+                        <div className="space-y-4">
+                            <div>
+                                <label className={labelCls}>Mật khẩu hiện tại *</label>
+                                <div className="relative">
+                                    <input type={showPassword ? 'text' : 'password'} name="currentPassword" value={passwordData.currentPassword} onChange={handlePasswordChange} className={`${inputCls} pr-12`} />
+                                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                        {showPassword ? <FaEyeSlash /> : <FaEye />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className={labelCls}>Mật khẩu mới *</label>
+                                <input type="password" name="newPassword" value={passwordData.newPassword} onChange={handlePasswordChange} className={inputCls} />
+                            </div>
+                            <div>
+                                <label className={labelCls}>Xác nhận mật khẩu mới *</label>
+                                <input type="password" name="confirmPassword" value={passwordData.confirmPassword} onChange={handlePasswordChange} className={inputCls} />
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3 mt-6">
+                            <button onClick={() => { setShowPasswordModal(false); setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' }); }} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                                Hủy
+                            </button>
+                            <button onClick={handleChangePassword} disabled={saving} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary-active disabled:opacity-70 transition shadow-lg shadow-primary/20">
+                                {saving ? <SpinnerComp className="w-4 h-4 border-2" /> : 'Đổi mật khẩu'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
-                            <Form.Group className="mb-3">
-                                <Form.Label style={{ fontWeight: '600' }}>Xác nhận mật khẩu mới *</Form.Label>
-                                <Form.Control
-                                    type="password"
-                                    name="confirmPassword"
-                                    value={passwordData.confirmPassword}
-                                    onChange={handlePasswordChange}
-                                    style={{
-                                        borderRadius: '10px',
-                                        border: '2px solid #e9ecef',
-                                        fontSize: '15px',
-                                        padding: '12px 15px'
-                                    }}
-                                />
-                            </Form.Group>
-                        </Form>
-                    </Modal.Body>
-                    <Modal.Footer style={{ borderTop: 'none', padding: '0 30px 30px' }}>
-                        <Button
-                            variant="outline-secondary"
-                            onClick={() => {
-                                setShowPasswordModal(false);
-                                setPasswordData({
-                                    currentPassword: '',
-                                    newPassword: '',
-                                    confirmPassword: ''
-                                });
-                            }}
-                            style={{ borderRadius: '10px', fontWeight: '600' }}
-                        >
-                            Hủy
-                        </Button>
-                        <Button
-                            variant="primary"
-                            onClick={handleChangePassword}
-                            disabled={saving}
-                            style={{ borderRadius: '10px', fontWeight: '600' }}
-                        >
-                            {saving ? <SpinnerComp size="sm" /> : 'Đổi mật khẩu'}
-                        </Button>
-                    </Modal.Footer>
-                </Modal>
-            </Container>
             <Footer />
         </div>
     );

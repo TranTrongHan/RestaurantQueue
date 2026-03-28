@@ -1,35 +1,35 @@
-import React, { useContext, useEffect, useState } from 'react';
-import { Container } from 'react-bootstrap';
+import React from 'react';
 import Header from '../layout/Header';
 import Footer from '../layout/Footer';
-import { MyUserContext } from '../configs/Context';
+import useUserStore from '../../store/useUserStore';
 import CommentSection from '../layout/CommentSection/CommenSection';
-import { CardElement, useElements, useStripe } from '@stripe/react-stripe-js';
-
 
 const HomePage = () => {
-  const [user,] = useContext(MyUserContext);
-
+  const { user } = useUserStore();
 
   return (
-    <>
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
+      <Header />
 
-      <div className="d-flex flex-column min-vh-100">
-        <Header user={user} />
-
-        <Container className="flex-grow-1 my-5">
-          <h1 className="text-center mb-4">Chào mừng đến với Nhà Hàng</h1>
-          <p className="text-center">
-            Thưởng thức ẩm thực đẳng cấp với không gian sang trọng và dịch vụ chuyên nghiệp.
+      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 dark:text-gray-100 mb-6 tracking-tight">
+            Chào mừng đến với <span className="text-primary block mt-2">Nhà Hàng Của Chúng Tôi</span>
+          </h1>
+          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed">
+            Thưởng thức ẩm thực đẳng cấp với không gian sang trọng, nguyên liệu tươi ngon và dịch vụ chuẩn 5 sao.
           </p>
-          {user && <CommentSection />}
-  
-        </Container>
+        </div>
 
-        <Footer />
-      </div>
-    </>
+        {/* {user && (
+          <div className="max-w-4xl mx-auto mt-8 bg-white dark:bg-gray-900 rounded-2xl shadow-card p-6 md:p-8 border border-gray-100 dark:border-gray-800">
+             <CommentSection />
+          </div>
+        )} */}
+      </main>
 
+      <Footer />
+    </div>
   );
 };
 

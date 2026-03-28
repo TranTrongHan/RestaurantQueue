@@ -3,415 +3,227 @@ import { authApis, endpoints } from "../configs/Apis";
 import { useCookies } from "react-cookie";
 import Header from "../layout/Header";
 import Footer from "../layout/Footer";
-import { Container, Card, Row, Col, Spinner, Alert, Form, Button } from "react-bootstrap";
-import moment from 'moment';
-import AlertComp from "../common/AlertComp";
+import moment from "moment";
 import SpinnerComp from "../common/SpinnerComp";
+import { Users, Clock, Mail, Phone, StickyNote, Search, ListFilter, CheckCircle2, LogIn } from "lucide-react";
+import toast from 'react-hot-toast';
+
+const STATUS_MAP = {
+    BOOKED:     { label: "Đã đặt",      cls: "bg-success/10 text-success border-success/30" },
+    CHECKEDIN:  { label: "Đã check-in", cls: "bg-primary/10 text-primary border-primary/30" },
+    CHECKEDOUT: { label: "Đã checkout", cls: "bg-gray-100 dark:bg-gray-700 text-gray-500 border-gray-200 dark:border-gray-600" },
+};
+const StatusBadge = ({ status }) => {
+    const s = STATUS_MAP[status] || { label: status, cls: "bg-gray-100 text-gray-500 border-gray-200" };
+    return (
+        <span className={`inline-flex items-center text-[11px] font-bold px-2.5 py-1 rounded-full border tracking-wide uppercase ${s.cls}`}>
+            {s.label}
+        </span>
+    );
+};
 
 const ReservationsPages = () => {
     const [reservations, setReservations] = useState([]);
-    const [cookies,] = useCookies(["token"]);
+    const [cookies] = useCookies(["token"]);
     const [loading, setLoading] = useState(false);
+    const [loadingBtn, setLoadingBtn] = useState(null); // reservationId being processed
     const [error, setError] = useState(null);
+    // const [success, setSuccess] = useState(null);
     const [search, setSearch] = useState("");
     const [status, setStatus] = useState("BOOKED");
-    const [loadingBtn, setLoadingBtn] = useState(false);
-    const [sucess, setSucess] = useState(null);
+
     const fetchReservations = async () => {
         try {
             setLoading(true);
-            let url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['booking']}`;
-            if (search) {
-                console.log("has search");
-                url = `${url}?customer=${search}`;
-            }
-            if(status){
-                url = `${url}${search ? '&' : '?'}status=${status}`;
-            }
-            console.log("fetching url: ", url);
-            let res = await authApis(cookies.token).get(url);
-            if (res.status === 200) {
-                setReservations(res.data.result);
-            }
-        } catch (error) {
-            if (error.response) {
-                console.error("Backend error:", error.response.data);
-                setError("Lỗi từ máy chủ: " + error.response.data.message);
-            } else {
-                console.error("Axios error:", error.message);
-                setError("Lỗi kết nối mạng. Vui lòng thử lại sau.");
-            }
+            let url = `${import.meta.env.VITE_API_BASE_URL}${endpoints["booking"]}`;
+            const params = [];
+            if (search) params.push(`customer=${search}`);
+            if (status) params.push(`status=${status}`);
+            if (params.length) url += `?${params.join("&")}`;
+            const res = await authApis(cookies.token).get(url);
+            if (res.status === 200) setReservations(res.data.result);
+        } catch (err) {
+            setError(err.response?.data?.message || "Lỗi kết nối mạng. Vui lòng thử lại sau.");
         } finally {
             setLoading(false);
         }
-    }
-    useEffect(() => {
-
-        fetchReservations();
-
-    }, []);
-    useEffect(() => {
-        if (search || status) {
-            fetchReservations();
-        }
-    }, [search,status]);
-
-    const formatTime = (time) => {
-        return moment(time).format("HH:mm:ss DD/MM/YYYY");
     };
-    const handleChange = (e) => {
-        setSearch(e.target.value);
-        console.log("value: ", e.target.value);
-    }
+
+    useEffect(() => { fetchReservations(); }, []);
+    useEffect(() => { fetchReservations(); }, [search, status]);
+
+    // useEffect(() => {
+    //     if (success) { const t = setTimeout(() => setSuccess(null), 2500); return () => clearTimeout(t); }
+    // }, [success]);
+
     const handleCheckin = async (reservationId) => {
         try {
-            setLoadingBtn(true);
-            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['booking']}/${reservationId}`;
-            console.log("posting url", url);
-            let res = await authApis(cookies.token).post(url);
+            setLoadingBtn(reservationId);
+            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints["booking"]}/${reservationId}`;
+            const res = await authApis(cookies.token).post(url);
             if (res.status === 200) {
-                setSucess("Checkin thành công");
+                // setSuccess("Check-in thành công!");
+                toast.success("Check-in thành công!");
                 fetchReservations();
-                const session_token = res.data.result.sessionToken;
-                const customerJwt = res.data.result.customerJwt || null;
-                const sessionId = res.data.result.sessionId || null;
-                if (session_token) {
-                    console.log("jwt being sent: ", customerJwt)
-                    const session_url = `${import.meta.env.VITE_CONTEXT_PATH}/order_session?token=${session_token}&sessionId=${sessionId}`;
-                    console.log("sessionPageUrl: ", session_url);
-                    const newWindow = window.open(session_url, "_blank");
+                const { sessionToken, customerJwt, sessionId } = res.data.result;
+                if (sessionToken) {
+                    const sessionUrl = `${import.meta.env.VITE_CONTEXT_PATH}/order_session?token=${sessionToken}&sessionId=${sessionId}`;
+                    const newWindow = window.open(sessionUrl, "_blank");
                     if (newWindow) {
-                        newWindow.onload = () => {
-                            newWindow.postMessage(
-                                customerJwt,
-                                window.location.origin
-                            );
-                        };
+                        newWindow.onload = () => newWindow.postMessage(customerJwt, window.location.origin);
                     }
                 }
-
             }
-        } catch (error) {
-            if (error.response) {
-                console.error("Backend error:", error.response.data);
-                setError("Lỗi từ máy chủ: " + error.response.data.message);
-            } else {
-                console.error("Axios error:", error.message);
-                setError("Lỗi kết nối mạng. Vui lòng thử lại sau.");
-            }
+        } catch (err) {
+            // setError(err.response?.data?.message || "Lỗi kết nối mạng.");
+            toast.error(err.response?.data?.message || "Lỗi kết nối mạng.");
         } finally {
-            setLoadingBtn(false);
-        }
-    }
-    useEffect(() => {
-        if (sucess) {
-            const timer = setTimeout(() => {
-                setSucess(null);
-                return () => clearTimeout(timer);
-            }, 2000)
-
-        }
-    }, [sucess])
-
-    const statusStyle = (status) => {
-        switch (status) {
-            case 'BOOKED':
-                return {
-                    color: '#ffffff',
-                    backgroundColor: '#11b139ff',
-                    padding: '6px 12px',
-                    borderRadius: '12px',
-                    fontSize: '0.85rem',
-                    fontWeight: '500',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                };
-            default:
-                return {
-                    color: '#ffffff',
-                    backgroundColor: '#757575',
-                    padding: '6px 12px',
-                    borderRadius: '12px',
-                    fontSize: '0.85rem',
-                    fontWeight: '500',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                };
+            setLoadingBtn(null);
         }
     };
-    const handleSelect = (e) => {
-        console.log("status selected: ", e.target.value);
-        setStatus(e.target.value);
-    }
+
     return (
-        <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            minHeight: '100vh',
-            background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e9f0 100%)'
-        }}>
+        <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-950">
             <Header />
-            <Container style={{
-                flex: 1,
-                padding: '40px 20px',
-                maxWidth: '1400px',
-                marginTop: '20px',
-                marginBottom: '40px'
-            }}>
-                <Row className="d-flex align-items-start ">
-                    <Col md={6} lg={6}>
-                        <Form style={{
-                            marginBottom: '30px',
-                            maxWidth: '600px',
-                            marginLeft: 'auto',
-                            marginRight: 'auto'
-                        }}>
-                            <Form.Group controlId="searchBar">
-                                <Form.Control
-                                    type="text"
-                                    placeholder="Tìm kiếm theo tên khách hàng hoặc tên bàn..."
-                                    value={search}
-                                    onChange={handleChange}
-                                    style={{
-                                        padding: '12px 20px',
-                                        fontSize: '1rem',
-                                        borderRadius: '25px',
-                                        border: '1px solid #e0e0e0',
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-                                        outline: 'none',
-                                        transition: 'all 0.3s ease',
-                                        backgroundColor: '#ffffff'
-                                    }}
-                                    onFocus={(e) => e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'}
-                                    onBlur={(e) => e.target.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)'}
-                                />
-                            </Form.Group>
 
-                        </Form>
-                    </Col>
-                    <Col md={6} lg={6} >
-                        <Form.Select aria-label="Default select example" onChange={handleSelect} value={status}>
-                            <option >Chọn trạng thái đơn đặt bàn</option>
-                            <option value="BOOKED" >Đã đặt bàn</option>
-                            <option value="CHECKEDIN" >Đã checkin</option>
+            <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
+                {/* Page Header */}
+                <div className="mb-7">
+                    <h1 className="text-2xl font-extrabold text-gray-900 dark:text-gray-100 mb-1">Quản lý đặt bàn</h1>
+                    <p className="text-sm text-gray-500">{reservations.length} kết quả đang hiển thị</p>
+                </div>
+
+                {/* Filters */}
+                <div className="flex flex-col sm:flex-row gap-3 mb-7">
+                    {/* Search */}
+                    <div className="relative flex-1 max-w-md">
+                        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Tìm theo tên khách hàng hoặc tên bàn..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-primary transition"
+                        />
+                    </div>
+
+                    {/* Status filter */}
+                    <div className="relative">
+                        <ListFilter size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                        <select
+                            value={status}
+                            onChange={(e) => setStatus(e.target.value)}
+                            className="pl-10 pr-4 py-2.5 text-sm rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-primary transition appearance-none cursor-pointer"
+                        >
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="BOOKED">Đã đặt bàn</option>
+                            <option value="CHECKEDIN">Đã check-in</option>
                             <option value="CHECKEDOUT">Đã checkout</option>
-                        </Form.Select>
-                    </Col>
+                        </select>
+                    </div>
+                </div>
 
-                </Row>
-                {loading && (
-                    <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '15px',
-                        padding: '20px',
-                        backgroundColor: '#ffffff',
-                        borderRadius: '15px',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
-                    }}>
-                        <Spinner animation="border" style={{
-                            color: '#d32f2f',
-                            width: '3rem',
-                            height: '3rem'
-                        }} />
-                        <p style={{
-                            margin: 0,
-                            color: '#333333',
-                            fontSize: '1.1rem',
-                            fontWeight: '500'
-                        }}>
-                            Đang tải dữ liệu...
-                        </p>
+                {/* Notifications */}
+                {/* 
+                {success && (
+                    <div className="flex items-center gap-3 mb-5 bg-success/10 border border-success/30 text-success px-5 py-3.5 rounded-2xl text-sm font-medium">
+                        <CheckCircle2 size={17} className="shrink-0" /> {success}
+                    </div>
+                )}
+                */}
+                {error && (
+                    <div className="mb-5 bg-danger/10 border border-danger/30 text-danger px-5 py-3.5 rounded-2xl text-sm font-medium">
+                        ⚠ {error}
                     </div>
                 )}
 
-                {error && (
-                    <Alert variant="danger" style={{
-                        textAlign: 'center',
-                        padding: '20px',
-                        borderRadius: '15px',
-                        backgroundColor: '#ffebee',
-                        color: '#c62828',
-                        fontWeight: '500',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                        marginBottom: '30px'
-                    }}>
-                        {error}
-                    </Alert>
-                )}
-                {sucess && <AlertComp variant="success" lable={sucess} />}
-                {!loading && !error && reservations.length === 0 && (
-                    <Alert variant="info" style={{
-                        textAlign: 'center',
-                        padding: '20px',
-                        borderRadius: '15px',
-                        backgroundColor: '#e3f2fd',
-                        color: '#1565c0',
-                        fontWeight: '500',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                        marginBottom: '30px'
-                    }}>
-                        Hiện không có đơn đặt bàn nào.
-                    </Alert>
+                {/* Loading */}
+                {loading && (
+                    <div className="flex justify-center py-20"><SpinnerComp /></div>
                 )}
 
-                <Row>
-                    {reservations.map(res => (
-                        <Col xs={2} md={4} lg={4} key={res.reservationId} style={{ marginTop: 10 }}>
-                            <Card style={{
-                                height: '100%',
-                                borderRadius: '15px',
-                                border: 'none',
-                                backgroundColor: '#ffffff',
-                                boxShadow: '0 6px 20px rgba(0,0,0,0.1)',
-                                overflow: 'hidden',
-                                transition: 'transform 0.3s ease, box-shadow 0.3s ease'
-                            }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(-5px)';
-                                    e.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,0.15)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.1)';
-                                }}>
-                                <Card.Header style={{
-                                    backgroundColor: '#d32f2f',
-                                    color: '#ffffff',
-                                    padding: '15px 20px',
-                                    borderBottom: 'none'
-                                }}>
-                                    <div style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center'
-                                    }}>
-                                        <h5 style={{
-                                            margin: 0,
-                                            fontSize: '1.3rem',
-                                            fontWeight: '600',
-                                            letterSpacing: '0.5px'
-                                        }}>
-                                            {res.tableResponse.tableName}
-                                        </h5>
-                                        <span style={statusStyle(res.status)}>
-                                            {res.status}
-                                        </span>
+                {/* Empty State */}
+                {!loading && reservations.length === 0 && (
+                    <div className="text-center py-24 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-card">
+                        <ListFilter size={52} className="text-gray-200 dark:text-gray-700 mx-auto mb-4" />
+                        <h3 className="text-lg font-bold text-gray-400 dark:text-gray-500 mb-1">Không có đơn đặt bàn nào</h3>
+                        <p className="text-sm text-gray-400">Thử thay đổi bộ lọc để xem thêm kết quả.</p>
+                    </div>
+                )}
+
+                {/* Cards Grid */}
+                {!loading && reservations.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {reservations.map((res) => (
+                            <div
+                                key={res.reservationId}
+                                className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-card overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/10"
+                            >
+                                {/* Card Header */}
+                                <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-primary to-primary-active text-white">
+                                    <h3 className="font-extrabold text-lg">{res.tableResponse.tableName}</h3>
+                                    <StatusBadge status={res.status} />
+                                </div>
+
+                                {/* Card Body */}
+                                <div className="px-5 py-4 space-y-2.5">
+                                    <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                        <Users size={14} className="text-primary shrink-0" />
+                                        <span><strong>Khách hàng:</strong> {res.customerResponse.fullName}</span>
                                     </div>
-                                </Card.Header>
-                                <Card.Body style={{
-                                    padding: '20px',
-                                    backgroundColor: '#fafafa'
-                                }}>
-                                    <p style={{
-                                        marginBottom: '12px',
-                                        fontSize: '1rem',
-                                        color: '#333333',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px'
-                                    }}>
-                                        <strong style={{ color: '#d32f2f', fontWeight: '600' }}>Khách hàng:</strong>
-                                        {res.customerResponse.fullName}
-                                    </p>
-                                    <p style={{
-                                        marginBottom: '12px',
-                                        fontSize: '1rem',
-                                        color: '#333333',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px'
-                                    }}>
-                                        <strong style={{ color: '#d32f2f', fontWeight: '600' }}>Thời gian:</strong>
-                                        {formatTime(res.checkinTime)}
-                                    </p>
-                                    <p style={{
-                                        marginBottom: '12px',
-                                        fontSize: '1rem',
-                                        color: '#333333',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px'
-                                    }}>
-                                        <strong style={{ color: '#d32f2f', fontWeight: '600' }}>Số người:</strong>
-                                        {res.tableResponse.capacity}
-                                    </p>
-                                    <hr style={{
-                                        borderTop: '1px solid #e0e0e0',
-                                        margin: '15px 0'
-                                    }} />
-                                    <p style={{
-                                        marginBottom: '8px',
-                                        fontSize: '0.95rem',
-                                        color: '#555555'
-                                    }}>
-                                        <strong style={{ color: '#333333' }}>Email:</strong> {res.customerResponse.email}
-                                    </p>
-                                    <p style={{
-                                        marginBottom: '8px',
-                                        fontSize: '0.95rem',
-                                        color: '#555555'
-                                    }}>
-                                        <strong style={{ color: '#333333' }}>Số điện thoại:</strong> {res.customerResponse.phone}
-                                    </p>
-                                    {res.note && (
-                                        <p style={{
-                                            marginTop: '12px',
-                                            fontSize: '0.95rem',
-                                            color: '#666666',
-                                            backgroundColor: '#f5f5f5',
-                                            padding: '10px',
-                                            borderRadius: '8px'
-                                        }}>
-                                            <strong style={{ color: '#333333' }}>Ghi chú:</strong> {res.note}
-                                        </p>
-                                    )}
-                                </Card.Body>
-                                <Card.Footer style={{
-                                    backgroundColor: '#ffffff',
-                                    borderTop: '1px solid #e0e0e0',
-                                    padding: '15px 20px',
-                                    display: 'flex',
-                                    justifyContent: 'flex-end'
-                                }}>
-                                    <Button
-                                        style={{
-                                            backgroundColor: '#d32f2f',
-                                            border: 'none',
-                                            borderRadius: '25px',
-                                            padding: '10px 20px',
-                                            fontSize: '1rem',
-                                            fontWeight: '500',
-                                            color: '#ffffff',
-                                            transition: 'all 0.3s ease',
-                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                                        }}
-                                        disabled={loadingBtn || res.status === "CHECKEDOUT"}
-                                        onClick={() => handleCheckin(res.reservationId)}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#b71c1c';
-                                            e.currentTarget.style.transform = 'scale(1.05)';
-                                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#d32f2f';
-                                            e.currentTarget.style.transform = 'scale(1)';
-                                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
-                                        }}
-                                    >
-                                        {loadingBtn && <SpinnerComp />} Checkin
-                                    </Button>
-                                </Card.Footer>
-                            </Card>
-                        </Col>
-                    ))}
-                </Row>
+                                    <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                        <Clock size={14} className="text-warning shrink-0" />
+                                        <span><strong>Check-in:</strong> {moment(res.checkinTime).format("HH:mm DD/MM/YYYY")}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                        <Users size={14} className="text-gray-400 shrink-0" />
+                                        <span><strong>Số người:</strong> {res.tableResponse.capacity}</span>
+                                    </div>
 
-            </Container>
+                                    <div className="border-t border-gray-100 dark:border-gray-800 pt-2.5 mt-2.5 space-y-2">
+                                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                            <Mail size={12} className="shrink-0" />
+                                            {res.customerResponse.email}
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                            <Phone size={12} className="shrink-0" />
+                                            {res.customerResponse.phone}
+                                        </div>
+                                        {res.note && (
+                                            <div className="flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400 italic">
+                                                <StickyNote size={12} className="shrink-0 mt-0.5" />
+                                                <span className="line-clamp-2">{res.note}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Card Footer - Checkin Button */}
+                                <div className="px-5 pb-5">
+                                    <button
+                                        onClick={() => handleCheckin(res.reservationId)}
+                                        disabled={loadingBtn === res.reservationId || res.status === "CHECKEDOUT"}
+                                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-sm text-white bg-primary hover:bg-primary-active transition-all shadow-md shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {loadingBtn === res.reservationId ? (
+                                            <SpinnerComp className="w-4 h-4 border-2" />
+                                        ) : (
+                                            <>
+                                                <LogIn size={15} />
+                                                Check-in
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </main>
+
             <Footer />
         </div>
     );
-}
+};
 
 export default ReservationsPages;

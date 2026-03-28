@@ -1,25 +1,43 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { authApis, endpoints } from "../configs/Apis";
 import { useCookies } from "react-cookie";
 import SpinnerComp from "../common/SpinnerComp";
-import AlertComp from "../common/AlertComp";
 import Header from "../layout/Header";
 import Footer from "../layout/Footer";
-import { Container, Card, Row, Col, Badge, Form, Button, Table, Modal } from "react-bootstrap";
-import { 
-    FaChair, 
-    FaCalendarAlt, 
-    FaClock, 
-    FaUser, 
-    FaStickyNote, 
-    FaReceipt, 
-    FaCreditCard, 
-    FaCheck,
-
-} from "react-icons/fa";
+import useUserStore from "../../store/useUserStore";
 import dayjs from "dayjs";
-import { MyUserContext } from "../configs/Context";
+import {
+    ArrowLeft, Users, User, CalendarDays, Clock, StickyNote,
+    Receipt, CreditCard, Check, AlertCircle, CheckCircle, XCircle, Pencil
+} from "lucide-react";
+import toast from 'react-hot-toast';
+
+const STATUS_MAP = {
+    BOOKED:     { label: "Đã đặt",        cls: "bg-success/10 text-success border-success/30" },
+    CANCELED:   { label: "Đã hủy",        cls: "bg-danger/10 text-danger border-danger/30" },
+    CHECKED_IN: { label: "Đã nhận bàn",   cls: "bg-primary/10 text-primary border-primary/30" },
+    CHECKEDOUT: { label: "Đã thanh toán", cls: "bg-gray-100 dark:bg-gray-800 text-gray-500 border-gray-200" },
+};
+
+const StatusBadge = ({ status }) => {
+    const s = STATUS_MAP[status] || { label: status, cls: "bg-gray-100 text-gray-500 border-gray-200" };
+    return (
+        <span className={`inline-flex items-center text-xs font-bold px-3 py-1 rounded-full border ${s.cls}`}>
+            {s.label}
+        </span>
+    );
+};
+
+const InfoRow = ({ icon: Icon, iconCls = "text-primary", label, value }) => (
+    <div className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-400">
+        <Icon size={15} className={`${iconCls} shrink-0 mt-0.5`} />
+        <span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100">{label}: </span>
+            {value}
+        </span>
+    </div>
+);
 
 const ReservationDetailPage = () => {
     const { id } = useParams();
@@ -29,377 +47,310 @@ const ReservationDetailPage = () => {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
     const nav = useNavigate();
-    const [user,] = useContext(MyUserContext);
-    const [show, setShow] = useState(false);
+    const { user } = useUserStore();
+    const [showLoginModal, setShowLoginModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [newCheckinTime, setNewCheckinTime] = useState("");
+
+    const formatPrice = (p) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(p);
+    const formatDateTime = (dt) => {
+        if (!dt) return "Chưa có";
+        return new Date(dt).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" });
+    };
+
     const fetchReservationDetail = async () => {
-        if (!user) {
-            setShow(true);
-            return;
-        }
+        if (!user) { setShowLoginModal(true); return; }
         try {
             setLoading(true);
             const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints["booking"]}/${id}`;
-            let res = await authApis(cookies.token).get(url);
+            const res = await authApis(cookies.token).get(url);
             if (res.data.code === 200) {
                 setReservation(res.data.result);
                 setError(null);
-            } else {
-                setError("Không tìm thấy đặt bàn.");
             }
         } catch (err) {
-            console.log(err.message);
-            setError(err.message);
-            if (err.response) {
-                if (err.response.data.code === 9997) {
-                    setError("Không có quyền truy cập!")
-                }
-            }
+            if (err.response?.data?.code === 9997) setError("Không có quyền truy cập!");
+            else setError(err.message || "Không tìm thấy đặt bàn.");
         } finally {
             setLoading(false);
         }
-    };
-
-    useEffect(() => {
-        fetchReservationDetail();
-    }, [id]);
-
-
-    const getBillStatusBadge = (status) => {
-        switch (status) {
-            case "PAID":
-                return <Badge bg="success"><FaCheck className="me-1"/>Đã thanh toán</Badge>;
-            case "PENDING":
-                return <Badge bg="warning" text="dark">Chờ thanh toán</Badge>;
-            default:
-                return <Badge bg="secondary">{status}</Badge>;
-        }
-    };
-
-    const formatPrice = (price) => {
-        return new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND'
-        }).format(price);
-    };
-
-    const formatDateTime = (dateTime) => {
-        if (!dateTime) return "Chưa có";
-        return new Date(dateTime).toLocaleString("vi-VN", {
-            hour: "2-digit",
-            minute: "2-digit",
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric"
-        });
-    };
-
-    const [formData, setFormData] = useState({
-        checkinTime: ""
-    });
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
     };
 
     const handleUpdate = async (e) => {
         e.preventDefault();
+        if (!newCheckinTime) return;
         try {
             setLoading(true);
-            const payload = {
-                checkinTime: dayjs(formData.checkinTime).format("YYYY-MM-DD HH:mm:ss")
-            };
-            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['booking']}/${id}`;
-            let res = await authApis(cookies.token).put(url, payload);
+            const payload = { checkinTime: dayjs(newCheckinTime).format("YYYY-MM-DD HH:mm:ss") };
+            const res = await authApis(cookies.token).put(
+                `${import.meta.env.VITE_API_BASE_URL}${endpoints["booking"]}/${id}`, payload
+            );
             if (res.data.code === 200) {
-                setSuccess("Thay đổi giờ checkin thành công");
-                setFormData({ checkinTime: "" });
+                // setSuccess("Thay đổi giờ check-in thành công!");
+                toast.success("Thay đổi giờ check-in thành công!");
+                setNewCheckinTime("");
                 fetchReservationDetail();
             }
         } catch (err) {
-            if (err.response) {
-                if (Number(err.response.data.code) === 5004) {
-                    setError("Bạn chỉ có thể thay đổi giờ checkin trong vòng 2 tiếng kể từ khi đặt bàn");
-                } else if (Number(err.response.data.code) === 5005) {
-                    setError("Thời gian thay đổi không hợp lệ");
-                } else {
-                    setError(err.response.data.message || "Lỗi khi cập nhật giờ checkin");
-                }
-            } else {
-                setError("Lỗi khi cập nhật giờ checkin");
-            }
+            const code = Number(err.response?.data?.code);
+            if (code === 5004) toast.error("Chỉ được thay đổi trong vòng 2 tiếng kể từ khi đặt bàn.");
+            else if (code === 5005) toast.error("Thời gian thay đổi không hợp lệ.");
+            else toast.error(err.response?.data?.message || "Lỗi khi cập nhật.");
         } finally {
             setLoading(false);
-            setFormData({ checkinTime: "" });
         }
     };
 
-    useEffect(() => {
-        if (!error) return;
-        const timer = setTimeout(() => {
-            setError(null);
-        }, 2500);
-        return () => clearTimeout(timer);
-    }, [error]);
-
-    useEffect(() => {
-        if (!success) return;
-        const timer = setTimeout(() => setSuccess(null), 2500);
-        return () => clearTimeout(timer);
-    }, [success]);
     const handleDelete = async () => {
-       
-         try {
+        try {
             setLoading(true);
-            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['booking']}/${id}`;
-            let res = await authApis(cookies.token).delete(url);
+            const res = await authApis(cookies.token).delete(
+                `${import.meta.env.VITE_API_BASE_URL}${endpoints["booking"]}/${id}`
+            );
             if (res.data.code === 200) {
+                toast.success("Hủy đơn thành công!");
                 nav("/my-reservations");
             }
         } catch (err) {
-            if (err.response) {
-                if (Number(err.response.data.code) === 5004) {
-                    setError("Bạn chỉ có thể hủy đơn đặt trong vòng 2 tiếng kể từ khi đặt bàn");
-                } else {
-                    setError(err.response.data.message);
-                }
-            } else {
-                setError("Lỗi khi cập nhật giờ checkin");
-            }
+            const code = Number(err.response?.data?.code);
+            if (code === 5004) toast.error("Chỉ được hủy trong vòng 2 tiếng kể từ khi đặt bàn.");
+            else toast.error(err.response?.data?.message || "Lỗi khi hủy đơn.");
         } finally {
             setLoading(false);
-            
+            setShowDeleteModal(false);
         }
-    }
+    };
+
+    useEffect(() => { fetchReservationDetail(); }, [id]);
+    useEffect(() => {
+        if (error) { const t = setTimeout(() => setError(null), 3000); return () => clearTimeout(t); }
+    }, [error]);
+    useEffect(() => {
+        if (success) { const t = setTimeout(() => setSuccess(null), 3000); return () => clearTimeout(t); }
+    }, [success]);
+
     return (
-        <div className="d-flex flex-column min-vh-100">
+        <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-950">
             <Header />
-            <Container className="flex-grow-1 my-5">
-                {loading && <SpinnerComp />}
-                {error && <AlertComp variant="danger" lable={error} />}
-                {success && <AlertComp variant="success" lable={success} />}
-                
-                {reservation && !loading && !error && (
-                    <Row className="justify-content-center">
-                        <Col lg={10}>
-                            {/* Card thông tin chính */}
-                            <Card className="shadow-lg border-0 rounded-4 overflow-hidden mb-4">
-                                <Card.Header
-                                    className="text-white d-flex justify-content-between align-items-center"
-                                    style={{
-                                        background: "linear-gradient(90deg, #b34411ff, #d44107ff)",
-                                        borderBottom: "none"
-                                    }}
-                                >
-                                    <h5 className="mb-0">
-                                        <FaChair className="me-2" />
-                                        {reservation.table.tableName}
-                                    </h5>
-                                   
-                                </Card.Header>
 
-                                <Card.Body className="p-4">
-                                    <Row>
-                                        <Col md={6}>
-                                            <div className="mb-3 d-flex align-items-center">
-                                                <FaChair className="me-2 text-secondary" size={20} />
-                                                <strong>Sức chứa:</strong>&nbsp;{reservation.table.capacity} người
-                                            </div>
+            <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
+                {/* Back */}
+                <button
+                    onClick={() => nav("/my-reservations")}
+                    className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-primary transition-colors mb-6"
+                >
+                    <ArrowLeft size={16} />
+                    Trở về danh sách đặt bàn
+                </button>
 
-                                            <div className="mb-3 d-flex align-items-center">
-                                                <FaUser className="me-2 text-info" size={20} />
-                                                <strong>Khách:</strong>&nbsp;{reservation.customer.fullName}
-                                            </div>
-
-                                            <div className="mb-3 d-flex align-items-center">
-                                                <FaCalendarAlt className="me-2 text-primary" size={20} />
-                                                <strong>Ngày đặt:</strong>&nbsp;{formatDateTime(reservation.bookingTime)}
-                                            </div>
-                                        </Col>
-                                        
-                                        <Col md={6}>
-                                            <div className="mb-3 d-flex align-items-center">
-                                                <FaClock className="me-2 text-success" size={20} />
-                                                <strong>Check-in:</strong>&nbsp;{formatDateTime(reservation.checkinTime)}
-                                            </div>
-
-                                            {reservation.checkoutTime && (
-                                                <div className="mb-3 d-flex align-items-center">
-                                                    <FaClock className="me-2 text-danger" size={20} />
-                                                    <strong>Check-out:</strong>&nbsp;{formatDateTime(reservation.checkoutTime)}
-                                                </div>
-                                            )}
-
-                                            {reservation.note && (
-                                                <div className="mb-3 d-flex align-items-start">
-                                                    <FaStickyNote className="me-2 text-muted" size={20} />
-                                                    <div>
-                                                        <strong>Ghi chú:</strong>
-                                                        <div className="fst-italic text-muted">{reservation.note}</div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </Col>
-                                    </Row>
-
-                                    {/* Form thay đổi giờ check-in chỉ hiện khi status là BOOKED */}
-                                    {reservation.status === "BOOKED" && (
-                                        <>
-                                            <hr />
-                                            <div>
-                                                <h6 className="fw-bold mb-3">
-                                                    <FaClock className="me-2 text-warning" />
-                                                    Thay đổi giờ check-in
-                                                </h6>
-                                                <Form className="d-flex gap-2 align-items-center flex-wrap">
-                                                    <Form.Control
-                                                        type="datetime-local"
-                                                        value={formData.checkinTime}
-                                                        name="checkinTime"
-                                                        onChange={handleChange}
-                                                        style={{ maxWidth: '250px' }}
-                                                    />
-                                                    <Button variant="success" onClick={handleUpdate}>
-                                                        <FaCheck className="me-1" />Lưu
-                                                    </Button>
-                                                </Form>
-                                            </div>
-                                            <div className="mt-3">
-                                                <Button variant="danger" disabled={loading}
-                                                    onClick={handleDelete}
-                                                >Hủy đơn đặt bàn</Button>
-                                            </div>
-                                        </>
-                                    )}
-                                </Card.Body>
-                            </Card>
-
-                            {/* Card hóa đơn và món ăn */}
-                            {reservation.bill && (
-                                <Card className="shadow-lg border-0 rounded-4 overflow-hidden">
-                                    <Card.Header 
-                                        className="text-white d-flex justify-content-between align-items-center"
-                                        style={{
-                                            background: "linear-gradient(90deg, #b34411ff, #d44107ff)",
-                                            borderBottom: "none"
-                                        }}
-                                    >
-                                        <h5 className="mb-0">
-                                            <FaReceipt className="me-2" />
-                                            Hóa đơn #{reservation.bill.billId}
-                                        </h5>
-                                        {getBillStatusBadge(reservation.bill.status)}
-                                    </Card.Header>
-
-                                    <Card.Body className="p-0">
-                                        {/* Thông tin hóa đơn */}
-                                        <div className="p-4 border-bottom">
-                                            <Row>
-                                                <Col md={6}>
-                                                    <div className="mb-2">
-                                                        <strong>Ngày tạo hóa đơn:</strong> {formatDateTime(reservation.bill.createdAt)}
-                                                    </div>
-                                                    {reservation.bill.paymentTime && (
-                                                        <div className="mb-2">
-                                                            <strong>Thời gian thanh toán:</strong> {formatDateTime(reservation.bill.paymentTime)}
-                                                        </div>
-                                                    )}
-                                                </Col>
-                                                <Col md={6}>
-                                                    <div className="mb-2">
-                                                        <strong>Trạng thái đơn hàng:</strong> 
-                                                        {reservation.bill.order.isPaid ? (
-                                                            <Badge bg="success" className="ms-2">Đã thanh toán</Badge>
-                                                        ) : (
-                                                            <Badge bg="warning" text="dark" className="ms-2">Chưa thanh toán</Badge>
-                                                        )}
-                                                    </div>
-                                                </Col>
-                                            </Row>
-                                        </div>
-
-                                     
-                                        <div 
-                                            className="p-4 text-white"
-                                            style={{ 
-                                                 background: "linear-gradient(90deg, #943509ff, #d44107ff)"
-                                            }}
-                                        >
-                                            <Row>
-                                                <Col md={8}>
-                                                    <h6 className="fw-bold mb-3">
-                                                     
-                                                        Thông tin thanh toán
-                                                    </h6>
-                                                    <div className="d-flex justify-content-between mb-2">
-                                                        <span>Tạm tính:</span>
-                                                        <span>{formatPrice(reservation.bill.subTotal)}</span>
-                                                    </div>
-                                                    <div className="d-flex justify-content-between mb-2">
-                                                        <span>Giảm giá:</span>
-                                                        <span className="text-success">
-                                                            {reservation.bill.discountAmount > 0 ? 
-                                                                `-${formatPrice(reservation.bill.discountAmount)}` : 
-                                                                formatPrice(0)
-                                                            }
-                                                        </span>
-                                                    </div>
-                                                    <hr className="border-light" />
-                                                    <div className="d-flex justify-content-between">
-                                                        <strong className="h5">Tổng cộng:</strong>
-                                                        <strong className="h5 text-warning">
-                                                            {formatPrice(reservation.bill.totalAmount)}
-                                                        </strong>
-                                                    </div>
-                                                </Col>
-                                                <Col md={4} className="text-end">
-                                                    <div className="mt-3">
-                                                        <FaCreditCard size={40} className="text-warning mb-2" />
-                                                        <div>
-                                                            <small>Phương thức thanh toán</small>
-                                                            <div className="fw-bold">Thanh toán tại quầy</div>
-                                                        </div>
-                                                    </div>
-                                                </Col>
-                                            </Row>
-                                        </div>
-                                    </Card.Body>
-                                </Card>
-                            )}
-
-                            {/* Nút trở về */}
-                            <div className="text-center mt-4">
-                                <Button 
-                                    variant="outline-primary" 
-                                    size="lg"
-                                    onClick={() => nav("/my-reservations")}
-                                >
-                                    ← Trở về danh sách đặt bàn
-                                </Button>
-                            </div>
-                        </Col>
-                    </Row>
-                    
+                {/* Alerts */}
+                {/* Bỏ banner toast thành công cũ, nhưng giữ banner lỗi kết nối nếu có 
+                {error && (
+                    <div className="flex items-center gap-3 mb-5 bg-danger/10 border border-danger/30 text-danger px-5 py-3.5 rounded-2xl text-sm font-medium">
+                        <XCircle size={17} className="shrink-0" /> {error}
+                    </div>
                 )}
-                 <Modal show={show} onHide={() => setShow(false)}>
-                        <Modal.Header closeButton>
-                            <Modal.Title>Yêu cầu đăng nhập</Modal.Title>
-                        </Modal.Header>
-                        <Modal.Body>
+                */}
+                {/* 
+                {success && (
+                    <div className="flex items-center gap-3 mb-5 bg-success/10 border border-success/30 text-success px-5 py-3.5 rounded-2xl text-sm font-medium">
+                        <CheckCircle size={17} className="shrink-0" /> {success}
+                    </div>
+                )}
+                */}
+
+                {loading && !reservation && (
+                    <div className="flex justify-center py-20"><SpinnerComp /></div>
+                )}
+
+                {reservation && (
+                    <div className="space-y-5">
+                        {/* ── Card 1: Thông tin đặt bàn ── */}
+                        <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-card overflow-hidden">
+                            {/* Header */}
+                            <div className="flex items-center justify-between px-6 py-5 bg-gradient-to-r from-primary to-primary-active text-white">
+                                <div>
+                                    <p className="text-white/70 text-xs font-medium uppercase tracking-wider mb-0.5">Bàn đặt</p>
+                                    <h2 className="text-xl font-extrabold">{reservation.table.tableName}</h2>
+                                </div>
+                                <StatusBadge status={reservation.status} />
+                            </div>
+
+                            {/* Body - info grid */}
+                            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <InfoRow icon={Users}       iconCls="text-gray-400"  label="Sức chứa"   value={`${reservation.table.capacity} người`} />
+                                <InfoRow icon={User}        iconCls="text-info"      label="Khách"      value={reservation.customer.fullName} />
+                                <InfoRow icon={CalendarDays} iconCls="text-primary"  label="Ngày đặt"   value={formatDateTime(reservation.bookingTime)} />
+                                <InfoRow icon={Clock}       iconCls="text-success"   label="Check-in"   value={formatDateTime(reservation.checkinTime)} />
+                                {reservation.checkoutTime && (
+                                    <InfoRow icon={Clock}   iconCls="text-danger"    label="Check-out"  value={formatDateTime(reservation.checkoutTime)} />
+                                )}
+                                {reservation.note && (
+                                    <InfoRow icon={StickyNote} iconCls="text-gray-400" label="Ghi chú" value={<span className="italic text-gray-500">{reservation.note}</span>} />
+                                )}
+                            </div>
+
+                            {/* Edit check-in + Cancel (only BOOKED) */}
+                            {reservation.status === "BOOKED" && (
+                                <div className="border-t border-dashed border-gray-200 dark:border-gray-700 mx-6 pb-6 pt-5 space-y-4">
+                                    {/* Change check-in time */}
+                                    <div>
+                                        <h4 className="flex items-center gap-2 text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
+                                            <Pencil size={14} className="text-warning" />
+                                            Thay đổi giờ check-in
+                                        </h4>
+                                        <form onSubmit={handleUpdate} className="flex items-center gap-3 flex-wrap">
+                                            <input
+                                                type="datetime-local"
+                                                value={newCheckinTime}
+                                                onChange={(e) => setNewCheckinTime(e.target.value)}
+                                                className="px-3 py-2 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-primary transition"
+                                            />
+                                            <button
+                                                type="submit"
+                                                disabled={loading || !newCheckinTime}
+                                                className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-success hover:bg-success-active text-white text-sm font-semibold transition shadow-md shadow-success/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                                            >
+                                                <Check size={14} /> Lưu
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    {/* Cancel button */}
+                                    <button
+                                        onClick={() => setShowDeleteModal(true)}
+                                        disabled={loading}
+                                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl border-2 border-danger/30 text-danger text-sm font-semibold hover:bg-danger hover:text-white hover:border-danger transition disabled:opacity-60"
+                                    >
+                                        <XCircle size={15} /> Hủy đơn đặt bàn
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* ── Card 2: Hóa đơn ── */}
+                        {reservation.bill && (
+                            <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-card overflow-hidden">
+                                {/* Header */}
+                                <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-800">
+                                    <h3 className="flex items-center gap-2 font-extrabold text-gray-900 dark:text-gray-100">
+                                        <Receipt size={18} className="text-primary" />
+                                        Hóa đơn #{reservation.bill.billId}
+                                    </h3>
+                                    <span className={`text-xs font-bold px-3 py-1 rounded-full border ${
+                                        reservation.bill.status === "PAID"
+                                            ? "bg-success/10 text-success border-success/30"
+                                            : "bg-warning/10 text-warning border-warning/30"
+                                    }`}>
+                                        {reservation.bill.status === "PAID" ? "✓ Đã thanh toán" : "Chờ thanh toán"}
+                                    </span>
+                                </div>
+
+                                <div className="p-6 space-y-4">
+                                    {/* Bill meta */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm pb-4 border-b border-dashed border-gray-200 dark:border-gray-700">
+                                        <div className="text-gray-600 dark:text-gray-400">
+                                            <span className="font-semibold text-gray-900 dark:text-gray-100">Ngày tạo: </span>
+                                            {formatDateTime(reservation.bill.createdAt)}
+                                        </div>
+                                        {reservation.bill.paymentTime && (
+                                            <div className="text-gray-600 dark:text-gray-400">
+                                                <span className="font-semibold text-gray-900 dark:text-gray-100">Thanh toán: </span>
+                                                {formatDateTime(reservation.bill.paymentTime)}
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                                            <span className="font-semibold text-gray-900 dark:text-gray-100">Đơn hàng:</span>
+                                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+                                                reservation.bill.order.isPaid
+                                                    ? "bg-success/10 text-success border-success/30"
+                                                    : "bg-warning/10 text-warning border-warning/30"
+                                            }`}>
+                                                {reservation.bill.order.isPaid ? "Đã thanh toán" : "Chưa thanh toán"}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Payment summary */}
+                                    <div className="bg-gradient-to-br from-primary to-primary-active rounded-2xl p-5 text-white">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="flex-1 space-y-2.5">
+                                                <h5 className="font-bold text-white/90 text-sm uppercase tracking-wider mb-3">Thông tin thanh toán</h5>
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-white/80">Tạm tính:</span>
+                                                    <span className="font-semibold">{formatPrice(reservation.bill.subTotal)}</span>
+                                                </div>
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-white/80">Giảm giá:</span>
+                                                    <span className="font-semibold text-yellow-300">
+                                                        {reservation.bill.discountAmount > 0
+                                                            ? `-${formatPrice(reservation.bill.discountAmount)}`
+                                                            : formatPrice(0)}
+                                                    </span>
+                                                </div>
+                                                <div className="border-t border-white/20 pt-2.5 flex justify-between">
+                                                    <span className="font-extrabold text-base">Tổng cộng:</span>
+                                                    <span className="font-extrabold text-xl text-yellow-300">
+                                                        {formatPrice(reservation.bill.totalAmount)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="text-center opacity-80 shrink-0">
+                                                <CreditCard size={36} className="text-yellow-300 mb-1 mx-auto" />
+                                                <p className="text-[11px] text-white/70">Phương thức</p>
+                                                <p className="text-xs font-bold">Tại quầy</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </main>
+
+            <Footer />
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowDeleteModal(false)} />
+                    <div className="relative z-10 bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-sm mx-4 p-8 border border-gray-100 dark:border-gray-800 text-center">
+                        <AlertCircle size={48} className="text-danger mx-auto mb-4" />
+                        <h3 className="text-xl font-extrabold text-gray-900 dark:text-gray-100 mb-2">Xác nhận hủy đặt bàn?</h3>
+                        <p className="text-sm text-gray-500 mb-6">Hành động này không thể hoàn tác. Bạn có chắc chắn muốn hủy đơn đặt bàn này không?</p>
+                        <div className="flex gap-3">
+                            <button onClick={() => setShowDeleteModal(false)} className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
+                                Giữ lại
+                            </button>
+                            <button onClick={handleDelete} disabled={loading} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-danger hover:bg-danger-active transition shadow-lg shadow-danger/20 disabled:opacity-70">
+                                {loading ? "Đang hủy..." : "Hủy đặt bàn"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Login Modal */}
+            {showLoginModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowLoginModal(false)} />
+                    <div className="relative z-10 bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-sm mx-4 p-8 border border-gray-100 dark:border-gray-800 text-center">
+                        <AlertCircle size={48} className="text-warning mx-auto mb-4" />
+                        <h3 className="text-xl font-extrabold text-gray-900 dark:text-gray-100 mb-3">Yêu cầu đăng nhập</h3>
+                        <p className="text-sm text-gray-500 mb-6">
                             Vui lòng{" "}
-                            <Link to={`/login?redirect=${encodeURIComponent(window.location.pathname)}`}>
+                            <Link to={`/login?redirect=${encodeURIComponent(window.location.pathname)}`} className="font-bold text-primary underline">
                                 đăng nhập
                             </Link>{" "}
-                            để xem đơn đặt bàn
-                        </Modal.Body>
-                        <Modal.Footer>
-                            <Button variant="secondary" onClick={() => setShow(false)}>
-                                Đóng
-                            </Button>
-                        </Modal.Footer>
-                    </Modal>
-            </Container>
-            <Footer />
+                            để xem đơn đặt bàn.
+                        </p>
+                        <button onClick={() => setShowLoginModal(false)} className="w-full py-2.5 rounded-xl text-sm font-semibold border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 transition">
+                            Đóng
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

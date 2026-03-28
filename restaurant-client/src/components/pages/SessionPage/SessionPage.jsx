@@ -2,7 +2,8 @@ import{ useCallback, useEffect, useRef, useState } from "react";
 
 import { useLocation, useNavigate } from "react-router-dom";
 import SpinnerComp from "../../common/SpinnerComp";
-import AlertComp from "../../common/AlertComp";
+import AlertComp from "../../common/AlertComp"; // AlertComp được giữ lại phòng hờ
+import toast from 'react-hot-toast';
 import { Badge, Button, Card, Col, Container, Row } from "react-bootstrap";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../../../firebase";
@@ -86,8 +87,10 @@ const SessionPage = () => {
                 const result = res.data.result;
                 if (!result.valid) {
                     console.warn("Token không hợp lệ!");
-                    setError("Phiên làm việc đã hết hạn hoặc không hợp lệ.");
-                    alert("Token không hợp lệ. Tự động chuyển về trang chủ sau 3 giây nữa");
+                    // setError("Phiên làm việc đã hết hạn hoặc không hợp lệ.");
+                    // alert("Token không hợp lệ. Tự động chuyển về trang chủ sau 3 giây nữa");
+                    toast.error("Phiên làm việc không hợp lệ. Đang chuyển về trang chủ...");
+                    setError(true);
                     return;
                 }
                 setCustomerInfo({
@@ -103,10 +106,12 @@ const SessionPage = () => {
         } catch (error) {
             if (error.response) {
                 console.error("Backend error:", error.response.data);
-                setError("Lỗi từ máy chủ: " + error.response.data.message);
+                toast.error("Lỗi từ máy chủ: " + error.response.data.message);
+                setError(true);
             } else {
                 console.error("Axios error:", error.message);
-                setError("Lỗi kết nối mạng. Vui lòng thử lại sau.");
+                toast.error("Lỗi kết nối mạng. Vui lòng thử lại sau.");
+                setError(true);
             }
 
         } finally {
@@ -218,10 +223,10 @@ const SessionPage = () => {
         } catch (error) {
             if (error.response) {
                 console.error("Backend error:", error.response.data);
-                alert("Lỗi từ máy chủ: " + error.response.data.message);
+                toast.error("Lỗi từ máy chủ: " + error.response.data.message);
             } else {
                 console.error("Axios error:", error.message);
-                alert("Lỗi kết nối mạng. Vui lòng thử lại sau.");
+                toast.error("Lỗi kết nối mạng. Vui lòng thử lại sau.");
             }
 
         } finally {
@@ -271,21 +276,21 @@ const SessionPage = () => {
             console.log("delete url: ", url);
             let res = await authApis(customerJwt).delete(url);
             if (res.status === 200) {
-                alert("Xóa món thành công")
+                toast.success("Xóa món thành công");
             }
         } catch (error) {
             if (error.response) {
                 console.error("Backend error:", error.response.data);
-                setError("Lỗi từ máy chủ: " + error.response.data.message);
+                toast.error("Lỗi từ máy chủ: " + error.response.data.message);
             } else {
                 console.error("Axios error:", error.message);
-                setError("Lỗi kết nối mạng. Vui lòng thử lại sau.");
+                toast.error("Lỗi kết nối mạng. Vui lòng thử lại sau.");
             }
         }
     }
     const handlePayment = async () => {
         if (billItems.length === 0) {
-            alert("Vui lòng order món để thanh toán!");
+            toast.error("Vui lòng order món để thanh toán!");
             return;
         }
         const pendingItems = items.filter(item => item.status == "PENDING");
@@ -367,7 +372,7 @@ const SessionPage = () => {
     
     return (
         <>
-            {error ? (<AlertComp variant="danger" lable={error} />) : (loading ? (<SpinnerComp />) : (
+            {error ? (<div className="h-screen w-full flex items-center justify-center font-bold text-gray-500">Đang chuyển hướng...</div>) : (loading ? (<SpinnerComp />) : (
                 <>
                     {/* Modal Overlay */}
                    
@@ -471,7 +476,7 @@ const SessionPage = () => {
                             </div>
                         </div>
                     )}
-                    {success && <AlertComp variant="success" lable={success} />}
+                    {/* {success && <AlertComp variant="success" lable={success} />} */}
                     <Container fluid style={{
                         height: '100vh',
                         backgroundColor: lightColor,

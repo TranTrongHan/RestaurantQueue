@@ -1,6 +1,5 @@
 import React, { useRef, useState } from "react";
-import { Form, Button, Row, Col } from "react-bootstrap";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import SpinnerComp from "../common/SpinnerComp";
 import Apis, { endpoints } from "../configs/Apis";
 
@@ -25,14 +24,12 @@ const RegisterForm = () => {
     e.preventDefault();
     const form = e.currentTarget;
 
-    // Nếu form chưa hợp lệ -> dừng
     if (form.checkValidity() === false) {
       e.stopPropagation();
       setValidated(true);
       return;
     }
 
-    // Kiểm tra password
     if (formData.password !== formData.confirm) {
       setError("Mật khẩu xác nhận không khớp");
       setValidated(true);
@@ -45,7 +42,7 @@ const RegisterForm = () => {
       Object.entries(formData).forEach(([key, value]) => {
         data.append(key, value);
       });
-      data.append("file", avatar.current.files[0] || null);
+      data.append("file", avatar.current?.files?.[0] || null);
 
       let res = await Apis.post(endpoints["register"], data, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -54,7 +51,7 @@ const RegisterForm = () => {
         navigate("/login");
       }
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message || "Đăng ký thất bại");
       console.error("Registration error:", err);
     } finally {
       setLoading(false);
@@ -68,157 +65,169 @@ const RegisterForm = () => {
   };
 
   return (
-    <Form noValidate validated={validated} onSubmit={handleSubmit}>
-      <Row>
-        <Col md={6}>
-          <Form.Group className="mb-3" controlId="fullName">
-            <Form.Label>Họ và tên</Form.Label>
-            <Form.Control
+    <form noValidate className="space-y-5" onSubmit={handleSubmit}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        
+        {/* Cột trái */}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1" htmlFor="fullName">Họ và tên</label>
+            <input
               required
+              id="fullName"
               type="text"
               name="fullName"
               value={formData.fullName}
               onChange={handleInputChange}
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition duration-150 ease-in-out dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
             />
-            <Form.Control.Feedback type="invalid">
-              Vui lòng nhập họ và tên.
-            </Form.Control.Feedback>
-          </Form.Group>
+            {validated && !formData.fullName && (
+              <p className="mt-1.5 text-xs text-danger font-medium">Vui lòng nhập họ và tên.</p>
+            )}
+          </div>
 
-          <Form.Group className="mb-3" controlId="dob">
-            <Form.Label>Ngày sinh</Form.Label>
-            <Form.Control
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1" htmlFor="dob">Ngày sinh</label>
+            <input
               required
+              id="dob"
               type="date"
               name="dob"
               value={formData.dob}
               onChange={handleInputChange}
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition duration-150 ease-in-out dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100"
             />
-            <Form.Control.Feedback type="invalid">
-              Vui lòng chọn ngày sinh.
-            </Form.Control.Feedback>
-          </Form.Group>
+            {validated && !formData.dob && (
+              <p className="mt-1.5 text-xs text-danger font-medium">Vui lòng chọn ngày sinh.</p>
+            )}
+          </div>
 
-          <Form.Group className="mb-3" controlId="email">
-            <Form.Label>Email</Form.Label>
-            <Form.Control
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1" htmlFor="email">Email</label>
+            <input
               required
+              id="email"
               type="email"
               name="email"
               value={formData.email}
               onChange={handleInputChange}
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition duration-150 ease-in-out dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
             />
-            <Form.Control.Feedback type="invalid">
-              Vui lòng nhập email hợp lệ.
-            </Form.Control.Feedback>
-          </Form.Group>
+            {validated && !formData.email && (
+              <p className="mt-1.5 text-xs text-danger font-medium">Vui lòng nhập email hợp lệ.</p>
+            )}
+          </div>
 
-          <Form.Group className="mb-3" controlId="phone">
-            <Form.Label>Số điện thoại</Form.Label>
-            <Form.Control
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1" htmlFor="phone">Số điện thoại</label>
+            <input
               required
+              id="phone"
               type="text"
               name="phone"
               value={formData.phone}
               onChange={handleInputChange}
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition duration-150 ease-in-out dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
             />
-            <Form.Control.Feedback type="invalid">
-              Vui lòng nhập số điện thoại.
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
+            {validated && !formData.phone && (
+              <p className="mt-1.5 text-xs text-danger font-medium">Vui lòng nhập số điện thoại.</p>
+            )}
+          </div>
+        </div>
 
-        <Col md={6}>
-          <Form.Group className="mb-3" controlId="address">
-            <Form.Label>Địa chỉ</Form.Label>
-            <Form.Control
+        {/* Cột phải */}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1" htmlFor="address">Địa chỉ</label>
+            <input
               required
+              id="address"
               type="text"
               name="address"
               value={formData.address}
               onChange={handleInputChange}
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition duration-150 ease-in-out dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
             />
-            <Form.Control.Feedback type="invalid">
-              Vui lòng nhập địa chỉ.
-            </Form.Control.Feedback>
-          </Form.Group>
+            {validated && !formData.address && (
+              <p className="mt-1.5 text-xs text-danger font-medium">Vui lòng nhập địa chỉ.</p>
+            )}
+          </div>
 
-          <Form.Group className="mb-3" controlId="username">
-            <Form.Label>Tên đăng nhập</Form.Label>
-            <Form.Control
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1" htmlFor="username">Tên đăng nhập</label>
+            <input
               required
+              id="username"
               type="text"
               name="username"
               value={formData.username}
               onChange={handleInputChange}
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition duration-150 ease-in-out dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
             />
-            <Form.Control.Feedback type="invalid">
-              Vui lòng nhập tên đăng nhập.
-            </Form.Control.Feedback>
-          </Form.Group>
+            {validated && !formData.username && (
+              <p className="mt-1.5 text-xs text-danger font-medium">Vui lòng nhập tên đăng nhập.</p>
+            )}
+          </div>
 
-          <Form.Group className="mb-3" controlId="password">
-            <Form.Label>Mật khẩu</Form.Label>
-            <Form.Control
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1" htmlFor="password">Mật khẩu</label>
+            <input
               required
+              id="password"
               type="password"
               name="password"
               value={formData.password}
               onChange={handleInputChange}
               minLength={6}
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition duration-150 ease-in-out dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
             />
-            <Form.Control.Feedback type="invalid">
-              Mật khẩu phải tối thiểu 6 ký tự.
-            </Form.Control.Feedback>
-          </Form.Group>
+            {validated && (!formData.password || formData.password.length < 6) && (
+              <p className="mt-1.5 text-xs text-danger font-medium">Mật khẩu phải tối thiểu 6 ký tự.</p>
+            )}
+          </div>
 
-          <Form.Group className="mb-3" controlId="confirm">
-            <Form.Label>Xác nhận mật khẩu</Form.Label>
-            <Form.Control
+          <div>
+            <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1" htmlFor="confirm">Xác nhận mật khẩu</label>
+            <input
               required
+              id="confirm"
               type="password"
               name="confirm"
               value={formData.confirm}
               onChange={handleInputChange}
-              isInvalid={!!error}
+              className={`w-full px-4 py-2.5 rounded-xl border bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition duration-150 ease-in-out dark:bg-gray-800 dark:text-gray-100 ${error ? 'border-danger focus:ring-danger/50 focus:border-danger' : 'border-gray-200 dark:border-gray-700'}`}
             />
-            <Form.Control.Feedback type="invalid">
-              {error || "Vui lòng xác nhận mật khẩu."}
-            </Form.Control.Feedback>
-          </Form.Group>
-        </Col>
-      </Row>
-
-      <Form.Group className="mb-4" controlId="avatar">
-        <Form.Label>Ảnh đại diện</Form.Label>
-        <Form.Control type="file" name="file" ref={avatar} />
-      </Form.Group>
-
-      <Button
-        type="submit"
-        className="w-100 fw-semibold"
-        style={{
-          background: "linear-gradient(45deg, #912910, #b33b1f)",
-          borderColor: "#912910",
-        }}
-        disabled={loading}
-      >
-        {loading ? <SpinnerComp /> : "Đăng ký"}
-      </Button>
-
-      <div className="text-center mt-3">
-        <span className="me-1">Đã có tài khoản?</span>
-        <Button
-          variant="link"
-          className="p-0"
-          style={{ color: "#912910", fontWeight: "500" }}
-          disabled={loading}
-          onClick={() => navigate("/login")}
-        >
-          Đăng nhập
-        </Button>
+            {validated && (!formData.confirm || error) && (
+              <p className="mt-1.5 text-xs text-danger font-medium">{error || "Vui lòng xác nhận mật khẩu."}</p>
+            )}
+          </div>
+        </div>
       </div>
-    </Form>
+
+      <div>
+        <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1" htmlFor="avatar">Ảnh đại diện</label>
+        <input 
+          id="avatar"
+          type="file" 
+          name="file" 
+          ref={avatar} 
+          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all dark:text-gray-400 dark:file:bg-primary/20 dark:hover:file:bg-primary/30"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full flex justify-center items-center py-3 px-4 mt-6 border border-transparent rounded-xl shadow-primary/30 shadow-lg text-sm font-bold text-white bg-primary hover:bg-primary-active focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all disabled:opacity-70 disabled:cursor-not-allowed -translate-y-[1px] hover:-translate-y-[2px]"
+      >
+        {loading ? <SpinnerComp className="w-5 h-5 border-2" /> : "Đăng ký ngay"}
+      </button>
+
+      <div className="text-center mt-6 text-sm text-gray-600 dark:text-gray-400">
+        <span className="mr-2">Đã có tài khoản?</span>
+        <Link to="/login" className="font-bold text-primary hover:text-primary-active transition-colors">Đăng nhập</Link>
+      </div>
+    </form>
   );
 };
 

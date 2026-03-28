@@ -1,198 +1,139 @@
 import React, { useState, useEffect } from 'react';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import { Card, Col, Row } from 'react-bootstrap';
 
-const FinishPage = ({ kitchenOrders = [], totalPage, renderPagination,totalItems }) => {
+const FinishPage = ({ kitchenOrders = [], totalPage, renderPagination, totalItems }) => {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {
-        // Auto select first cooking order if none selected
         if (kitchenOrders.length > 0 && !selectedOrder) {
             setSelectedOrder(kitchenOrders[0]);
         }
     }, [kitchenOrders, selectedOrder]);
 
     useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrentTime(new Date());
-        }, 1000);
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
 
     const formatTime = (timeString) => {
         if (!timeString) return '--:--';
         const date = new Date(timeString.replace(/^(\d{4}):(\d{2}):(\d{2})/, "$1-$2-$3"));
-        return date.toLocaleTimeString('vi-VN', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
+        return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     };
-    const OrderListItem = ({ order, isSelected, onClick }) => {
-       
-        return (
-            order.status === "DONE" && 
-            <div
-                onClick={onClick}
-                className="list-group-item list-group-item-action p-3"
-                style={{
-                    borderLeft: isSelected ? '4px solid #0d6efd' : '4px solid #ffc107',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    backgroundColor: isSelected ? '#e7f3ff' : 'white'
-                }}
-            >
-                <Row>
-                    <Col lg={2} style={{ display: "flex", justifyContent: 'center', flexDirection: 'column', textAlign: 'center' }}>
-                        {order.kitchenAssignId}
-                    </Col>
-                    <Col lg={5}>
-                        <div className="fw-bold mb-1">{order.itemResponse.name} (SL: {order.itemResponse.quantity})</div>
-                        <div className="text-muted small">
-                            <div>Chef: {order.chefResponse.name}</div>
-                        </div>
-                    </Col>
-                    <Col lg={5} style={{ display: "flex", justifyContent: "flex-end" }}>
-                        <div className="fw-bold mb-1">{order.table} </div>
-                    </Col>
-                </Row>
 
-
-
+    const OrderListItem = ({ order, isSelected, onClick }) => (
+        order.status === "DONE" &&
+        <div
+            onClick={onClick}
+            className={`flex items-center p-3 cursor-pointer transition-all duration-200 border-l-4 ${isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-warning bg-white dark:bg-gray-800'} hover:bg-blue-50 dark:hover:bg-blue-900/20`}
+        >
+            <div className="w-12 text-center text-sm font-semibold text-gray-600 dark:text-gray-400 shrink-0">
+                {order.kitchenAssignId}
             </div>
-        );
-    };
+            <div className="flex-1 px-3">
+                <div className="font-bold text-gray-900 dark:text-gray-100">{order.itemResponse.name} <span className="text-sm font-normal text-gray-500">(SL: {order.itemResponse.quantity})</span></div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Chef: {order.chefResponse.name}</div>
+            </div>
+            <div className="font-bold text-gray-700 dark:text-gray-300 text-sm text-right shrink-0">{order.table}</div>
+        </div>
+    );
 
     const OrderDetail = ({ order }) => {
-        if (!order) {
-            return (
-                <div className="card h-100 d-flex align-items-center justify-content-center">
-                    <div className="text-center text-muted">
-                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🍳</div>
-                        <h5>Chọn một món để xem chi tiết</h5>
-                    </div>
+        if (!order) return (
+            <div className="h-full flex items-center justify-center bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
+                <div className="text-center text-gray-400">
+                    <div className="text-6xl mb-4">🍳</div>
+                    <h5 className="font-semibold">Chọn một món để xem chi tiết</h5>
                 </div>
-            );
-        }
+            </div>
+        );
 
         return (
-            <div className="card h-100">
-                <div className="card-header">
-                    <h5 className="mb-0">Chi tiết đơn món {order.kitchenAssignId}</h5>
+            <div className="h-full flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+                    <h5 className="font-bold text-gray-900 dark:text-gray-100 text-lg">Chi tiết đơn món #{order.kitchenAssignId}</h5>
                 </div>
-
-                <div className="card-body">
-                    {/* Basic Info */}
-                    <div className="mb-4">
-                        <h4 className="mb-2">{order.itemResponse.name}</h4>
-                        <div className="text-muted">
-                            <div className="mb-1">Số lượng: <strong>{order.itemResponse.quantity}</strong></div>
-                            <div className="mb-1">Id: <strong>{order.itemResponse.orderItemId}</strong></div>
-                            <div>Điểm ưu tiên: <strong>{order.itemResponse.priorityScore}</strong></div>
+                <div className="flex-1 overflow-y-auto p-5 space-y-5">
+                    <div>
+                        <h4 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">{order.itemResponse.name}</h4>
+                        <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                            <div>Số lượng: <strong className="text-gray-900 dark:text-gray-100">{order.itemResponse.quantity}</strong></div>
+                            <div>Id: <strong className="text-gray-900 dark:text-gray-100">{order.itemResponse.orderItemId}</strong></div>
+                            <div>Điểm ưu tiên: <strong className="text-gray-900 dark:text-gray-100">{order.itemResponse.priorityScore}</strong></div>
                         </div>
                     </div>
-
-                    {/* Chef Info */}
-                    <div className="mb-4">
-                        <h6 className="text-muted">Thông tin bếp trưởng</h6>
-                        <div><strong>{order.chefResponse.name}</strong></div>
-
+                    <div>
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Bếp trưởng phụ trách</p>
+                        <p className="font-bold text-gray-900 dark:text-gray-100">{order.chefResponse.name}</p>
                     </div>
-
-                    {/* Time Information */}
-                    <div className="mb-4">
-                        <h6 className="text-muted mb-3">Thời gian</h6>
-
-                        <div className="row mb-3">
-                            <div className="col-6">
-                                <div className="border rounded p-2 text-center">
-                                    <div className="text-muted small">Bắt đầu nấu</div>
-                                    <div className="fw-bold">{formatTime(order.startAt)}</div>
-
-                                </div>
+                    <div>
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Thời gian</p>
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-center">
+                                <div className="text-xs text-gray-500 mb-1">Bắt đầu nấu</div>
+                                <div className="font-bold text-gray-900 dark:text-gray-100 text-sm">{formatTime(order.startAt)}</div>
                             </div>
-                            <div className="col-6">
-                                <div className="border rounded p-2 text-center">
-                                    <div className="text-muted small">Thời gian hoàn thành ước tính</div>
-                                    <div className="fw-bold">{formatTime(order.itemResponse.expectedDeadlineTime)}</div>
-                                </div>
+                            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-center">
+                                <div className="text-xs text-gray-500 mb-1">Dự kiến xong</div>
+                                <div className="font-bold text-gray-900 dark:text-gray-100 text-sm">{formatTime(order.itemResponse.expectedDeadlineTime)}</div>
                             </div>
                         </div>
-                        <div className="row mb-3">
-                            <div className="col-6">
-                                <div className="border rounded p-2 text-center">
-                                    <div className="text-muted small">Thời gian hoàn thành thực tế</div>
-                                    <div className="fw-bold">{formatTime(order.finishAt)}</div>
-
-                                </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 rounded-xl p-3 text-center">
+                                <div className="text-xs text-green-600 mb-1">Hoàn thành thực tế</div>
+                                <div className="font-bold text-green-700 dark:text-green-400 text-sm">{formatTime(order.finishAt)}</div>
                             </div>
-                            <div className="col-6">
-                                <div className="border rounded p-2 text-center">
-                                    <div className="text-muted small">Số phút hoàn thành món</div>
-                                    <div className="fw-bold">{order.actualCookingTime}</div>
-                                </div>
+                            <div className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-center">
+                                <div className="text-xs text-gray-500 mb-1">Phút nấu thực tế</div>
+                                <div className="font-bold text-gray-900 dark:text-gray-100 text-sm">{order.actualCookingTime}</div>
                             </div>
                         </div>
-
                     </div>
                 </div>
-
-
             </div>
         );
     };
 
     if (kitchenOrders.length === 0) {
         return (
-            <div className="container-fluid py-4">
-                <div className="text-center py-5">
-                    <div style={{ fontSize: '4rem', marginBottom: '2rem' }}>🍳</div>
-                    <h3 className="text-muted">Không có món nào</h3>
-                    <p className="text-muted">Tất cả món ăn đã hoàn thành hoặc đang chờ xử lý</p>
-                </div>
+            <div className="w-full py-16 text-center">
+                <div className="text-7xl mb-6">🍳</div>
+                <h3 className="text-xl font-bold text-gray-400 mb-2">Không có món nào</h3>
+                <p className="text-gray-400">Tất cả món ăn đã hoàn thành hoặc đang chờ xử lý</p>
             </div>
         );
     }
 
     return (
-        <div className="container-fluid py-3">
-            <div className="row" style={{ height: 'calc(100vh - 200px)' }}>
-                {/* Left Panel - Orders List */}
-                <div className="col-md-5 pe-2">
-                    <Card className="card h-100">
-                        <Card.Header className="card-header d-flex justify-content-between align-items-center">
-                            <Row>
-                                <Col>
-                                    <h5 className="mb-0">Đã hoàn thành ({totalItems} món)</h5>
-                                    <span className="badge bg-warning">{formatTime(currentTime.toISOString())}</span>
-                                </Col>
-                            </Row>
-                            
-                        </Card.Header>
-
-                        <Card.Body style={{ height: '100%', overflowY: 'auto' }}>
-                            <div className="list-group list-group-flush">
-                                {kitchenOrders.map(order => (
-                                    <OrderListItem
-                                        key={order.kitchenAssignId}
-                                        order={order}
-                                        isSelected={selectedOrder?.kitchenAssignId === order.kitchenAssignId}
-                                        onClick={() => setSelectedOrder(order)}
-                                    />
-                                ))}
-                            </div>
-                        </Card.Body>
-                        {totalPage > 1 && renderPagination()}
-                    </Card>
-
-                </div>
-
-                {/* Right Panel - Order Detail */}
-                <div className="col-md-7 ps-2">
-                    <div style={{ height: '100%', overflowY: 'auto' }}>
-                        <OrderDetail order={selectedOrder} />
+        <div className="w-full p-3">
+            <div className="flex gap-3" style={{ height: 'calc(100vh - 200px)' }}>
+                {/* Left Panel */}
+                <div className="w-5/12 flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                        <h5 className="font-bold text-gray-900 dark:text-gray-100">Đã hoàn thành ({totalItems} món)</h5>
+                        <span className="bg-warning text-white text-xs font-bold px-3 py-1.5 rounded-full">
+                            {formatTime(currentTime.toISOString())}
+                        </span>
                     </div>
+                    <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+                        {kitchenOrders.map(order => (
+                            <OrderListItem
+                                key={order.kitchenAssignId}
+                                order={order}
+                                isSelected={selectedOrder?.kitchenAssignId === order.kitchenAssignId}
+                                onClick={() => setSelectedOrder(order)}
+                            />
+                        ))}
+                    </div>
+                    {totalPage > 1 && (
+                        <div className="p-3 border-t border-gray-100 dark:border-gray-700">
+                            {renderPagination()}
+                        </div>
+                    )}
+                </div>
+                {/* Right Panel */}
+                <div className="w-7/12 overflow-y-auto">
+                    <OrderDetail order={selectedOrder} />
                 </div>
             </div>
         </div>

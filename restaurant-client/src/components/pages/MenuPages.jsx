@@ -1,42 +1,35 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Apis, { authApis, endpoints } from "../configs/Apis";
-import { Button, Card, Col, Container, Row, Nav, Badge, Modal } from "react-bootstrap";
 import Header from "../layout/Header";
 import Footer from "../layout/Footer";
-import AlertComp from "../common/AlertComp";
-import '../styles/MenuPages.css';
 import { useCookies } from "react-cookie";
 import SpinnerComp from "../common/SpinnerComp";
-import { MyCartContext, MyUserContext } from "../configs/Context";
+import useUserStore from "../../store/useUserStore";
+import useCartStore from "../../store/useCartStore";
 import { Link } from "react-router-dom";
+import { ShoppingCart, Plus, UtensilsCrossed } from "lucide-react";
 
 const MenuPages = () => {
     const [menuItems, setMenuItems] = useState([]);
     const [categories, setCategories] = useState([]);
-    const [cateId, setCateId] = useState(1);
-    const [user,] = useContext(MyUserContext);
-    const formatPrice = (price) => {
-        return price.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
-    };
+    const [cateId, setCateId] = useState(null);
+    const { user } = useUserStore();
+    const { cart, addItem, updateItemId } = useCartStore();
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [cookies] = useCookies(["token"]);
+
+    const formatPrice = (price) =>
+        price.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
 
     const fetchMenuItems = async (categoryId) => {
-        if (!categoryId) {
-            console.warn("fetchMenuItems skipped, invalid categoryId:", categoryId);
-            return;
-        }
+        if (!categoryId) return;
         try {
             const url = `${endpoints['menu_items']}?cateId=${categoryId}`;
             const res = await Apis.get(url);
-
-            if (res.data.code === 200) {
-                setMenuItems(res.data.result);
-            }
+            if (res.data.code === 200) setMenuItems(res.data.result);
         } catch (error) {
-            if (error.response) {
-                console.error("Backend error:", error.response.data);
-            } else {
-                console.error("Axios error:", error.message);
-            }
+            console.error("Error fetching menu items:", error.message);
         }
     };
 
@@ -45,431 +38,198 @@ const MenuPages = () => {
             const url = `${endpoints['categories']}`;
             const res = await Apis.get(url);
             if (res.data.code === 200) {
-                const fetchedCategories = res.data.result;
-                setCategories(fetchedCategories);
-                if (fetchedCategories.length > 0) {
-                    setCateId(fetchedCategories[0].categoryId);
-                }
+                const cats = res.data.result;
+                setCategories(cats);
+                if (cats.length > 0) setCateId(cats[0].categoryId);
             }
         } catch (error) {
             console.error('Error fetching categories:', error);
         }
     };
 
-    useEffect(() => {
-        fetchCategories();
-    }, []);
+    useEffect(() => { fetchCategories(); }, []);
+    useEffect(() => { if (cateId !== null) fetchMenuItems(cateId); }, [cateId]);
 
-    useEffect(() => {
-        if (cateId !== null) {
-            fetchMenuItems(cateId);
-        }
-    }, [cateId]);
-
-    const [loading, setLoading] = useState(false);
-    const [success, setSuccess] = useState(null);
-    const [error, setError] = useState(null);
-    const [cookies, setCookies] = useCookies(["cart"]);
-    const [cart, dispatchCart] = useContext(MyCartContext);
-    const [show, setShow] = useState(false);
-    const handleClose = () => setShow(false);
     const handleAddFoodToCart = async (item) => {
-        if (!user) {
-            setShow(true);
-            return;
-        }
-        console.log("name:", item.name);
-        dispatchCart({
-            type: "add",
-            payload: { name: item.name, menuItemId: item.menuItemId, quantity: 1, price: item.price, image: item.image }
-        });
+        if (!user) { setShowLoginModal(true); return; }
+
+        addItem({ name: item.name, menuItemId: item.menuItemId, quantity: 1, price: item.price, image: item.image });
 
         try {
             setLoading(true);
-            let payload = {
-                "items": [
-                    {
-                        "menuItemId": item.menuItemId,
-                        "quantity": 1
-                    }
-                ]
-            }
+            const payload = { items: [{ menuItemId: item.menuItemId, quantity: 1 }] };
             const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['cart']}/add`;
-            console.log("fetching url:", url);
-            console.log("token : ", cookies.token || null);
-            console.log("payload :", payload);
             let res = await authApis(cookies.token).post(url, payload);
             if (res.status === 200) {
-                const updatedCart = res.data.result.items;
-                if(updatedCart){
-                      console.log("has results")
-                }
-                  
-                updatedCart.map(cartItem => {
-                    if (cartItem.menuItemId == item.menuItemId) {
-                        console.log("updateId case");
-                        console.log("cartItemId ", Number(cartItem.cartItemId))
-                        dispatchCart({
-                            type: "updateId",
-                            payload: {
-                                menuItemId: cartItem.menuItemId,
-                                cartItemId: cartItem.cartItemId
-                            }
-                        })
+                res.data.result.items?.forEach(cartItem => {
+                    if (cartItem.menuItemId === item.menuItemId) {
+                        updateItemId({ menuItemId: cartItem.menuItemId, cartItemId: cartItem.cartItemId });
                     }
-                })
-
+                });
             }
         } catch (error) {
             setError("Có lỗi xảy ra");
         } finally {
             setLoading(false);
         }
-    }
-    useEffect(() => {
-        console.log("🛒 Cart state updated:", cart);
-    },[cart])
+    };
 
-    useEffect(() => {
-        if (success) {
-            console.log(success);
-            const timer = setTimeout(() => {
-                setSuccess(null);
-            }, 2500);
-            return () => clearTimeout(timer);
-        }
-    }, [success]);
-
-    useEffect(() => {
-        if (error) {
-            const timer = setTimeout(() => {
-                setError(null);
-            }, 2500);
-            return () => clearTimeout(timer);
-        }
-    }, [error]);
+    const cartTotal = cart.reduce((sum, i) => sum + i.quantity, 0);
 
     return (
-        <>
-            <div
-                className="d-flex flex-column min-vh-100"
-                style={{
-                    background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
-                    minHeight: '100vh'
-                }}
-            >
-                <Header />
-                <Container className="flex-grow-1" style={{ marginTop: '20px', position: 'relative', zIndex: 3 }}>
-                    {/* Categories & Cart Section */}
-                    <div style={{
-                        background: 'white',
-                        borderRadius: '20px',
-                        padding: '25px',
-                        marginBottom: '30px',
-                        boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-                        border: '1px solid rgba(145, 41, 16, 0.1)'
-                    }}>
-                        <Row style={{ alignItems: 'center' }}>
-                            <Col md={8}>
-                                <h5 style={{
-                                    marginBottom: '15px',
-                                    color: '#912910',
-                                    fontWeight: '700'
-                                }}>
-                                    Danh mục món ăn
-                                </h5>
-                                <div style={{
-                                    display: 'flex',
-                                    flexWrap: 'wrap',
-                                    gap: '10px'
-                                }}>
-                                    {categories.map(category => (
-                                        <button
-                                            key={category.categoryId}
-                                            className={`${cateId === category.categoryId ? 'active' : ''}`}
-                                            onClick={() => {
-                                                setCateId(category.categoryId);
-                                                fetchMenuItems(category.categoryId);
-                                            }}
-                                            style={{
-                                                padding: '10px 20px',
-                                                borderRadius: '25px',
-                                                border: '2px solid #912910',
-                                                background: cateId === category.categoryId
-                                                    ? 'linear-gradient(135deg, #912910 0%, #b8401f 100%)'
-                                                    : 'transparent',
-                                                color: cateId === category.categoryId ? 'white' : '#912910',
-                                                fontWeight: '600',
-                                                fontSize: '14px',
-                                                cursor: 'pointer',
-                                                transition: 'all 0.3s ease',
-                                                outline: 'none',
-                                                boxShadow: cateId === category.categoryId
-                                                    ? '0 4px 15px rgba(145, 41, 16, 0.3)'
-                                                    : '0 2px 5px rgba(0,0,0,0.1)'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                if (cateId !== category.categoryId) {
-                                                    e.target.style.background = 'rgba(145, 41, 16, 0.1)';
-                                                    e.target.style.transform = 'translateY(-2px)';
-                                                }
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                if (cateId !== category.categoryId) {
-                                                    e.target.style.background = 'transparent';
-                                                    e.target.style.transform = 'translateY(0)';
-                                                }
-                                            }}
-                                        >
-                                            {category.name}
-                                        </button>
-                                    ))}
-                                </div>
-                            </Col>
-                            {user?.role === "CUSTOMER" && <Col md={4} style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                <Link
-                                    to="/cart"
-                                    className="position-relative"
-                                    style={{
-                                        textDecoration: 'none',
-                                        border: '2px solid #912910',
-                                        borderRadius: '25px',
-                                        padding: '12px 25px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '10px',
-                                        transition: 'all 0.3s ease',
-                                        fontSize: '16px',
-                                        fontWeight: '600',
-                                        minWidth: '160px',
-                                        justifyContent: 'center',
-                                        color: '#912910',
-                                        backgroundColor: 'transparent',
-                                        boxShadow: '0 4px 15px rgba(145, 41, 16, 0.2)'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.backgroundColor = '#912910';
-                                        e.currentTarget.style.color = 'white';
-                                        e.currentTarget.style.transform = 'translateY(-3px)';
-                                        e.currentTarget.style.boxShadow = '0 6px 20px rgba(145, 41, 16, 0.4)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.backgroundColor = 'transparent';
-                                        e.currentTarget.style.color = '#912910';
-                                        e.currentTarget.style.transform = 'translateY(0)';
-                                        e.currentTarget.style.boxShadow = '0 4px 15px rgba(145, 41, 16, 0.2)';
-                                    }}
-                                >
-                                    <svg
-                                        width="20"
-                                        height="20"
-                                        fill="currentColor"
-                                        viewBox="0 0 16 16"
-                                        style={{ flexShrink: 0 }}
-                                    >
-                                        <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5zM3.102 4l1.313 7h8.17l1.313-7H3.102zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
-                                    </svg>
-                                    <span>Giỏ hàng</span>
-                                    {cart.reduce((sum, i) => sum + i.quantity, null) && (
-                                        <Badge
-                                            bg="danger"
-                                            pill
-                                            className="position-absolute"
-                                            style={{
-                                                top: '-8px',
-                                                right: '-8px',
-                                                fontSize: '11px',
-                                                minWidth: '22px',
-                                                height: '22px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                border: '2px solid white',
-                                                boxShadow: '0 2px 8px rgba(220, 53, 69, 0.4)',
-                                                background: 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)'
-                                            }}
-                                        >
-                                            {cart.length > 99 ? '99+' : cart.reduce((sum, i) => sum + i.quantity, null)}
-                                        </Badge>
-                                    )}
-                                </Link>
-                            </Col>}
+        <div className="flex flex-col min-h-screen bg-gray-100 dark:bg-gray-950">
+            <Header />
 
-                        </Row>
+            <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl">
+                {/* Category & Cart Bar */}
+                <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-card border border-gray-200 dark:border-gray-800 p-5 mb-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex-1">
+                            <h5 className="text-sm font-bold text-primary uppercase tracking-wider mb-3">
+                                Danh mục món ăn
+                            </h5>
+                            <div className="flex flex-wrap gap-2">
+                                {categories.map(category => (
+                                    <button
+                                        key={category.categoryId}
+                                        onClick={() => {
+                                            setCateId(category.categoryId);
+                                            fetchMenuItems(category.categoryId);
+                                        }}
+                                        className={`px-5 py-2 rounded-full text-sm font-semibold border-2 transition-all duration-200 ${cateId === category.categoryId
+                                            ? 'bg-primary border-primary text-white shadow-lg shadow-primary/30 -translate-y-0.5'
+                                            : 'border-primary text-primary bg-transparent hover:bg-primary/10'
+                                            }`}
+                                    >
+                                        {category.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {user?.role === "CUSTOMER" && (
+                            <Link
+                                to="/cart"
+                                className="relative flex items-center gap-2 px-6 py-3 rounded-full border-2 border-primary text-primary font-bold text-sm bg-transparent hover:bg-primary hover:text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 shrink-0"
+                            >
+                                <ShoppingCart size={18} />
+                                <span>Giỏ hàng</span>
+                                {cartTotal > 0 && (
+                                    <span className="absolute -top-2 -right-2 min-w-[22px] h-[22px] bg-danger text-white text-[11px] font-bold rounded-full flex items-center justify-center border-2 border-white shadow-md px-1">
+                                        {cartTotal > 99 ? '99+' : cartTotal}
+                                    </span>
+                                )}
+                            </Link>
+                        )}
                     </div>
+                </div>
 
-                    {/* Alerts */}
-                    {/* {error && <AlertComp variant="danger" lable={error} />}
-                    {success && <AlertComp variant="success" lable={success} />} */}
+                {/* Menu Items Grid */}
+                {menuItems.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {menuItems.map(item => (
+                            <div
+                                key={item.menuItemId}
+                                className="group bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-card border border-gray-100 dark:border-gray-800 flex flex-col transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-primary/15"
+                            >
+                                {/* Food Image */}
+                                <div className="relative overflow-hidden h-52 shrink-0">
+                                    <img
+                                        src={item.image}
+                                        alt={item.name}
+                                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                    />
+                                    {/* Gradient overlay */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                </div>
 
-                    {/* Menu Items Grid */}
-                    <Row>
-                        {menuItems.length > 0 ? (
-                            menuItems.map(item => (
-                                <Col md={4} className="mb-4" key={item.menuItemId}>
-                                    <Card style={{
-                                        border: 'none',
-                                        borderRadius: '20px',
-                                        overflow: 'hidden',
-                                        boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-                                        transition: 'all 0.3s ease',
-                                        background: 'white',
-                                        height: '100%'
-                                    }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.transform = 'translateY(-10px)';
-                                            e.currentTarget.style.boxShadow = '0 20px 40px rgba(145, 41, 16, 0.2)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.transform = 'translateY(0)';
-                                            e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.1)';
-                                        }}
-                                    >
-                                        <div style={{ position: 'relative', overflow: 'hidden' }}>
-                                            <Card.Img
-                                                variant="top"
-                                                src={item.image}
-                                                alt={item.name}
-                                                style={{
-                                                    height: '250px',
-                                                    objectFit: 'cover',
-                                                    transition: 'transform 0.3s ease'
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    e.target.style.transform = 'scale(1.05)';
-                                                }}
-                                                onMouseLeave={(e) => {
-                                                    e.target.style.transform = 'scale(1)';
-                                                }}
-                                            />
-
-                                        </div>
-
-                                        <Card.Body style={{
-                                            padding: '25px',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            justifyContent: 'space-between',
-                                            minHeight: '180px'
-                                        }}>
-                                            <div>
-                                                <Card.Title style={{
-                                                    fontSize: '1.4rem',
-                                                    fontWeight: '700',
-                                                    color: '#333',
-                                                    marginBottom: '15px',
-                                                    textAlign: 'center',
-                                                    lineHeight: '1.3'
-                                                }}>
-                                                    {item.name}
-                                                </Card.Title>
-
-                                                <div style={{
-                                                    textAlign: 'center',
-                                                    marginBottom: '20px'
-                                                }}>
-                                                    <span style={{
-                                                        fontSize: '1.3rem',
-                                                        fontWeight: '800',
-                                                        color: '#912910',
-                                                        background: 'linear-gradient(135deg, #912910 0%, #b8401f 100%)',
-                                                        WebkitBackgroundClip: 'text',
-                                                        WebkitTextFillColor: 'transparent',
-                                                        padding: '5px 15px',
-                                                        borderRadius: '15px',
-                                                        border: '2px solid rgba(145, 41, 16, 0.2)',
-                                                        display: 'inline-block'
-                                                    }}>
-                                                        {formatPrice(item.price)}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {(user === null || user.role === "CUSTOMER") && <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                                <Button
-                                                    onClick={() => handleAddFoodToCart(item)}
-                                                    disabled={loading}
-                                                    style={{
-                                                        background: 'linear-gradient(135deg, #912910 0%, #b8401f 100%)',
-                                                        border: 'none',
-                                                        borderRadius: '25px',
-                                                        padding: '12px 25px',
-                                                        fontWeight: '600',
-                                                        fontSize: '14px',
-                                                        width: '100%',
-                                                        boxShadow: '0 4px 15px rgba(145, 41, 16, 0.3)',
-                                                        transition: 'all 0.3s ease',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        gap: '8px'
-                                                    }}
-                                                    onMouseEnter={(e) => {
-                                                        e.target.style.transform = 'translateY(-2px)';
-                                                        e.target.style.boxShadow = '0 6px 20px rgba(145, 41, 16, 0.5)';
-                                                    }}
-                                                    onMouseLeave={(e) => {
-                                                        e.target.style.transform = 'translateY(0)';
-                                                        e.target.style.boxShadow = '0 4px 15px rgba(145, 41, 16, 0.3)';
-                                                    }}
-                                                >
-                                                    {loading ? (
-                                                        <SpinnerComp />
-                                                    ) : (
-                                                        <>
-                                                            <span>Thêm vào giỏ</span>
-                                                        </>
-                                                    )}
-                                                </Button>
-                                            </div>}
-
-                                        </Card.Body>
-                                    </Card>
-                                </Col>
-                            ))
-                        ) : (
-                            <div className="text-center my-5 w-100">
-                                <div style={{
-                                    background: 'white',
-                                    borderRadius: '20px',
-                                    padding: '60px 40px',
-                                    boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-                                    maxWidth: '600px',
-                                    margin: '0 auto'
-                                }}>
-
-                                    <h3 style={{ color: '#666', marginBottom: '15px' }}>
-                                        Không có món ăn trong danh mục này
+                                {/* Card Body */}
+                                <div className="flex flex-col flex-1 p-5">
+                                    <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 text-center mb-3 leading-snug line-clamp-2">
+                                        {item.name}
                                     </h3>
-                                    <p style={{ color: '#999' }}>
-                                        Hãy thử chọn danh mục khác để xem thêm món ăn ngon!
-                                    </p>
+
+                                    <div className="text-center mb-4">
+                                        <span className="inline-block text-gray-500 font-extrabold text-lg border-2 border-primary/20 bg-primary/5 px-4 py-1 rounded-full">
+                                            {formatPrice(item.price)}
+                                        </span>
+                                    </div>
+
+                                    {(user === null || user.role === "CUSTOMER") && (
+                                        <button
+                                            onClick={() => handleAddFoodToCart(item)}
+                                            disabled={loading}
+                                            className="mt-auto w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white bg-primary hover:bg-primary-active transition-all shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed"
+                                        >
+                                            {loading ? (
+                                                <SpinnerComp className="w-4 h-4 border-2" />
+                                            ) : (
+                                                <>
+                                                    <Plus size={16} strokeWidth={2.5} />
+                                                    Thêm vào giỏ
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
                                 </div>
                             </div>
-                        )}
-                    </Row>
-                    <Modal show={show} onHide={handleClose}>
-                        <Modal.Header closeButton>
-                            <Modal.Title>Yêu cầu đăng nhập</Modal.Title>
-                        </Modal.Header>
-                        <Modal.Body>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-24 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-card">
+                        <UtensilsCrossed size={56} className="text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                        <h3 className="text-lg font-bold text-gray-400 dark:text-gray-500 mb-2">
+                            Không có món ăn trong danh mục này
+                        </h3>
+                        <p className="text-sm text-gray-400">
+                            Hãy thử chọn danh mục khác để xem thêm món ăn ngon!
+                        </p>
+                    </div>
+                )}
+            </main>
+
+            <Footer />
+
+            {/* Login Required Modal */}
+            {/* {showLoginModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div
+                        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                        onClick={() => setShowLoginModal(false)}
+                    />
+                    <div className="relative z-10 bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-sm mx-4 p-8 border border-gray-100 dark:border-gray-800">
+                        <h3 className="text-xl font-extrabold text-gray-900 dark:text-gray-100 mb-3">
+                            🔒 Yêu cầu đăng nhập
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
                             Vui lòng{" "}
-                            <Link to={`/login?redirect=${encodeURIComponent(window.location.pathname)}`}>
+                            <Link
+                                to={`/login?redirect=${encodeURIComponent(window.location.pathname)}`}
+                                className="font-bold text-primary hover:text-primary-active transition-colors underline"
+                            >
                                 đăng nhập
-                            </Link>{" "}
-                            để thực hiện đặt món
-                        </Modal.Body>
-                        <Modal.Footer>
-                            <Button variant="secondary" onClick={handleClose}>
+                            </Link>
+                            {" "}để thực hiện đặt món.
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowLoginModal(false)}
+                                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                            >
                                 Đóng
-                            </Button>
-                        </Modal.Footer>
-                    </Modal>
-                </Container>
-                <Footer />
-            </div>
-        </>
+                            </button>
+                            <Link
+                                to={`/login?redirect=${encodeURIComponent(window.location.pathname)}`}
+                                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand hover:bg-brand-active transition shadow-lg shadow-brand/20"
+                            >
+                                Đăng nhập ngay
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            )} */}
+        </div>
     );
-}
+};
 
 export default MenuPages;
