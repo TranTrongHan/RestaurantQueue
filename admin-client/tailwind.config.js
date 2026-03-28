@@ -1,0 +1,87 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx,vue}'],
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        // Override Gray colors với màu custom
+        gray: {
+          50: '#FAFAFA',
+          100: '#F9F9F9',
+          200: '#F1F1F4',
+          300: '#DBDFE9',
+          400: '#C4CADA',
+          500: '#99A1B7',
+          600: '#78829D',
+          700: '#4B5675',
+          800: '#252F4A',
+          900: '#071437',
+          950: '#030A1E',
+        },
+        // Custom semantic colors
+        primary: {
+          DEFAULT: '#1B84FF',
+          active: '#056EE9',
+          light: '#EFF6FF',
+          clarity: 'rgba(27, 132, 255, 0.20)',
+          inverse: '#ffffff',
+          50: '#EFF6FF',
+          100: '#DBEAFE',
+          200: '#BFDBFE',
+          300: '#93C5FD',
+          400: '#60A5FA',
+          500: '#1B84FF',
+          600: '#056EE9',
+          700: '#0369D1',
+          800: '#075985',
+          900: '#0C4A6E',
+        },
+        success: {
+          DEFAULT: '#17C653',
+          active: '#04B440',
+          light: '#EAFFF1',
+          clarity: 'rgba(23, 198, 83, 0.20)',
+          inverse: '#ffffff',
+        },
+        warning: {
+          DEFAULT: '#F6B100',
+          active: '#DFA000',
+          light: '#FFF8DD',
+          clarity: 'rgba(246, 177, 0, 0.20)',
+          inverse: '#ffffff',
+        },
+        danger: {
+          DEFAULT: '#F8285A',
+          active: '#D81A48',
+          light: '#FFEEF3',
+          clarity: 'rgba(248, 40, 90, 0.20)',
+          inverse: '#ffffff',
+        },
+        info: {
+          DEFAULT: '#7239EA',
+          active: '#5014D0',
+          light: '#F8F5FF',
+          clarity: 'rgba(114, 57, 234, 0.20)',
+          inverse: '#ffffff',
+        },
+        brand: {
+          DEFAULT: '#FF6F1E',
+          active: '#F15700',
+          light: '#FFF5EF',
+          clarity: 'rgba(255, 111, 30, 0.20)',
+          inverse: '#ffffff',
+        },
+      },
+      boxShadow: {
+        card: '0px 3px 4px 0px rgba(0, 0, 0, 0.03)',
+        primary: '0px 4px 12px 0px rgba(40, 132, 239, 0.35)',
+        success: '0px 4px 12px 0px rgba(53, 189, 100, 0.35)',
+        danger: '0px 4px 12px 0px rgba(241, 65, 108, 0.35)',
+        info: '0px 4px 12px 0px rgba(114, 57, 234, 0.35)',
+        warning: '0px 4px 12px 0px rgba(246, 192, 0, 0.35)',
+      },
+    },
+  },
+  plugins: [],
+}
