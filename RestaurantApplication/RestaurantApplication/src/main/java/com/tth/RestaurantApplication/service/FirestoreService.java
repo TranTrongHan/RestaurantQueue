@@ -1,252 +1,170 @@
 package com.tth.RestaurantApplication.service;
 
-import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
-import com.google.type.DateTime;
-import com.tth.RestaurantApplication.entity.KitchenAssignment;
-import com.tth.RestaurantApplication.entity.Order;
 import com.tth.RestaurantApplication.entity.OrderItem;
+import com.tth.RestaurantApplication.entity.Reservation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 @Service
 @Slf4j
 public class FirestoreService {
-    //    orders/{orderId}
-    //    orderItems/{orderItemId}
-    //    name: "Lẩu thái"
-    //    quantity: 2
-    //    status: "PENDING"
-    //    startTime: "2025-08-19 13:30:00"
-    //    deadlineTime: null
-    //    priorityScore: 0.75
-    public void pushOrderItem(OrderItem orderItem, Order order) {
 
+    private static final String RESERVATIONS_COLLECTION = "activeReservations";
+    private static final String ORDER_ITEMS_COLLECTION = "orderItems";
+
+    /**
+     * Đồng bộ thông tin cơ bản của Reservation khi khách hàng check-in.
+     */
+    public void syncReservationMetadata(Reservation reservation) {
         try {
             Firestore db = FirestoreClient.getFirestore();
-            String projectId = db.getOptions().getProjectId();
-            log.info("Đang kết nối tới Firestore project: {}", projectId);
-            Map<String, Object> orderItemData = new HashMap<>();
-            orderItemData.put("orderItemId", orderItem.getOrderItemId());
-            orderItemData.put("orderId", order.getOrderId());
-            orderItemData.put("table", order.getOrderSession().getReservation().getTable().getTableName());
-            orderItemData.put("name", orderItem.getMenuItem().getName());
-            orderItemData.put("quantity", orderItem.getQuantity());
-            orderItemData.put("price", orderItem.getMenuItem().getPrice());
-            orderItemData.put("status", orderItem.getStatus().toString());
-            orderItemData.put("startTime", orderItem.getStartTime() != null ? orderItem.getStartTime().toString() : null);
-            orderItemData.put("deadlineTime", orderItem.getDeadlineTime() != null ? orderItem.getDeadlineTime().toString() : null);
-            orderItemData.put("priorityScore", orderItem.getPriorityScore());
-            orderItemData.put("VIP",orderItem.getOrder().getOrderSession().getReservation().getUser().getIsVip());
-            orderItemData.put("isLate",Boolean.FALSE.toString());
-            ApiFuture<WriteResult> result = db.collection("orders")
-                    .document(String.valueOf(order.getOrderId()))
-                    .collection("orderItems")
-                    .document(String.valueOf(orderItem.getOrderItemId()))
-                    .set(orderItemData);
-//            log.info("PUSH Firestore path: orders/{}/orderItems/{}",
-//                    order.getOrderId(), orderItem.getOrderItemId());
-//            log.info("Đã push orderItem {} vào Firestore tại {}",
-//                    orderItem.getOrderItemId(), result.get().getUpdateTime());
+            DocumentReference resRef = db.collection(RESERVATIONS_COLLECTION)
+                    .document(String.valueOf(reservation.getReservationId()));
 
-            ApiFuture<WriteResult> result2 = db.collection("orderItems")
-                    .document(String.valueOf(orderItem.getOrderItemId()))
-                    .set(orderItemData);
+            Map<String, Object> data = new HashMap<>();
+            data.put("reservationId", reservation.getReservationId());
+            data.put("tableId", reservation.getTable().getTableId());
+            data.put("tableName", reservation.getTable().getTableName());
+            data.put("customerName", reservation.getUser().getFullName());
+            data.put("status", reservation.getStatus().toString());
+            data.put("totalAmount", 0.0);
+            data.put("lastUpdated", FieldValue.serverTimestamp());
 
-//            log.info("PUSH Firestore path: orderItems/{}", orderItem.getOrderItemId());
-//            log.info("Đã push orderItem {} vào Firestore (global) tại {}",
-//                    orderItem.getOrderItemId(), result2.get().getUpdateTime());
+            resRef.set(data, SetOptions.merge());
+            log.info("✅ Sync Firestore metadata cho Reservation {}", reservation.getReservationId());
         } catch (Exception e) {
-            log.error("❌ Lỗi khi push orderItem {} vào Firestore: {}",
-                    orderItem.getOrderItemId(), e.getMessage(), e);
-        }
-
-    }
-    public void pushOrderItemForBill(OrderItem orderItem, Order order) throws ExecutionException, InterruptedException {
-        Firestore db = FirestoreClient.getFirestore();
-
-        String billDocId = String.valueOf(orderItem.getMenuItem().getMenuItemId());
-
-        DocumentReference docRef = db.collection("orderBills")
-                .document(String.valueOf(order.getOrderId()))
-                .collection("billItems")
-                .document(billDocId);
-
-
-        try {
-            db.runTransaction(transaction -> {
-                DocumentSnapshot snapshot = transaction.get(docRef).get();
-                long newQuantity = orderItem.getQuantity();
-                Long oldQuantity = null;
-
-                if (snapshot.exists()) {
-                    oldQuantity = snapshot.getLong("quantity");
-                    if (oldQuantity != null) {
-                        newQuantity += oldQuantity;
-                    }
-                }
-
-//                log.info("📌 Transaction: orderId={} | menuItem={} | oldQuantity={} | thêm={} | newQuantity={}",
-//                        order.getOrderId(), orderItem.getMenuItem().getName(),
-//                        oldQuantity, orderItem.getQuantity(), newQuantity);
-
-                Map<String, Object> data = new HashMap<>();
-                data.put("menuItemId", orderItem.getMenuItem().getMenuItemId());
-                data.put("name", orderItem.getMenuItem().getName());
-                data.put("price", orderItem.getMenuItem().getPrice());
-                data.put("quantity", newQuantity);
-
-                transaction.set(docRef, data);
-                return null;
-            }).get(); // ⚡ bắt buộc gọi .get() để chờ commit xong
-
-//            log.info(" Đã push BillItem thành công vào orderBills/{}/billItems/{}",
-//                    order.getOrderId(), billDocId);
-        } catch (Exception e) {
-            log.error(" Lỗi khi push BillItem: {}", e.getMessage(), e);
+            log.error("❌ Lỗi khi sync Reservation {} lên Firestore: {}", reservation.getReservationId(), e.getMessage());
         }
     }
-    public void decreaseBillItemQuantity(String orderId, OrderItem orderItem) {
-        Firestore db = FirestoreClient.getFirestore();
-        String billDocId = String.valueOf(orderItem.getMenuItem().getMenuItemId());
 
-        DocumentReference billDoc = db.collection("orderBills")
-                .document(orderId)
-                .collection("billItems")
-                .document(billDocId);
-
-//        log.info("➡️ Decrease BillItem bắt đầu: orderId={} | menuItemId={} | minus={}",
-//                orderId, billDocId, orderItem.getQuantity());
-
+    /**
+     * Đẩy món ăn mới vào sub-collection của Reservation và cập nhật tổng tiền tạm tính.
+     */
+    public void pushOrderItem(OrderItem orderItem, Integer reservationId) {
         try {
+            Firestore db = FirestoreClient.getFirestore();
+            DocumentReference resRef = db.collection(RESERVATIONS_COLLECTION)
+                    .document(String.valueOf(reservationId));
+            DocumentReference itemRef = resRef.collection(ORDER_ITEMS_COLLECTION)
+                    .document(String.valueOf(orderItem.getOrderItemId()));
+
             db.runTransaction(transaction -> {
-
-                DocumentSnapshot snapshot = transaction.get(billDoc).get();
-                log.info("📂 Checking BillItem: path={} | exists={}", billDoc.getPath(), snapshot.exists());
-                if (!snapshot.exists()) {
-                    log.warn("⚠️ BillItem KHÔNG tồn tại để decrease: orderId={} | menuItemId={}",
-                            orderId, billDocId);
-                    return null;
+                // 1. Lấy tổng tiền hiện tại
+                DocumentSnapshot resSnapshot = transaction.get(resRef).get();
+                double currentTotal = 0.0;
+                if (resSnapshot.exists() && resSnapshot.contains("totalAmount")) {
+                    currentTotal = resSnapshot.getDouble("totalAmount");
                 }
 
-                Long oldQuantity = snapshot.getLong("quantity");
-                if (oldQuantity == null) oldQuantity = 0L;
+                // 2. Tính tiền của món mới
+                double itemPrice = orderItem.getMenuItem().getPrice().doubleValue();
+                double itemTotal = itemPrice * orderItem.getQuantity();
+                double newTotal = currentTotal + itemTotal;
 
-                long minus = orderItem.getQuantity();
-                long newQuantity = oldQuantity - minus;
+                // 3. Chuẩn bị dữ liệu món ăn
+                Map<String, Object> itemData = new HashMap<>();
+                itemData.put("orderItemId", orderItem.getOrderItemId());
+                itemData.put("reservationId", reservationId);
+                itemData.put("tableName", resSnapshot.getString("tableName"));
+                itemData.put("menuItemId", orderItem.getMenuItem().getMenuItemId());
+                itemData.put("name", orderItem.getMenuItem().getName());
+                itemData.put("price", itemPrice);
+                itemData.put("quantity", orderItem.getQuantity());
+                itemData.put("status", orderItem.getStatus().toString());
+                itemData.put("orderedAt", FieldValue.serverTimestamp());
+                itemData.put("note", orderItem.getNote());
 
-                if (newQuantity > 0) {
-                    transaction.update(billDoc, "quantity", newQuantity);
-//                    log.info("🔽 Decrease OK: orderId={} | menuItemId={} | old={} | minus={} | new={}",
-//                            orderId, billDocId, oldQuantity, minus, newQuantity);
-                } else {
-                    transaction.delete(billDoc);
-//                    log.info("🗑️ Xoá billItem vì về 0: orderId={} | menuItemId={} | old={} | minus={}",
-//                            orderId, billDocId, oldQuantity, minus);
-                }
+                // 4. Update cả 2 tài liệu
+                transaction.update(resRef, "totalAmount", newTotal, "lastUpdated", FieldValue.serverTimestamp());
+                transaction.set(itemRef, itemData);
+
                 return null;
             }).get();
 
-//            log.info("✅ Transaction decrease BillItem COMMIT: orderId={} | menuItemId={}", orderId, billDocId);
+            log.info("✅ Push OrderItem {} vào Reservation {} và cập nhật totalAmount", 
+                    orderItem.getOrderItemId(), reservationId);
         } catch (Exception e) {
-//            log.error("❌ Lỗi khi decrease BillItem: orderId={} | menuItemId={} | err={}",
-//                    orderId, billDocId, e.getMessage(), e);
+            log.error("❌ Lỗi khi push OrderItem {} vào Firestore: {}", orderItem.getOrderItemId(), e.getMessage());
         }
     }
-    public void updateOrderItemField(String orderId,String orderItemId, String field, Object value) throws Exception {
+
+    /**
+     * Cập nhật trạng thái của một món ăn cụ thể.
+     */
+    public void updateOrderItemStatus(Integer reservationId, Integer orderItemId, String status) {
         try {
             Firestore db = FirestoreClient.getFirestore();
+            DocumentReference itemRef = db.collection(RESERVATIONS_COLLECTION)
+                    .document(String.valueOf(reservationId))
+                    .collection(ORDER_ITEMS_COLLECTION)
+                    .document(String.valueOf(orderItemId));
 
-            ApiFuture<WriteResult> future = db.collection("orders")
-                    .document(orderId)
-                    .collection("orderItems")
-                    .document(orderItemId)
-                    .set(Map.of(field, value), SetOptions.merge());
-
-            ApiFuture<WriteResult> future2 = db.collection("orderItems")
-                    .document(orderItemId)
-                    .set(Map.of(field, value), SetOptions.merge());
-
-//            log.info("Đã update field '{}' cho orderItem {} ở cả hai collection. Thời gian cập nhật: {}, {}",
-//                    field, orderItemId, future.get().getUpdateTime(), future2.get().getUpdateTime());
+            itemRef.update("status", status);
+            log.info("✅ Cập nhật trạng thái món {} thành {}", orderItemId, status);
         } catch (Exception e) {
-            log.error(" Lỗi khi update {} orderItem {} trên Firestore: {}",
-                    field,orderItemId, e.getMessage(), e);
+            log.error("❌ Lỗi khi cập nhật trạng thái món {}: {}", orderItemId, e.getMessage());
         }
     }
-    public void removeOrderItem(String orderId, String orderItemId) {
+
+    /**
+     * Cập nhật trạng thái chung của Reservation (ví dụ: sang CHECKEDOUT).
+     */
+    public void updateReservationStatus(Integer reservationId, String status) {
         try {
             Firestore db = FirestoreClient.getFirestore();
+            DocumentReference resRef = db.collection(RESERVATIONS_COLLECTION)
+                    .document(String.valueOf(reservationId));
 
-
-            ApiFuture<WriteResult> future1 = db.collection("orders")
-                    .document(orderId)
-                    .collection("orderItems")
-                    .document(orderItemId)
-                    .delete();
-
-
-            ApiFuture<WriteResult> future2 = db.collection("orderItems")
-                    .document(orderItemId)
-                    .delete();
-
-//            log.info("Đã xóa orderItem {} khỏi cả hai collection. Thời gian xóa: {}, {}",
-//                    orderItemId, future1.get().getUpdateTime(), future2.get().getUpdateTime());
-
+            resRef.update("status", status, "lastUpdated", FieldValue.serverTimestamp());
+            log.info("✅ Cập nhật trạng thái Reservation {} thành {}", reservationId, status);
         } catch (Exception e) {
-            log.error("Lỗi khi xóa orderItem {} trên Firestore: {}", orderItemId, e.getMessage(), e);
+            log.error("❌ Lỗi khi cập nhật trạng thái Reservation {}: {}", reservationId, e.getMessage());
         }
     }
-    public void pushKitchenAssignment(KitchenAssignment kitchenAssignment, OrderItem orderItem) {
+
+    public void updatePaymentStatus(Integer reservationId, String paymentStatus) {
         try {
             Firestore db = FirestoreClient.getFirestore();
-            String projectId = db.getOptions().getProjectId();
+            DocumentReference resRef = db.collection(RESERVATIONS_COLLECTION)
+                    .document(String.valueOf(reservationId));
 
-            Map<String, Object> data = new HashMap<>();
-            data.put("orderId", orderItem.getOrder().getOrderId());
-            data.put("name", orderItem.getMenuItem().getName());
-            data.put("quantity", orderItem.getQuantity());
-            data.put("priorityScore",orderItem.getPriorityScore());
-            data.put("status", kitchenAssignment.getStatus().toString());
-            data.put("sendingTime", orderItem.getStartTime() != null ? orderItem.getStartTime().toString() : null);
-            data.put("expectedDeadlineTime", orderItem.getDeadlineTime() != null ? orderItem.getDeadlineTime().toString() : null);
-            data.put("deadlineTime",kitchenAssignment.getDeadlineTime().toString());
-            data.put("chef",kitchenAssignment.getChef().getUser().getFullName());
-            data.put("table",orderItem.getOrder().getOrderSession().getReservation().getTable().getTableName());
-            data.put("startAt",kitchenAssignment.getStartAt().toString());
-            data.put("VIP",orderItem.getOrder().getOrderSession().getReservation().getUser().getIsVip());
-            data.put("finishAt",null);
-            data.put("actualCookingTime",null);
-
-            ApiFuture<WriteResult> result = db.collection("kitchen")
-                    .document(String.valueOf(kitchenAssignment.getKitchenAssignId()))
-                    .set(data);
-
-
+            resRef.update("paymentStatus", paymentStatus, "lastUpdated", FieldValue.serverTimestamp());
+            log.info("✅ Cập nhật trạng thái thanh toán Reservation {} thành {}", reservationId, paymentStatus);
         } catch (Exception e) {
-            log.error("❌ Lỗi khi push kitchenAssign {} vào Firestore: {}",
-                    kitchenAssignment.getKitchenAssignId(), e.getMessage(), e);
+            log.error("❌ Lỗi khi cập nhật trạng thái thanh toán Reservation {}: {}", reservationId, e.getMessage());
         }
     }
-    public void updateKitchenField(String kitchenAssignId, String field, Object value) throws Exception {
+
+    /**
+     * Xóa món ăn khỏi Firestore và trừ tiền tương ứng.
+     */
+    public void removeOrderItem(Integer reservationId, Integer orderItemId, double amountToSubtract) {
         try {
             Firestore db = FirestoreClient.getFirestore();
+            DocumentReference resRef = db.collection(RESERVATIONS_COLLECTION)
+                    .document(String.valueOf(reservationId));
+            DocumentReference itemRef = resRef.collection(ORDER_ITEMS_COLLECTION)
+                    .document(String.valueOf(orderItemId));
 
-            ApiFuture<WriteResult> future = db.collection("kitchen")
-                    .document(String.valueOf(kitchenAssignId))
-                    .set(Map.of(field, value), SetOptions.merge());
+            db.runTransaction(transaction -> {
+                DocumentSnapshot resSnapshot = transaction.get(resRef).get();
+                if (resSnapshot.exists()) {
+                    double currentTotal = resSnapshot.getDouble("totalAmount");
+                    double newTotal = Math.max(0, currentTotal - amountToSubtract);
+                    transaction.update(resRef, "totalAmount", newTotal, "lastUpdated", FieldValue.serverTimestamp());
+                }
+                transaction.delete(itemRef);
+                return null;
+            }).get();
 
-
+            log.info("✅ Xóa OrderItem {} khỏi Reservation {} và cập nhật totalAmount", orderItemId, reservationId);
         } catch (Exception e) {
-            log.error(" Lỗi khi update {} kitchenAssign {} trên Firestore: {}",
-                    field,kitchenAssignId, e.getMessage(), e);
+            log.error("❌ Lỗi khi xóa OrderItem {} khỏi Firestore: {}", orderItemId, e.getMessage());
         }
     }
-
 }

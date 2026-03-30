@@ -127,9 +127,8 @@ public class OrderSessionService {
         orderItem.setEstimateTime(estimatedTime);
         orderItem.setStartTime(LocalDateTime.now());
         orderItem.setDeadlineTime(LocalDateTime.now().plusMinutes((long) estimatedTime));
-        log.info("before priority");
-        orderItem.setPriorityScore(this.calculatePriorityScore(orderItem));
-        log.info("after priority");
+        // logic priority points disabled
+        // orderItem.setPriorityScore(this.calculatePriorityScore(orderItem));
         return orderItemRepository.save(orderItem);
     }
 
@@ -168,23 +167,16 @@ public class OrderSessionService {
                     dishData.put("quantity", String.valueOf(orderItem.getQuantity()));
                     dishData.put("priority", String.valueOf(orderItem.getPriorityScore()));
 
-                    redisTemplate.opsForStream().add(redisProperties.getStreamKey(), dishData);
+//                    redisTemplate.opsForStream().add(redisProperties.getStreamKey(), dishData);
+//
+//
+//                    redisTemplate.opsForZSet().add(
+//                            redisProperties.getZsetKey(),
+//                            String.valueOf(orderItem.getOrderItemId()),
+//                            orderItem.getPriorityScore()
+//                    );
 
-
-                    redisTemplate.opsForZSet().add(
-                            redisProperties.getZsetKey(),
-                            String.valueOf(orderItem.getOrderItemId()),
-                            orderItem.getPriorityScore()
-                    );
-
-                    try {
-                        firestoreService.pushOrderItemForBill(orderItem, order);
-                    } catch (ExecutionException e) {
-                        throw new RuntimeException(e);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                    firestoreService.pushOrderItem(orderItem, order);
+                    firestoreService.pushOrderItem(orderItem, orderSession.getReservation().getReservationId());
                 }
                 kitchenAssignmentService.assignDishesToAllAvailableChefs();
             }
@@ -196,33 +188,33 @@ public class OrderSessionService {
                 .collect(Collectors.toList());
     }
 
-    public double calculatePriorityScore(OrderItem item) {
-        // Điểm cơ bản
-        final double baseScore = 100;
-
-        // 1. Giảm điểm cho khách VIP (càng thấp càng ưu tiên)
-        boolean isVIP = item.getOrder().getOrderSession().getReservation().getUser().getIsVip();
-        double vipPenalty = isVIP ? 20 : 0;
-
-        // 2. Giảm điểm theo thời gian chờ (càng chờ lâu, điểm càng thấp, ưu tiên càng cao)
-        long minutesSinceOrder = Duration.between(
-                item.getStartTime(),
-                LocalDateTime.now()
-        ).toMinutes();
-        double waitingTimeBonus = minutesSinceOrder;
-
-        // 3. Giảm điểm theo thời gian nấu (món nấu lâu điểm càng thấp, ưu tiên càng cao)
-        double avgCookingTime = menuItemService.getAvgCookingTime(item.getMenuItem().getMenuItemId());
-        double cookingTimePenalty = avgCookingTime * 0.5;
-
-        // Công thức tính điểm ưu tiên tổng hợp
-        double score = baseScore - vipPenalty - waitingTimeBonus - cookingTimePenalty;
-        if (score < 0) {
-            score = 0;
-        }
-        return BigDecimal.valueOf(score).setScale(2, RoundingMode.HALF_UP).doubleValue();
-
-    }
+//    public double calculatePriorityScore(OrderItem item) {
+//        // Điểm cơ bản
+//        final double baseScore = 100;
+//
+//        // 1. Giảm điểm cho khách VIP (càng thấp càng ưu tiên)
+//        boolean isVIP = item.getOrder().getOrderSession().getReservation().getUser().getIsVip();
+//        double vipPenalty = isVIP ? 20 : 0;
+//
+//        // 2. Giảm điểm theo thời gian chờ (càng chờ lâu, điểm càng thấp, ưu tiên càng cao)
+//        long minutesSinceOrder = Duration.between(
+//                item.getStartTime(),
+//                LocalDateTime.now()
+//        ).toMinutes();
+//        double waitingTimeBonus = minutesSinceOrder;
+//
+//        // 3. Giảm điểm theo thời gian nấu (món nấu lâu điểm càng thấp, ưu tiên càng cao)
+//        double avgCookingTime = menuItemService.getAvgCookingTime(item.getMenuItem().getMenuItemId());
+//        double cookingTimePenalty = avgCookingTime * 0.5;
+//
+//        // Công thức tính điểm ưu tiên tổng hợp
+//        double score = baseScore - vipPenalty - waitingTimeBonus - cookingTimePenalty;
+//        if (score < 0) {
+//            score = 0;
+//        }
+//        return BigDecimal.valueOf(score).setScale(2, RoundingMode.HALF_UP).doubleValue();
+//
+//    }
 
     // Pay xong thi sua lai status reservatiton
     public BillResponse pay(Integer sessionId) {
@@ -261,6 +253,16 @@ public class OrderSessionService {
 
         return billResponse;
     }
+
+    public void requestPayment(Integer sessionId) {
+        OrderSession orderSession = orderSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_SESSION_NOT_FOUND));
+
+        Integer resId = orderSession.getReservation().getReservationId();
+        firestoreService.updatePaymentStatus(resId, "REQUESTED");
+        log.info("Payment requested for reservation {}", resId);
+    }
+
     public Order getCurrentUserOrder(Integer sessionId){
         OrderSession orderSession = orderSessionRepository.findById(sessionId).orElseThrow(() -> new AppException(ErrorCode.ORDER_SESSION_NOT_FOUND));
 
@@ -294,16 +296,16 @@ public class OrderSessionService {
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_ITEM_NOT_FOUND));
         if(orderItem.getStatus().equals(OrderItem.OrderItemStatus.PENDING)){
             orderItemRepository.delete(orderItem);
-            firestoreService.removeOrderItem(orderItem.getOrder().getOrderId().toString(),orderItem.getOrderItemId().toString());
-            firestoreService.decreaseBillItemQuantity(orderItem.getOrder().getOrderId().toString(),orderItem);
-            redisTemplate.opsForZSet().remove(redisProperties.getZsetKey(), String.valueOf(orderItem.getOrderItemId()));
+            double amountToSubtract = orderItem.getMenuItem().getPrice().doubleValue() * orderItem.getQuantity();
+            firestoreService.removeOrderItem(orderItem.getOrder().getOrderSession().getReservation().getReservationId(), 
+                    orderItem.getOrderItemId(), amountToSubtract);
 
             Map<String, String> deleteData = new HashMap<>();
             deleteData.put("orderItemId", String.valueOf(orderItem.getOrderItemId()));
             deleteData.put("orderId", String.valueOf(orderItem.getOrder().getOrderId()));
             deleteData.put("type", "DELETE");
 
-            redisTemplate.opsForStream().add(redisProperties.getStreamKey(), deleteData);
+//            redisTemplate.opsForStream().add(redisProperties.getStreamKey(), deleteData);
 
             log.info("OrderItem {} đã bị hủy: xóa khỏi DB, Firestore, Redis ZSet và thông báo lên Stream", orderItemId);
         }

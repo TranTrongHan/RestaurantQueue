@@ -1,6 +1,5 @@
 package com.tth.RestaurantApplication.controller;
 
-
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.tth.RestaurantApplication.dto.request.ApiResponse;
@@ -32,59 +31,70 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @Slf4j
-@FieldDefaults(level = AccessLevel.PRIVATE,makeFinal = true)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RequestMapping("/api/order_session")
 public class OrderSessionController {
     AuthenticateService authenticateService;
     OrderSessionService orderSessionService;
     OnlineOrderService onlineOrderService;
     JwtService jwtService;
+
     @GetMapping("/validate")
-    public ApiResponse<OrderSessionResponse> validateSession(@RequestParam("token") String token){
+    public ApiResponse<OrderSessionResponse> validateSession(@RequestParam("token") String token) {
         System.out.println("Received token: " + token);
         return ApiResponse.<OrderSessionResponse>builder()
                 .result(orderSessionService.validateSession(token))
                 .build();
     }
+
     @GetMapping("/{sessionId}")
-    public ApiResponse<OrderResponse> getOrder(@PathVariable(value = "sessionId") Integer sessionId){
+    public ApiResponse<OrderResponse> getOrder(@PathVariable(value = "sessionId") Integer sessionId) {
         return ApiResponse.<OrderResponse>builder()
                 .result(orderSessionService.getOrder(sessionId))
                 .build();
     }
 
     @PostMapping("/{sessionId}/orderitems")
-    ApiResponse<List<OrderItemResponse>> order(@PathVariable(value = "sessionId") Integer sessionId, @RequestBody @Valid OrderRequest orderRequest,
-                                               @RequestHeader("Authorization") String authHeader) throws ParseException, JOSEException {
-        String token =  authHeader != null && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
-        log.info("token : {}" ,token);
+    ApiResponse<List<OrderItemResponse>> order(@PathVariable(value = "sessionId") Integer sessionId,
+            @RequestBody @Valid OrderRequest orderRequest,
+            @RequestHeader("Authorization") String authHeader) throws ParseException, JOSEException {
+        String token = authHeader != null && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
         JWTClaimsSet claims = jwtService.validateAndExtractClaims(token);
         Integer sessionIdFromJwt = claims.getIntegerClaim("sessionId");
-        log.info("sesionIdFromJwt: {}",sessionIdFromJwt);
         if (!sessionId.equals(sessionIdFromJwt)) {
             throw new AppException(ErrorCode.FORBIDDEN);
         }
 
         return ApiResponse.<List<OrderItemResponse>>builder()
-                .result(orderSessionService.createOrderItem(orderRequest,sessionId))
+                .result(orderSessionService.createOrderItem(orderRequest, sessionId))
                 .message("Send food successfull")
                 .build();
     }
+
     @PostMapping("/{sessionId}")
-    ApiResponse<BillResponse> pay(@PathVariable(value = "sessionId") Integer sessionId){
+    ApiResponse<BillResponse> pay(@PathVariable(value = "sessionId") Integer sessionId) {
         return ApiResponse.<BillResponse>builder()
                 .result(orderSessionService.pay(sessionId))
                 .message("pay successful")
                 .build();
     }
+
+    @PostMapping("/{sessionId}/request-payment")
+    ApiResponse<String> requestPayment(@PathVariable(value = "sessionId") Integer sessionId) {
+        orderSessionService.requestPayment(sessionId);
+        return ApiResponse.<String>builder()
+                .result("Payment requested successful")
+                .build();
+    }
+
     @PostMapping("/createPayment/{sessionId}")
     public ApiResponse<String> createPayment(@RequestBody(required = false) PaymentRequest request,
-                                             @PathVariable(value = "sessionId") Integer sessionId,
-                                             @RequestParam String returnUrl) throws Exception {
-        log.info("return url received: {}",returnUrl);
+            @PathVariable(value = "sessionId") Integer sessionId,
+            @RequestParam String returnUrl) throws Exception {
+        log.info("return url received: {}", returnUrl);
         User currentUser = authenticateService.getCurrentAuthenticatedUser();
         Order order = orderSessionService.getCurrentUserOrder(sessionId);
-        String paymentUrl = onlineOrderService.createPaymentUrl(currentUser, request,"DINE_IN",order,returnUrl);
+        String paymentUrl = onlineOrderService.createPaymentUrl(currentUser, request, "DINE_IN", order, returnUrl);
         return ApiResponse.<String>builder()
                 .result(paymentUrl)
                 .message("Create payment url success")
@@ -100,8 +110,9 @@ public class OrderSessionController {
                 .message("Payment verified and bill created")
                 .build();
     }
+
     @DeleteMapping("/{orderItemId}")
-    ApiResponse<String> cancelOrderItem(@PathVariable(value = "orderItemId") Integer orderItemId){
+    ApiResponse<String> cancelOrderItem(@PathVariable(value = "orderItemId") Integer orderItemId) {
         orderSessionService.cancelOrderItem(orderItemId);
         return ApiResponse.<String>builder()
                 .result("OrderItem hủy thành công")

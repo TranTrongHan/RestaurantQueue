@@ -4,6 +4,7 @@ import com.nimbusds.jose.JOSEException;
 import com.tth.RestaurantApplication.dto.request.ApiResponse;
 import com.tth.RestaurantApplication.dto.request.ReservationUpdateRequest;
 import com.tth.RestaurantApplication.dto.request.TableBookingRequest;
+import com.tth.RestaurantApplication.dto.response.PageResponse;
 import com.tth.RestaurantApplication.dto.response.ReservationDetailResponse;
 import com.tth.RestaurantApplication.dto.response.ReservationResponse;
 import com.tth.RestaurantApplication.entity.User;
@@ -19,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.text.ParseException;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -32,20 +32,26 @@ public class ReservationController {
     ReservationService reservationService;
 
     @GetMapping
-    ApiResponse<List<ReservationResponse>> getReservations(@RequestParam Map<String, String> params){
+    ApiResponse<PageResponse<ReservationResponse>> getReservations(
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            @RequestParam Map<String, String> params){
 
-        return ApiResponse.<List<ReservationResponse>>builder()
-                .result(reservationService.getReservations(params))
+        return ApiResponse.<PageResponse<ReservationResponse>>builder()
+                .result(reservationService.getReservations(page, size, params))
                 .message("Get list successfull")
                 .build();
     }
 
     @GetMapping("/my")
-    ApiResponse<List<ReservationResponse>> getMyReservation() throws ParseException, JOSEException {
+    ApiResponse<PageResponse<ReservationResponse>> getMyReservation(
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size
+    ) throws ParseException, JOSEException {
         User currentUser = authenticateService.getCurrentAuthenticatedUser();
 
-        return ApiResponse.<List<ReservationResponse>>builder()
-                .result(reservationService.getMyReservation(currentUser))
+        return ApiResponse.<PageResponse<ReservationResponse>>builder()
+                .result(reservationService.getMyReservation(currentUser, page, size))
                 .message("Get list successfull")
                 .build();
     }

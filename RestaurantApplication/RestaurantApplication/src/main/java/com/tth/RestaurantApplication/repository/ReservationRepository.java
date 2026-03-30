@@ -4,6 +4,8 @@ import com.tth.RestaurantApplication.entity.Reservation;
 import com.tth.RestaurantApplication.entity.User;
 import com.tth.RestaurantApplication.specification.ReservationSpecification;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
@@ -16,9 +18,12 @@ public interface ReservationRepository extends JpaRepository<Reservation,Integer
 
 
     public List<Reservation> findByUserOrderByBookingTimeDesc(User currentUser);
-    
+
+    public Page<Reservation> findByUser(User user, Pageable pageable);
+
     /**
      * Tìm tất cả reservation của user với các status cụ thể
      */
     public List<Reservation> findByUserAndStatusIn(User user, Set<Reservation.ReservationStatus> statuses);
 }
+

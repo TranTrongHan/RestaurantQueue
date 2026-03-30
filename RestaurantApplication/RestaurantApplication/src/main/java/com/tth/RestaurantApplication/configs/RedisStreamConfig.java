@@ -13,7 +13,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer;
 import java.time.Duration;
 
-@Configuration
+// @Configuration
 public class RedisStreamConfig {
 
     @Value("${redis.stream-key}")

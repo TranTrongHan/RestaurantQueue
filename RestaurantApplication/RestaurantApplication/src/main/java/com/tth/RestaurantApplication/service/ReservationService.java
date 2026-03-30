@@ -23,6 +23,9 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 
@@ -47,6 +50,7 @@ public class ReservationService {
     TableService tableService;
     JwtService jwtService;
     EmailService emailService;
+    FirestoreService firestoreService;
 
 
     public ReservationResponse bookingTable(TableBookingRequest request, User currentUser) throws MessagingException {
@@ -157,20 +161,34 @@ public class ReservationService {
 
     }
 
-    public List<ReservationResponse> getMyReservation(User currentUser) {
-        List<ReservationResponse> reservationResponseList = new ArrayList<>();
-        List<Reservation> reservationList = this.reservationRepository.findByUserOrderByBookingTimeDesc(currentUser);
-        for (Reservation reservation : reservationList) {
-            ReservationResponse response = reservationMapper.toReservationResponse(reservation);
-            reservationResponseList.add(response);
-        }
-        return reservationResponseList;
+    public PageResponse<ReservationResponse> getMyReservation(User currentUser, int page, int size) {
+        Pageable pageable = PageRequest.of(page - 1, size);
+        Page<Reservation> reservationPage = this.reservationRepository.findByUser(currentUser, pageable);
+
+        return PageResponse.<ReservationResponse>builder()
+                .currentPage(page)
+                .pageSize(size)
+                .totalPages(reservationPage.getTotalPages())
+                .totalElements(reservationPage.getTotalElements())
+                .data(reservationPage.getContent().stream()
+                        .map(reservationMapper::toReservationResponse)
+                        .toList())
+                .build();
     }
 
-    public List<ReservationResponse> getReservations(Map<String, String> params) {
-        List<Reservation> reservationList = reservationRepository.findAll(ReservationSpecification.filterByParams(params));
+    public PageResponse<ReservationResponse> getReservations(int page, int size, Map<String, String> params) {
+        Pageable pageable = PageRequest.of(page - 1, size);
+        Page<Reservation> reservationPage = reservationRepository.findAll(ReservationSpecification.filterByParams(params), pageable);
 
-        return reservationList.stream().map(reservationMapper::toReservationResponse).toList();
+        return PageResponse.<ReservationResponse>builder()
+                .currentPage(page)
+                .pageSize(size)
+                .totalPages(reservationPage.getTotalPages())
+                .totalElements(reservationPage.getTotalElements())
+                .data(reservationPage.getContent().stream()
+                        .map(reservationMapper::toReservationResponse)
+                        .toList())
+                .build();
     }
 
     @Transactional
@@ -194,6 +212,9 @@ public class ReservationService {
         reservationRepository.save(reservation);
 
         OrderSession orderSession = orderManagementService.createInHouseOrderFromReservation(reservation);
+
+        // Sync Firestore metadata
+        firestoreService.syncReservationMetadata(reservation);
 
         // Generate JWT cho KH (expire = expiredAt của session)
         Instant expiresAt = orderSession.getExpiredAt().atZone(ZoneId.systemDefault()).toInstant();

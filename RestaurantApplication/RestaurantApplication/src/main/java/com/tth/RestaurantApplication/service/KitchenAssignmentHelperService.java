@@ -65,12 +65,12 @@ public class KitchenAssignmentHelperService {
 //        firestoreService.updateDeadlineTime(orderItem,LocalDateTime.now().plusMinutes((long) avgTime));
 //        log.info("đã cập nhật deadlineTime thực tế cho orderItem {}",orderItem.getOrderItemId());
         assignment = kitchenAssignmentRepository.save(assignment);
-//        log.info("đã lưu assignment{}", assignment.getKitchenAssignId());
-        firestoreService.pushKitchenAssignment(assignment,orderItem);
         orderItem.setStatus(OrderItem.OrderItemStatus.COOKING);
         orderItemRepository.save(orderItem);
-//        log.info("cập nhật {} cooking",orderItem.getOrderItemId());
-        firestoreService.updateOrderItemField(String.valueOf(orderItem.getOrder().getOrderId()),String.valueOf(orderItem.getOrderItemId()),"status", OrderItem.OrderItemStatus.COOKING.toString());
+
+        Integer resId = orderItem.getOrder().getOrderSession().getReservation().getReservationId();
+        firestoreService.updateOrderItemStatus(resId, orderItem.getOrderItemId(), OrderItem.OrderItemStatus.COOKING.toString());
+
         chef.setIsAvailable(false);
         chefRepository.save(chef);
 //        log.info("đã cập nhật trạng thái chef {}",chef.getUser().getUserId());

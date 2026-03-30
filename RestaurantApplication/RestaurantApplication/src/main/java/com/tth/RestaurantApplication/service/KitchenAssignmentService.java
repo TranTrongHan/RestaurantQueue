@@ -72,19 +72,19 @@ public class KitchenAssignmentService {
 
         for (Chef chef : availableChefs) {
             try {
-                Set<ZSetOperations.TypedTuple<String>> items = redisTemplate.opsForZSet()
-                        .popMin(redisProperties.getZsetKey(), 1);
-
-                if (items != null && !items.isEmpty()) {
-                    ZSetOperations.TypedTuple<String> highestPriorityItem = items.iterator().next();
-                    log.info("orderItemId from sorted set: {}",highestPriorityItem.getValue());
-                    Integer orderItemId = Integer.parseInt(Objects.requireNonNull(highestPriorityItem.getValue()));
-                    kitchenAssignmentHelperService.assignToChef(orderItemId, chef.getUserId());
-
-                    log.info("Assigned dish {} from priority queue to chef {}.", orderItemId, chef.getUserId());
-                } else {
-                    break;
-                }
+//                Set<ZSetOperations.TypedTuple<String>> items = redisTemplate.opsForZSet()
+//                        .popMin(redisProperties.getZsetKey(), 1);
+//
+//                if (items != null && !items.isEmpty()) {
+//                    ZSetOperations.TypedTuple<String> highestPriorityItem = items.iterator().next();
+//                    log.info("orderItemId from sorted set: {}",highestPriorityItem.getValue());
+//                    Integer orderItemId = Integer.parseInt(Objects.requireNonNull(highestPriorityItem.getValue()));
+//                    kitchenAssignmentHelperService.assignToChef(orderItemId, chef.getUserId());
+//
+//                    log.info("Assigned dish {} from priority queue to chef {}.", orderItemId, chef.getUserId());
+//                } else {
+//                    break;
+//                }
             } catch (Exception e) {
                 log.error("Lỗi khi gán món ăn cho bếp {}: {}", chef.getUserId(), e.getMessage());
 
@@ -113,10 +113,8 @@ public class KitchenAssignmentService {
 
         updateAvgCookingTime(item.getMenuItem(),actualCookingTime);
         updateDeadlineTimes();
-        firestoreService.updateOrderItemField(String.valueOf(item.getOrder().getOrderId()),String.valueOf(item.getOrderItemId()), "status", OrderItem.OrderItemStatus.DONE);
-        firestoreService.updateKitchenField(kitchenAssignment.getKitchenAssignId().toString(),"status", KitchenAssignment.KitchenAssignmentStatus.DONE.toString());
-        firestoreService.updateKitchenField(kitchenAssignment.getKitchenAssignId().toString(),"finishAt",finishTime.toString());
-        firestoreService.updateKitchenField(kitchenAssignment.getKitchenAssignId().toString(),"actualCookingTime",String.valueOf(actualCookingTime));
+        Integer resId = item.getOrder().getOrderSession().getReservation().getReservationId();
+        firestoreService.updateOrderItemStatus(resId, item.getOrderItemId(), OrderItem.OrderItemStatus.DONE.toString());
 
         ChefResponse chefResponse = chefMapper.toChefResponse(kitchenAssignment.getChef());
         OrderItemResponse orderItemResponse = orderItemMapper.toOrderItemResponse(kitchenAssignment.getOrderItem());
@@ -132,10 +130,10 @@ public class KitchenAssignmentService {
         Chef chef = kitchenAssignment.getChef();
         chef.setIsAvailable(true);
         chefRepository.save(chef);
-        Map<String, String> wakeUpMessage = new HashMap<>();
-        wakeUpMessage.put("type", "WAKE_UP");
-        wakeUpMessage.put("chefId", String.valueOf(chef.getUserId()));
-        redisTemplate.opsForStream().add("kitchen-stream", wakeUpMessage);
+//        Map<String, String> wakeUpMessage = new HashMap<>();
+//        wakeUpMessage.put("type", "WAKE_UP");
+//        wakeUpMessage.put("chefId", String.valueOf(chef.getUserId()));
+//        redisTemplate.opsForStream().add("kitchen-stream", wakeUpMessage);
 
         return response;
     }
@@ -169,9 +167,6 @@ public class KitchenAssignmentService {
             log.info("new deadline of PENDING orderItem {}: {}", orderItem.getOrderItemId(), newDeadline);
             orderItem.setDeadlineTime(newDeadline);
             orderItemRepository.save(orderItem);
-
-
-            firestoreService.updateOrderItemField(String.valueOf(orderItem.getOrder().getOrderId()),String.valueOf(orderItem.getOrderItemId()), "deadlineTime",newDeadline.toString());
         }
     }
 
