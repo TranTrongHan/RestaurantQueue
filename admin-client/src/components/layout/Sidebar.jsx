@@ -10,7 +10,8 @@ import {
   ShoppingCart,
   CalendarDays,
   ListFilter,
-  Layers
+  Layers,
+  Soup
 } from 'lucide-react';
 
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
@@ -116,6 +117,10 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
               <NavLink to="/reservations" className={subItemClass}>
                 <CalendarDays size={14} className="mr-3" />
                 <span>Đặt bàn</span>
+              </NavLink>
+              <NavLink to="/kitchen" className={subItemClass}>
+                <Soup size={14} className="mr-3" />
+                <span>Đơn bếp</span>
               </NavLink>
             </div>
           )}

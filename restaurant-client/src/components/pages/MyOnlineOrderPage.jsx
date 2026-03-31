@@ -18,7 +18,7 @@ const MyOnlineOrderPage = () => {
             const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['online_order']}/my`;
             let res = await authApis(cookies.token).get(url);
             if (res.status === 200) {
-                setOnlineOrders(res.data.result);
+                setOnlineOrders(res.data.result.data || []);
                 setError(null);
                 if (showToast) toast.success("Đã tải lại danh sách");
             }

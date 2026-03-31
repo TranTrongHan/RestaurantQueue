@@ -24,10 +24,10 @@ public class Chef {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(name = "is_available")
-    private Boolean isAvailable;
-
-    @OneToMany(mappedBy = "chef", fetch = FetchType.LAZY,cascade = CascadeType.ALL)
-    private List<KitchenAssignment> kitchenAssignments;
+//    @Column(name = "is_available")
+//    private Boolean isAvailable;
+//
+//    @OneToMany(mappedBy = "chef", fetch = FetchType.LAZY,cascade = CascadeType.ALL)
+//    private List<KitchenAssignment> kitchenAssignments;
 
 }

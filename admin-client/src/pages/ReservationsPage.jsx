@@ -29,7 +29,8 @@ import axios from "axios";
 
 const STATUS_MAP = {
     BOOKED:     { label: "Chờ đến",      cls: "bg-amber-100 text-amber-700 border-amber-200" },
-    CHECKEDIN:  { label: "Đã có mặt", cls: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+    CHECKEDIN:  { label: "Đang dùng món", cls: "bg-blue-100 text-blue-700 border-blue-200" },
+    REQUEST_PAYMENT: { label: "Chờ thanh toán", cls: "bg-amber-100 text-amber-700 border-amber-200" },
     CHECKEDOUT: { label: "Hoàn tất", cls: "bg-slate-100 text-slate-500 border-slate-200" },
 };
 
@@ -100,18 +101,45 @@ const ReservationsPage = () => {
         fetchReservations(page);
     };
 
+    const realtimeDataRef = React.useRef({});
+
     // 1. Listen to activeReservations collection for real-time table status
     useEffect(() => {
         const q = query(collection(db, "activeReservations"));
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = {};
+            
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "modified") {
+                    const newData = change.doc.data();
+                    const oldData = realtimeDataRef.current[change.doc.id];
+                    const oldStatus = oldData?.status;
+
+                    if (newData.status === "REQUEST_PAYMENT" && oldStatus !== "REQUEST_PAYMENT") {
+                        toast(`🔔 Bàn ${newData.tableResponse?.tableName || change.doc.id} đang yêu cầu thanh toán!`, {
+                            icon: '💰',
+                            duration: 5000,
+                            position: 'top-right',
+                            style: {
+                                borderRadius: '10px',
+                                background: '#333',
+                                color: '#fff',
+                            },
+                        });
+                    }
+                }
+            });
+
             snapshot.docs.forEach(docSnap => {
                 data[docSnap.id] = docSnap.data();
             });
+
+            realtimeDataRef.current = data;
             setRealtimeData(data);
         });
         return () => unsubscribe();
-    }, []);
+    }, []); 
+
 
     // 2. Listen to orderItems sub-collection when a session is selected
     useEffect(() => {
@@ -151,15 +179,20 @@ const ReservationsPage = () => {
     const handleVNPayPayment = async (sessionId) => {
         try {
             setLoadingBtn("vnpay_" + sessionId);
-            const res = await authApis(token).post(`${import.meta.env.VITE_API_BASE_URL}${endpoints["order_session"]}/createPayment/${sessionId}`);
+            const returnUrl = `${window.location.origin}/payment-return`;
+            const res = await authApis(token).post(
+                `${import.meta.env.VITE_API_BASE_URL}${endpoints["order_session"]}/createPayment/${sessionId}?returnUrl=${encodeURIComponent(returnUrl)}`,
+                {}
+            );
             if (res.status === 200) {
                 const paymentUrl = res.data.result;
                 if (paymentUrl) {
                     window.open(paymentUrl, "_blank");
-                    toast.success("Đã mở trang thanh toán VNPay!");
+                    toast.success("Đã mở trang thanh toán VNPay! Vui lòng hoàn tất tại tab mới.");
                 }
             }
         } catch (err) {
+            console.error("VNPay Error:", err);
             toast.error(err.response?.data?.message || "Lỗi khởi tạo VNPay!");
         } finally {
             setLoadingBtn(null);
@@ -258,8 +291,11 @@ const ReservationsPage = () => {
                                         {/* Card Header & Status */}
                                         <div className="p-4 border-b border-slate-50 flex items-start justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-bold">
-                                                    <Hash size={16} />
+                                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold 
+                                                    ${realtimeData[res.reservationId]?.status === "REQUEST_PAYMENT" 
+                                                        ? "bg-amber-500 text-white animate-bounce" 
+                                                        : "bg-blue-50 text-blue-600"}`}>
+                                                    {realtimeData[res.reservationId]?.status === "REQUEST_PAYMENT" ? "💰" : <Hash size={16} />}
                                                 </div>
                                                 <div>
                                                     <h3 className="font-bold text-slate-800 leading-tight text-sm">{res.tableResponse.tableName}</h3>
@@ -269,7 +305,12 @@ const ReservationsPage = () => {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <StatusBadge status={res.status} />
+                                            <div className="flex flex-col items-end gap-1">
+                                                <StatusBadge status={realtimeData[res.reservationId]?.status || res.status} />
+                                                {realtimeData[res.reservationId]?.status === "REQUEST_PAYMENT" && (
+                                                    <span className="text-[9px] font-black text-amber-600 animate-pulse uppercase tracking-tighter">Cần phục vụ 💰</span>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {/* Card Body */}
@@ -312,18 +353,21 @@ const ReservationsPage = () => {
                                         </div>
 
                                         {/* Actions */}
-                                        <div className="p-3 px-4 bg-slate-50/50 border-t border-slate-100 mt-auto flex flex-col gap-2">
-                                            {res.status === "CHECKEDIN" ? (
+                                        <div className={`p-3 px-4 border-t mt-auto flex flex-col gap-2 
+                                            ${realtimeData[res.reservationId]?.status === "REQUEST_PAYMENT" 
+                                                ? "bg-amber-50 border-amber-100" 
+                                                : "bg-slate-50/50 border-slate-100"}`}>
+                                            {res.status === "CHECKEDIN" || realtimeData[res.reservationId] ? (
                                                 <button
                                                     onClick={() => { setSelectedSession(res); setShowModal(true); }}
                                                     className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black transition-all shadow-sm
-                                                        ${realtimeData[res.reservationId]?.paymentStatus === "REQUESTED"
-                                                            ? "bg-red-500 text-white animate-pulse"
+                                                        ${realtimeData[res.reservationId]?.status === "REQUEST_PAYMENT" || realtimeData[res.reservationId]?.paymentStatus === "REQUESTED"
+                                                            ? "bg-amber-500 text-white hover:bg-amber-600"
                                                             : "bg-white border border-blue-100 text-blue-600 hover:bg-blue-50"}
                                                     `}
                                                 >
                                                     <ListFilter size={14} />
-                                                    Xem chi tiết ăn uống
+                                                    {realtimeData[res.reservationId]?.status === "REQUEST_PAYMENT" ? "XỬ LÝ THANH TOÁN" : "Xem chi tiết ăn uống"}
                                                 </button>
                                             ) : (
                                                 <button
@@ -379,11 +423,11 @@ const ReservationsPage = () => {
                                         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">Khách: {selectedSession.customerResponse.fullName}</span>
                                         <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
                                         <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border 
-                                            ${realtimeData[selectedSession.reservationId]?.paymentStatus === "REQUESTED" 
-                                                ? "bg-red-100 text-red-600 border-red-200 animate-pulse" 
+                                            ${realtimeData[selectedSession.reservationId]?.status === "REQUEST_PAYMENT" || realtimeData[selectedSession.reservationId]?.paymentStatus === "REQUESTED" 
+                                                ? "bg-amber-100 text-amber-600 border-amber-200 animate-pulse" 
                                                 : "bg-blue-100 text-blue-600 border-blue-200"}
                                         `}>
-                                            {realtimeData[selectedSession.reservationId]?.paymentStatus === "REQUESTED" ? "Yêu cầu thanh toán" : "Đang ăn uống"}
+                                            {realtimeData[selectedSession.reservationId]?.status === "REQUEST_PAYMENT" || realtimeData[selectedSession.reservationId]?.paymentStatus === "REQUESTED" ? "Yêu cầu thanh toán" : "Đang ăn uống"}
                                         </span>
                                     </div>
                                 </div>

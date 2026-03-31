@@ -11,8 +11,8 @@ import com.tth.RestaurantApplication.exception.ErrorCode;
 import com.tth.RestaurantApplication.mapper.CustomerMapper;
 import com.tth.RestaurantApplication.mapper.OnlineOrderMapper;
 import com.tth.RestaurantApplication.mapper.OrderItemMapper;
-import com.tth.RestaurantApplication.properties.RedisProperties;
 import com.tth.RestaurantApplication.repository.MenuItemRepository;
+
 import com.tth.RestaurantApplication.repository.OnlineOrderRepository;
 import com.tth.RestaurantApplication.repository.OrderItemRepository;
 import com.tth.RestaurantApplication.repository.OrderRepository;
@@ -117,67 +117,106 @@ public class OnlineOrderService {
     @Transactional
     public BillResponse handleVnpayReturn(Map<String, String> params, User currentUser) throws Exception {
         // 1. Kiểm tra chữ ký (secure hash)
-        log.info("===== VNPay Response =====");
-        String vnp_SecureHash = params.get("vnp_SecureHash");
-        String vnp_SecureHashType = params.get("vnp_SecureHashType");
-        log.info("SecureHash (from VNPay): {}", vnp_SecureHash);
-        log.info("SecureHashType (from VNPay): {}", vnp_SecureHashType);
-        params.remove("vnp_SecureHash");
-        params.remove("vnp_SecureHashType");
-
-        String signValue = VNPayService.hashAllFields(params, vnp_HashSecret);
-        log.info("SecureHash (computed): {}", signValue);
-        if (!signValue.equals(vnp_SecureHash)) {
-            log.warn("Checksum KHÔNG hợp lệ!");
-            throw new AppException(ErrorCode.INVALID_SIGNATURE);
-        }
+        verifyVnpaySignature(params);
 
         // 2. Lấy thông tin orderId từ vnp_TxnRef
         String txnRef = params.get("vnp_TxnRef");
-        Long orderId = Long.valueOf(txnRef.split("-")[0]);
-        log.info("orderId: {}", orderId);
-        Order order = orderRepository.findById(Math.toIntExact(orderId))
+        Integer orderId = Integer.valueOf(txnRef.split("-")[0]);
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
-//        // 3. So sánh số tiền
-        Long amountFromVnpay = Long.valueOf(params.get("vnp_Amount")) / 100; // VNPAY trả về *100
-//        if (order.getTotal() != null && order.getTotal().longValue() != amountFromVnpay) {
-//            throw new AppException(ErrorCode.AMOUNT_MISMATCH);
-//        }
-
-        // 4. Kiểm tra mã phản hồi từ VNPAY
+        // 3. Kiểm tra mã phản hồi từ VNPAY
         String responseCode = params.get("vnp_ResponseCode");
-        String transactionStatus = params.get("vnp_TransactionStatus"); // Có thể in thêm trạng thái giao dịch
-        log.info("Mã phản hồi từ VNPAY (vnp_ResponseCode): {}", responseCode);
-        log.info("Trạng thái giao dịch (vnp_TransactionStatus): {}", transactionStatus);
         if ("00".equals(responseCode)) {
-            order.setIsPaid(true);
-            log.info("✅ Giao dịch thành công (Mã: {}).", responseCode);
-            // Delete cart now that payment succeeded
-            cartRepository.deleteByUser(currentUser);
-
-            if(order.getOrderSession() != null){
-                log.info("this order {} has no online_order",order.getOrderId());
-                return paymentService.createBillForDineInOrder(order, null, BigDecimal.valueOf(amountFromVnpay));
-            } else if(order.getOnlineOrder() != null){
-                log.info("this order {} has online_order",order.getOrderId());
-                return paymentService.createBill(order,null,BigDecimal.valueOf(amountFromVnpay));
-            }
+            // Xử lý logic nghiệp vụ (tạo bill, xóa giỏ hàng...)
+            return finalizePayment(order, params, currentUser);
         } else {
-            order.setIsPaid(false);
-            log.warn("❌ Giao dịch thất bại (Mã: {}).", responseCode);
-            
-            // Lấy ra online order (nếu có) trước khi xóa order
-            OnlineOrder onlineOrder = order.getOnlineOrder();
-            
-            orderRepository.delete(order);
-            
-            if (onlineOrder != null) {
-                onlineOrderRepository.delete(onlineOrder);
-            }
-            
+            log.warn("❌ Giao dịch thất bại (Mã: {}). Không xóa đơn hàng để khách có thể thử lại.", responseCode);
             throw new AppException(ErrorCode.PAYMENT_FAILED);
         }
-        return null;
     }
+
+    @Transactional
+    public String handleVnpayIpn(Map<String, String> params) throws Exception {
+        log.info("===== Incoming VNPay IPN =====");
+        try {
+            // 1. Kiểm tra chữ ký
+            verifyVnpaySignature(params);
+
+            // 2. Lấy order
+            String txnRef = params.get("vnp_TxnRef");
+            Integer orderId = Integer.valueOf(txnRef.split("-")[0]);
+            Order order = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+            // 3. Kiểm tra số tiền (VNPay trả về *100)
+            // Note: Cần cẩn thận khi so sánh double/BigDecimal, ở đây giả định dùng long cho đơn giản
+            // Long amount = Long.valueOf(params.get("vnp_Amount")) / 100;
+
+            // 4. Kiểm tra trạng thái đơn hàng (Tránh xử lý lại đơn đã thanh toán)
+            if (Boolean.TRUE.equals(order.getIsPaid())) {
+                log.info("Order {} already paid. Returning Success to VNPay.", orderId);
+                return "{\"RspCode\":\"02\",\"Message\":\"Order already confirmed\"}";
+            }
+
+            // 5. Kiểm tra mã phản hồi
+            String responseCode = params.get("vnp_ResponseCode");
+            if ("00".equals(responseCode)) {
+                log.info("✅ IPN: Giao dịch thành công cho Order {}", orderId);
+                finalizePayment(order, params, null); // currentUser là null vì IPN gọi từ server-to-server
+            } else {
+                log.warn("❌ IPN: Giao dịch thất bại cho Order {}", orderId);
+                // Không xóa đơn hàng ở đây
+            }
+
+            return "{\"RspCode\":\"00\",\"Message\":\"Confirm Success\"}";
+
+        } catch (AppException e) {
+            log.error("IPN Error: {}", e.getErrorCode().getMessage());
+            return "{\"RspCode\":\"01\",\"Message\":\"Order not found or Invalid signature\"}";
+        } catch (Exception e) {
+            log.error("IPN Unknown Error", e);
+            return "{\"RspCode\":\"99\",\"Message\":\"Unknown error\"}";
+        }
+    }
+
+    private void verifyVnpaySignature(Map<String, String> params) throws Exception {
+        String vnp_SecureHash = params.get("vnp_SecureHash");
+        Map<String, String> vnp_Params = new java.util.HashMap<>(params);
+        vnp_Params.remove("vnp_SecureHash");
+        vnp_Params.remove("vnp_SecureHashType");
+
+        String signValue = VNPayService.hashAllFields(vnp_Params, vnp_HashSecret);
+        if (!signValue.equals(vnp_SecureHash)) {
+            log.warn("Checksum KHÔNG hợp lệ! Computed: {}, Received: {}", signValue, vnp_SecureHash);
+            throw new AppException(ErrorCode.INVALID_SIGNATURE);
+        }
+    }
+
+    private BillResponse finalizePayment(Order order, Map<String, String> params, User currentUser) throws Exception {
+
+        Long amountFromVnpay = Long.valueOf(params.get("vnp_Amount")) / 100;
+        
+        order.setIsPaid(true);
+        orderRepository.save(order);
+
+        // Xóa giỏ hàng nếu là User thực hiện (Return URL)
+        // Với IPN, ta có thể lấy User từ Order
+        User user = (currentUser != null) ? currentUser : 
+                   (order.getOrderSession() != null ? order.getOrderSession().getReservation().getUser() : 
+                    (order.getOnlineOrder() != null ? order.getOnlineOrder().getUser() : null));
+        
+        if (user != null) {
+            cartRepository.deleteByUser(user);
+        }
+
+        if (order.getOrderSession() != null) {
+            log.info("Finalizing Dine-in order {}", order.getOrderId());
+            return paymentService.createBillForDineInOrder(order, null, BigDecimal.valueOf(amountFromVnpay));
+        } else {
+            log.info("Finalizing Online order {}", order.getOrderId());
+            return paymentService.createBill(order, null, BigDecimal.valueOf(amountFromVnpay));
+        }
+    }
+
 }

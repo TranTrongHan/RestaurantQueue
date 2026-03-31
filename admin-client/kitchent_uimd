@@ -1,0 +1,48 @@
+# Kitchen UI Implementation Plan
+
+This plan outlines the steps to build the Kitchen Management interface, which allows chefs to view and manage food orders in real-time.
+
+## User Review Required
+
+> [!IMPORTANT]
+> The Kitchen UI depends on **Firestore Collection Group Queries**. This may require an index to be created in the Firebase Console if it hasn't been created for the specific combination of status and orderedAt fields. I will implement the logic, and you may need to click the link provided in the browser console during initial testing to create the missing index.
+
+## Proposed Changes
+
+### Configuration & Routing
+
+#### [MODIFY] [Sidebar.jsx](file:///d:/Study/PTHTWeb/DoAn/RestaurantQueue/admin-client/src/components/layout/Sidebar.jsx)
+- Add "Đơn bếp" menu item under the "Vận hành" (Operations) section.
+- Icon: `ChefHat` (from `lucide-react`).
+
+#### [MODIFY] [App.jsx](file:///d:/Study/PTHTWeb/DoAn/RestaurantQueue/admin-client/src/App.jsx)
+- Register the new `KitchenOrdersPage` route at `/kitchen`.
+
+### Page Implementation
+
+#### [NEW] [KitchenOrdersPage.jsx](file:///d:/Study/PTHTWeb/DoAn/RestaurantQueue/admin-client/src/pages/KitchenOrdersPage.jsx)
+- **Real-time Listener**: Use `onSnapshot` with `collectionGroup(db, "orderItems")` where `status` in `["PENDING", "COOKING"]`.
+- **Sorting**: Sort by `orderedAt` (Ascending) for FIFO.
+- **View Modes**:
+    - **Queue View**: A flat list of cards, each showing a dish.
+    - **Table View**: Items grouped by `tableName`.
+- **Actions**:
+    - "Bắt đầu nấu" (Start Cooking): Calls Backend API with `COOKING`.
+    - "Xong" (Done): Calls Backend API with `READY`.
+- **UI Design**:
+    - High-visibility status indicators.
+    - Glassmorphic card design.
+    - "Ordered X mins ago" badge with color change as delay increases (e.g., orange at 10m, red at 20m).
+
+## Open Questions
+
+1.  **Icon Preference**: I chose `ChefHat`. Let me know if you prefer `Soup` or `Utensils`.
+2.  **Next Status**: When "Done" is clicked, I'll update it to `READY`. This signals the waiter to serve the dish. Please confirm if this is the desired flow.
+
+## Verification Plan
+
+### Automated/Manual Tests
+- **Real-time Sync**: Confirm that orders made on the customer tablet appear instantly in the kitchen view.
+- **Status Updates**: Verify that status changes (Start -> Finish) reflect correctly in both the kitchen view and the customer tablet's order tracker.
+- **Grouping/Sorting**: Verify FIFO (first in, first out) order and table grouping logic.
+- **Index Check**: Check for no errors in console related to Firestore queries.

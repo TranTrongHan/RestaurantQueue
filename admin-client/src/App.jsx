@@ -3,9 +3,12 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import ReservationsPage from './pages/ReservationsPage';
+import KitchenOrdersPage from './pages/KitchenOrdersPage';
+import VNPayReturnPage from './pages/VNPayReturnPage';
 import CustomerOrderingPage from './pages/CustomerOrderingPage';
 import MainLayout from './components/layout/MainLayout';
 import useAuthStore from './store/useAuthStore';
+import { Toaster } from 'react-hot-toast';
 
 // Basic Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -21,6 +24,7 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-right" />
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
@@ -40,6 +44,8 @@ function App() {
           <Route path="rfm" element={<HomePage />} />
           <Route path="orders" element={<HomePage />} />
           <Route path="reservations" element={<ReservationsPage />} />
+          <Route path="kitchen" element={<KitchenOrdersPage />} />
+          <Route path="payment-return" element={<VNPayReturnPage />} />
           <Route path="products" element={<HomePage />} />
           <Route path="product-groups" element={<HomePage />} />
         </Route>

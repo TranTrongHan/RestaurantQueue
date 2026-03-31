@@ -11,9 +11,9 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
-@Repository
-public interface KitchenAssignmentRepository extends JpaRepository<KitchenAssignment,Integer> {
-    List<KitchenAssignment>  findByStatus(KitchenAssignment.KitchenAssignmentStatus status);
-    Optional<KitchenAssignment> findTopByChefAndStatusOrderByStartAtDesc(Chef chef, KitchenAssignment.KitchenAssignmentStatus status);
-    Page<KitchenAssignment> findAll(Specification<KitchenAssignment> spec, Pageable pageable);
+// @Repository
+public interface KitchenAssignmentRepository { // extends JpaRepository<KitchenAssignment,Integer> {
+//    List<KitchenAssignment>  findByStatus(KitchenAssignment.KitchenAssignmentStatus status);
+//    Optional<KitchenAssignment> findTopByChefAndStatusOrderByStartAtDesc(Chef chef, KitchenAssignment.KitchenAssignmentStatus status);
+//    Page<KitchenAssignment> findAll(Specification<KitchenAssignment> spec, Pageable pageable);
 }

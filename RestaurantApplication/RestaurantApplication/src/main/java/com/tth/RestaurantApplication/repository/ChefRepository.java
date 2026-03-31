@@ -9,8 +9,8 @@ import java.util.Optional;
 
 @Repository
 public interface ChefRepository extends JpaRepository<Chef, Integer> {
-    Optional<Chef> findFirstByIsAvailableTrue();
-
-    List<Chef> findByIsAvailableTrue();
-    Integer countByIsAvailableTrue();
+//    Optional<Chef> findFirstByIsAvailableTrue();
+//
+//    List<Chef> findByIsAvailableTrue();
+//    Integer countByIsAvailableTrue();
 }

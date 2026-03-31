@@ -149,3 +149,4 @@ Dưới đây là các đầu việc cụ thể để team FE triển khai dựa
     - **Thanh toán Tiền mặt**: Gọi API `POST /api/order_session/{sessionId}` để kết thúc hóa đơn.
     - **Thanh toán Online (VNPay)**: Lễ tân xác nhận -> Gọi API `POST /api/order_session/createPayment/{sessionId}` để lấy URL thanh toán/mã QR VNPay cho khách.
     - Sau khi hoàn tất, Backend sẽ tự động cập nhật `status: "CHECKEDOUT"` và dọn dẹp Firestore.
+

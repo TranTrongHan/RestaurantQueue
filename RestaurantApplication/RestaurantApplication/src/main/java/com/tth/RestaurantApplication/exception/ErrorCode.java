@@ -83,6 +83,7 @@ public enum ErrorCode {
     // ===== CHEF MANAGEMENT ERRORS =====
     CHEF_NOT_FOUND(9001,"Chef not found"),
     // ===== GENERAL ERRORS =====
+    TABLE_LOCKED_FOR_PAYMENT(3005, "Table is locked for payment. No more orders allowed."),
     INVALID_KEY(9998, "Invalid message key"),
     UNCATEGORIZED_EXCEPTION(9999, "Uncategorized exception"),
     INVALID_SIGNATURE(9997,"Invalid signature"),

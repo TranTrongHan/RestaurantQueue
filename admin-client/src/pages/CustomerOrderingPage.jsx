@@ -25,6 +25,7 @@ import {
     Utensils
 } from "lucide-react";
 import toast from "react-hot-toast";
+import ConfirmModal from "../components/common/ConfirmModal";
 import { db } from "../configs/firebase";
 import { collection, onSnapshot, query, where, doc } from "firebase/firestore";
 import axios from "axios";
@@ -50,6 +51,7 @@ const CustomerOrderingPage = () => {
 
     // UI State
     const [loading, setLoading] = useState(false);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [activeCategory, setActiveCategory] = useState(null);
     const [activeTab, setActiveTab] = useState("menu"); // menu, tracking, bill
     const [showCart, setShowCart] = useState(false);
@@ -135,6 +137,8 @@ const CustomerOrderingPage = () => {
         return () => clearTimeout(delaySearch);
     }, [searchTerm]);
 
+    const hasLoadedDocRef = useRef(false);
+
     // Firebase Real-time Tracking
     useEffect(() => {
         const idToUse = sessionInfo?.reservationId || sessionId;
@@ -144,13 +148,29 @@ const CustomerOrderingPage = () => {
         const resRef = doc(db, "activeReservations", idToUse.toString());
         const unsubRes = onSnapshot(resRef, (docSnap) => {
             if (docSnap.exists()) {
+                hasLoadedDocRef.current = true;
                 setReservationRealtime(docSnap.data());
+            } else {
+                // If it was loaded before but now it's gone -> Session finalized
+                if (hasLoadedDocRef.current) {
+                    setReservationRealtime({ status: "FINISHED_AND_CLOSED" });
+                    toast.success("Cảm ơn quý khách! Hóa đơn đã được thanh toán.", { duration: 5000 });
+
+                    // Show "Thank You" UI then close
+                    setTimeout(() => {
+                        window.close();
+                    }, 5000);
+                } else {
+                    // It doesn't exist yet (initial load delay)
+                    console.warn("Reservation document not found (waiting...)");
+                    setReservationRealtime({ status: "WAITING_FOR_DOC" });
+                }
             }
         });
 
         // 2. Listen to the sub-collection orderItems
         const itemsRef = collection(db, "activeReservations", idToUse.toString(), "orderItems");
-        const q = query(itemsRef); 
+        const q = query(itemsRef);
 
         const unsubItems = onSnapshot(q, (snapshot) => {
             const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -191,14 +211,14 @@ const CustomerOrderingPage = () => {
 
     const placeOrder = async () => {
         if (cart.length === 0) return;
-        if (reservationRealtime?.paymentStatus === "REQUESTED") {
-            toast.error("Vui lòng thanh toán trước khi đặt thêm món!");
+        if (reservationRealtime?.paymentStatus === "REQUESTED" || reservationRealtime?.status === "REQUEST_PAYMENT") {
+            toast.error("Bàn đã bị khóa do đang yêu cầu thanh toán!");
             return;
         }
         try {
             setLoading(true);
             const items = cart.map(i => ({ menuItemId: i.menuItemId, quantity: i.quantity }));
-            const res = await customerApis(token).post(`${BASE_URL}/order_session/${sessionId}/orderitems`, {
+            const res = await customerApis(token).post(`${BASE_URL}/order_item/${sessionId}`, {
                 menuItemRequestList: items
             });
             if (res.status === 200) {
@@ -208,31 +228,45 @@ const CustomerOrderingPage = () => {
                 setActiveTab("tracking");
             }
         } catch (err) {
-            toast.error(err.response?.data?.message || "Lỗi khi đặt món");
+            if (err.response?.data?.code === 3005) {
+                toast.error("Bàn đã bị khóa do đang yêu cầu thanh toán!");
+            } else {
+                toast.error(err.response?.data?.message || "Lỗi khi đặt món");
+            }
         } finally {
             setLoading(false);
         }
     };
 
     const requestPayment = async () => {
+        console.log("requestPayment function called");
         // Check for non-served items
-        const hasUnserved = orderItemsRealtime.some(item => 
-            item.status !== "SERVED" && item.status !== "CANCELLED"
-        );
+        const hasUnfinished = orderItemsRealtime.some(item => {
+            console.log("Checking item status:", item.name, item.status);
+            return item.status === "PENDING" || item.status === "COOKING";
+        });
 
-        if (hasUnserved) {
-            toast.error("Vui lòng đợi nhà bếp hoàn tất tất cả các món trước khi yêu cầu thanh toán");
+        if (hasUnfinished) {
+            console.log("Blocking request: Has unfinished items");
+            toast.error("Vui lòng đợi nhà bếp hoàn tất các món (Đang chờ/Đang chế biến) trước khi yêu cầu thanh toán");
             return;
         }
 
+        console.log("Opening custom confirmation modal");
+        setShowConfirmModal(true);
+    };
+
+    const handleConfirmPayment = async () => {
         try {
             setLoading(true);
-            const res = await customerApis(token).post(`${BASE_URL}/order_session/${sessionId}/request-payment`);
+            setShowConfirmModal(false);
+            const res = await customerApis(token).post(`${BASE_URL}/order_session/request-payment/${sessionId}`);
             if (res.status === 200) {
                 toast.success("Yêu cầu thanh toán đã được gửi!");
                 setActiveTab("bill");
             }
         } catch (err) {
+            console.error("Payment Request Error:", err);
             toast.error(err.response?.data?.message || "Lỗi yêu cầu thanh toán");
         } finally {
             setLoading(false);
@@ -255,49 +289,49 @@ const CustomerOrderingPage = () => {
     const getStatusConfig = (status) => {
         switch (status) {
             case "PENDING":
-                return { 
-                    label: "Đang chờ", 
-                    icon: <Clock size={16} />, 
+                return {
+                    label: "Đang chờ",
+                    icon: <Clock size={16} />,
                     color: "bg-amber-100 text-amber-600 border-amber-200",
                     step: 1,
                     progressColor: "bg-amber-500"
                 };
             case "COOKING":
-                return { 
-                    label: "Đang chế biến", 
-                    icon: <Flame size={16} />, 
+                return {
+                    label: "Đang chế biến",
+                    icon: <Flame size={16} />,
                     color: "bg-blue-100 text-blue-600 border-blue-200",
                     step: 2,
                     progressColor: "bg-blue-500"
                 };
             case "READY":
-                return { 
-                    label: "Sẵn sàng", 
-                    icon: <Soup size={16} />, 
+                return {
+                    label: "Sẵn sàng",
+                    icon: <Soup size={16} />,
                     color: "bg-cyan-100 text-cyan-600 border-cyan-200",
                     step: 3,
                     progressColor: "bg-cyan-500"
                 };
             case "SERVED":
-                return { 
-                    label: "Đã phục vụ", 
-                    icon: <CheckCircle2 size={16} />, 
+                return {
+                    label: "Đã phục vụ",
+                    icon: <CheckCircle2 size={16} />,
                     color: "bg-emerald-100 text-emerald-600 border-emerald-200",
                     step: 4,
                     progressColor: "bg-emerald-500"
                 };
             case "CANCELLED":
-                return { 
-                    label: "Đã hủy", 
-                    icon: <X size={16} />, 
+                return {
+                    label: "Đã hủy",
+                    icon: <X size={16} />,
                     color: "bg-red-100 text-red-600 border-red-200",
                     step: 0,
                     progressColor: "bg-red-500"
                 };
             default:
-                return { 
-                    label: status, 
-                    icon: <Info size={16} />, 
+                return {
+                    label: status,
+                    icon: <Info size={16} />,
                     color: "bg-slate-100 text-slate-600 border-slate-200",
                     step: 0,
                     progressColor: "bg-slate-500"
@@ -307,11 +341,14 @@ const CustomerOrderingPage = () => {
 
     if (!token) return <div className="p-20 text-center font-bold text-slate-400">Thiếu token xác thực.</div>;
 
-    if (loading && !sessionInfo) {
+    // Full Screen Loading State
+    if (loading || !reservationRealtime || reservationRealtime.status === "WAITING_FOR_DOC") {
         return (
             <div className="h-screen flex flex-col items-center justify-center bg-slate-50">
                 <SpinnerComp className="w-12 h-12 border-blue-600 border-t-transparent" />
-                <p className="mt-4 text-slate-500 font-medium animate-pulse">Đang kết nối hệ thống Tablet...</p>
+                <p className="mt-4 text-slate-500 font-medium animate-pulse">
+                    {loading ? "Đang tải dữ liệu từ máy chủ..." : "Đang đồng bộ trạng thái thực tế..."}
+                </p>
             </div>
         );
     }
@@ -319,17 +356,17 @@ const CustomerOrderingPage = () => {
     return (
         <div className="h-screen w-screen flex bg-slate-50 overflow-hidden font-sans text-slate-800 relative">
             {/* Checkout Success Screen */}
-            {reservationRealtime?.status === "CHECKEDOUT" && (
+            {(reservationRealtime?.status === "CHECKEDOUT" || reservationRealtime?.status === "FINISHED_AND_CLOSED") && (
                 <div className="absolute inset-0 z-[110] bg-white flex flex-col items-center justify-center text-center p-10 animate-in fade-in zoom-in duration-500">
                     <div className="w-40 h-40 bg-emerald-50 text-emerald-500 rounded-[56px] flex items-center justify-center mb-10 shadow-2xl shadow-emerald-100 ring-1 ring-emerald-100">
                         <CheckCircle2 size={96} strokeWidth={1.5} className="animate-in zoom-in duration-700 delay-300" />
                     </div>
                     <h2 className="text-5xl font-black text-slate-900 tracking-tight mb-6">Xin Cảm Ơn Quý Khách!</h2>
                     <p className="text-slate-500 text-xl max-w-lg leading-relaxed font-medium">
-                        Hy vọng quý khách đã có một trải nghiệm tuyệt vời tại nhà hàng. 
+                        Hy vọng quý khách đã có một trải nghiệm tuyệt vời tại nhà hàng.
                         Hẹn gặp lại quý khách vào lần tới!
                     </p>
-                    <button 
+                    <button
                         onClick={() => {
                             sessionStorage.clear();
                             nav("/");
@@ -342,7 +379,7 @@ const CustomerOrderingPage = () => {
             )}
 
             {/* Lock UI Overlay when Payment Requested */}
-            {reservationRealtime?.paymentStatus === "REQUESTED" && (
+            {(reservationRealtime?.paymentStatus === "REQUESTED" || reservationRealtime?.status === "REQUEST_PAYMENT") && (
                 <div className="absolute inset-0 z-[100] bg-slate-900/80 backdrop-blur-xl flex flex-col items-center justify-center text-center p-10 animate-in fade-in duration-500">
                     <div className="w-32 h-32 bg-white rounded-[48px] flex items-center justify-center mb-8 rotate-3 shadow-2xl animate-bounce-slow">
                         <Receipt size={64} className="text-blue-600" />
@@ -568,7 +605,7 @@ const CustomerOrderingPage = () => {
                                                 <div key={item.id} className="group bg-slate-50 rounded-[32px] p-8 border border-slate-100 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-500 relative overflow-hidden">
                                                     {/* Side indicator */}
                                                     <div className={`absolute top-0 left-0 w-1.5 h-full ${config.progressColor} opacity-50`}></div>
-                                                    
+
                                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                                                         <div className="flex items-center gap-5">
                                                             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${config.color} shadow-lg ring-4 ring-white`}>
@@ -604,8 +641,8 @@ const CustomerOrderingPage = () => {
                                                                         <React.Fragment key={s}>
                                                                             <div className="flex flex-col items-center gap-3 relative z-10">
                                                                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-700 
-                                                                                    ${isActive 
-                                                                                        ? `${sDefault.progressColor} text-white shadow-lg ${isCurrent ? "scale-125 ring-4 ring-white" : "scale-100"}` 
+                                                                                    ${isActive
+                                                                                        ? `${sDefault.progressColor} text-white shadow-lg ${isCurrent ? "scale-125 ring-4 ring-white" : "scale-100"}`
                                                                                         : "bg-white text-slate-300 border-2 border-slate-100"}
                                                                                 `}>
                                                                                     {isActive ? <CheckCircle2 size={16} /> : <div className="w-2 h-2 bg-slate-200 rounded-full"></div>}
@@ -616,7 +653,7 @@ const CustomerOrderingPage = () => {
                                                                             </div>
                                                                             {idx < steps.length - 1 && (
                                                                                 <div className="flex-1 h-1 mx-4 bg-slate-200 rounded-full overflow-hidden">
-                                                                                    <div 
+                                                                                    <div
                                                                                         className={`h-full ${config.progressColor} transition-all duration-1000 ease-out`}
                                                                                         style={{ width: idx < currentStepIdx ? "100%" : (idx === currentStepIdx ? "50%" : "0%") }}
                                                                                     ></div>
@@ -681,9 +718,12 @@ const CustomerOrderingPage = () => {
                                         </div>
                                     </div>
 
-                                    {reservationRealtime?.paymentStatus !== "REQUESTED" && orderItemsRealtime.length > 0 && (
+                                    {reservationRealtime?.paymentStatus !== "REQUESTED" && reservationRealtime?.status !== "REQUEST_PAYMENT" && orderItemsRealtime.length > 0 && (
                                         <button
-                                            onClick={requestPayment}
+                                            onClick={() => {
+                                                console.log("Request payment clicked");
+                                                requestPayment();
+                                            }}
                                             className="w-full mt-8 py-5 bg-slate-900 text-white rounded-3xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-slate-800 transition-all shadow-xl active:scale-95"
                                         >
                                             <Receipt size={20} />
@@ -720,6 +760,19 @@ const CustomerOrderingPage = () => {
                     ))}
                 </div>
             </main>
+
+            {/* Reusable Confirm Modal for Payment */}
+            <ConfirmModal
+                isOpen={showConfirmModal}
+                onClose={() => setShowConfirmModal(false)}
+                onConfirm={handleConfirmPayment}
+                title="Yêu cầu thanh toán?"
+                message="Xác nhận gửi yêu cầu thanh toán tới bộ phận Lễ tân. Sau khi xác nhận, hệ thống sẽ khóa chức năng đặt thêm món để chốt hóa đơn."
+                confirmText="XÁC NHẬN GỬI"
+                cancelText="KIỂM TRA LẠI"
+                type="info"
+                isLoading={loading}
+            />
 
             {/* Cart Overlay Drawer */}
             {showCart && (

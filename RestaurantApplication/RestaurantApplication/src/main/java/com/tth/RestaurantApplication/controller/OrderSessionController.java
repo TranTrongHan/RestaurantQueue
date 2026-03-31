@@ -54,22 +54,6 @@ public class OrderSessionController {
                 .build();
     }
 
-    @PostMapping("/{sessionId}/orderitems")
-    ApiResponse<List<OrderItemResponse>> order(@PathVariable(value = "sessionId") Integer sessionId,
-            @RequestBody @Valid OrderRequest orderRequest,
-            @RequestHeader("Authorization") String authHeader) throws ParseException, JOSEException {
-        String token = authHeader != null && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
-        JWTClaimsSet claims = jwtService.validateAndExtractClaims(token);
-        Integer sessionIdFromJwt = claims.getIntegerClaim("sessionId");
-        if (!sessionId.equals(sessionIdFromJwt)) {
-            throw new AppException(ErrorCode.FORBIDDEN);
-        }
-
-        return ApiResponse.<List<OrderItemResponse>>builder()
-                .result(orderSessionService.createOrderItem(orderRequest, sessionId))
-                .message("Send food successfull")
-                .build();
-    }
 
     @PostMapping("/{sessionId}")
     ApiResponse<BillResponse> pay(@PathVariable(value = "sessionId") Integer sessionId) {
@@ -79,7 +63,7 @@ public class OrderSessionController {
                 .build();
     }
 
-    @PostMapping("/{sessionId}/request-payment")
+    @PostMapping("/request-payment/{sessionId}")
     ApiResponse<String> requestPayment(@PathVariable(value = "sessionId") Integer sessionId) {
         orderSessionService.requestPayment(sessionId);
         return ApiResponse.<String>builder()
@@ -111,11 +95,11 @@ public class OrderSessionController {
                 .build();
     }
 
-    @DeleteMapping("/{orderItemId}")
-    ApiResponse<String> cancelOrderItem(@PathVariable(value = "orderItemId") Integer orderItemId) {
-        orderSessionService.cancelOrderItem(orderItemId);
-        return ApiResponse.<String>builder()
-                .result("OrderItem hủy thành công")
-                .build();
+    @GetMapping("/vnpayIpn")
+    public String vnpayIpn(@RequestParam Map<String, String> params) throws Exception {
+        return onlineOrderService.handleVnpayIpn(params);
     }
+
+
+
 }

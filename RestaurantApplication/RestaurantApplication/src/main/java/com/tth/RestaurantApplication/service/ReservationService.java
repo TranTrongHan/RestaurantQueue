@@ -26,7 +26,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -83,8 +82,6 @@ public class ReservationService {
         if (tableOpt.isPresent()) {
             log.info("has table");
             TableEntity table = tableOpt.get();
-            CustomerResponse customerResponse = customerMapper.toCustomerResponse(currentUser);
-
 
             Reservation reservation = new Reservation();
             reservation.setUser(currentUser);
@@ -199,13 +196,6 @@ public class ReservationService {
         if (!reservation.getStatus().toString().equals("BOOKED"))
             throw new AppException(ErrorCode.INVALID_RESERVATION_STATUS);
 
-//        LocalDateTime now = LocalDateTime.now();
-//        LocalDateTime reservedStart = reservation.getCheckinTime();
-//
-//        if(now.isBefore(reservedStart.minusMinutes(15))){
-//            throw new AppException(ErrorCode.RESERVATION_TOO_SOON);
-//        }
-
         reservation.setCheckinTime(LocalDateTime.now());
         reservation.setStatus(Reservation.ReservationStatus.CHECKEDIN);
         log.info("Set status success");
@@ -244,6 +234,4 @@ public class ReservationService {
             throw new AppException(ErrorCode.FORBIDDEN);
         return reservationDetailMapper.toReservationDetailResponse(reservation);
     }
-
-
 }

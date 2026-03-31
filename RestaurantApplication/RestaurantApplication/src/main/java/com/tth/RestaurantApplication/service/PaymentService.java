@@ -29,15 +29,35 @@ public class PaymentService {
     ReservationRepository reservationRepository;
     OrderRepository orderRepository;
     BillService billService;
+    FirestoreService firestoreService;
+
     public BillResponse createBill(Order order, PaymentRequest request, BigDecimal subTotal) {
+        // Kiểm tra xem đã có Bill cho Order này chưa (tránh trùng lặp giữa IPN và Return URL)
+        if (billRepository.existsByOrder_OrderId(order.getOrderId())) {
+            log.info("Bill for order {} already exists, skipping creation.", order.getOrderId());
+            Bill existingBill = billRepository.findByOrder_OrderId(order.getOrderId())
+                .orElseThrow(() -> new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION));
+            return billMapper.toBillResponse(existingBill);
+        }
+
         Bill bill = billService.buildBill(order, request, subTotal);
         billRepository.save(bill);
         return billMapper.toBillResponse(bill);
     }
+
     public BillResponse createBillForDineInOrder(Order order, PaymentRequest request, BigDecimal subTotal) {
+        // Kiểm tra trùng lặp
+        if (billRepository.existsByOrder_OrderId(order.getOrderId())) {
+            log.info("Bill for dine-in order {} already exists, skipping creation.", order.getOrderId());
+            Bill existingBill = billRepository.findByOrder_OrderId(order.getOrderId())
+                .orElseThrow(() -> new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION));
+            return billMapper.toBillResponse(existingBill);
+        }
+
         Bill bill = billService.buildBill(order, request, subTotal);
         billRepository.save(bill);
-        log.info("saved 1 bill");
+        log.info("saved 1 bill for dine-in order {}", order.getOrderId());
+
         OrderSession orderSession = order.getOrderSession();
         Reservation reservation = orderSession.getReservation();
         TableEntity table = reservation.getTable();
@@ -55,6 +75,10 @@ public class PaymentService {
         order.setIsPaid(true);
         orderRepository.save(order);
 
+        // Xóa Reservation trên Firestore để Tablet quay về màn Check-in
+        firestoreService.deleteReservation(reservation.getReservationId());
+
         return billMapper.toBillResponse(bill);
     }
+
 }

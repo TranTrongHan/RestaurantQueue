@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useCookies } from 'react-cookie';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import Apis, { authApis, endpoints } from '../configs/Apis';
 import useAuthStore from '../store/useAuthStore';
 import bgImage from '/img/bg.png';
@@ -56,8 +56,6 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen flex bg-white font-sans overflow-hidden">
-      <Toaster position="top-right" />
-
       {/* Left Side: Login Form */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center items-center px-8 sm:px-16 lg:px-24 xl:px-32">
         <div className="max-w-md w-full animate-in fade-in slide-in-from-left duration-700">

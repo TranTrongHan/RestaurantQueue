@@ -28,14 +28,14 @@ INSERT INTO `user` (`full_name`, `dob`, `email`, `phone`,`address`, `username`, 
 ('Nguyen Van A', '1985-02-10', 'vân@example.com', '0903344556','TPHCM', 'vana', '123456', 'CUSTOMER','LOCAL'),
 ('Tran D', '1985-02-10', 'd@example.com', '0903344556','TPHCM', 'd', '123456', 'CUSTOMER','LOCAL');
 -- Bảng Chef (thuộc tính riêng của đầu bếp)
-CREATE TABLE `chef` (
-    `user_id` INT PRIMARY KEY,
-    `is_available` BOOLEAN DEFAULT TRUE,
-    FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB;
-INSERT INTO `chef` (`user_id`, `is_available`) VALUES
-(1, TRUE),
-(2, TRUE);
+-- CREATE TABLE `chef` (
+--     `user_id` INT PRIMARY KEY,
+--     `is_available` BOOLEAN DEFAULT TRUE,
+--     FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
+-- ) ENGINE=InnoDB;
+-- INSERT INTO `chef` (`user_id`, `is_available`) VALUES
+-- (1, TRUE),
+-- (2, TRUE);
 
 -- Bảng bình luận
 -- CREATE TABLE `comments` (
@@ -80,7 +80,7 @@ CREATE TABLE `reservation` (
     `booking_time` DATETIME NOT NULL,
     `checkin_time` DATETIME DEFAULT NULL,
     `checkout_time` DATETIME DEFAULT NULL,
-    `status` ENUM('BOOKED', 'CHECKEDIN', 'CHECKEDOUT') NOT NULL,
+    `status` ENUM('BOOKED', 'CHECKEDIN', 'CHECKEDOUT','REQUEST_PAYMENT') NOT NULL,
     `note` TEXT,
     FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`),
     FOREIGN KEY (`table_id`) REFERENCES `table`(`table_id`)
@@ -272,19 +272,19 @@ VALUES
 
 (11, 1, 1, 'DONE', 15, 85, '2025-12-25 18:50:00', '2025-12-25 19:05:00', 'Extra soup');
 
--- Bảng KitchenAssignment (phân công món ăn cho đầu bếp)
-CREATE TABLE `kitchen_assignment` (
-    `kitchen_assign_id` INT PRIMARY KEY AUTO_INCREMENT,
-    `chef_id` INT NOT NULL,
-    `order_item_id` INT NOT NULL UNIQUE,
-    `start_at` DATETIME NOT NULL,
-    `finish_at` DATETIME,
-    `deadline_time` DATETIME,
-    `status` ENUM( 'COOKING', 'DONE') NOT NULL,
-    `actual_cooking_time` DOUBLE PRECISION,
-    FOREIGN KEY (`chef_id`) REFERENCES `chef`(`user_id`),
-    FOREIGN KEY (`order_item_id`) REFERENCES `order_item`(`order_item_id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB;
+-- Bảng KitchenAssignment (phân công món ăn cho/ đầu bếp)
+-- CREATE TABLE `kitchen_assignment` (
+--     `kitchen_assign_id` INT PRIMARY KEY AUTO_INCREMENT,
+--     `chef_id` INT NOT NULL,
+--     `order_item_id` INT NOT NULL UNIQUE,
+--     `start_at` DATETIME NOT NULL,
+--     `finish_at` DATETIME,
+--     `deadline_time` DATETIME,
+--     `status` ENUM( 'COOKING', 'DONE') NOT NULL,
+--     `actual_cooking_time` DOUBLE PRECISION,
+--     FOREIGN KEY (`chef_id`) REFERENCES `chef`(`user_id`),
+--     FOREIGN KEY (`order_item_id`) REFERENCES `order_item`(`order_item_id`) ON DELETE CASCADE ON UPDATE CASCADE
+-- ) ENGINE=InnoDB;-- -- 
 
 
 -- Bảng Bill (hóa đơn thanh toán)

@@ -37,7 +37,7 @@ const MyReservationPage = () => {
       const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints["booking"]}/my`;
       const res = await authApis(cookies.token).get(url);
       if (res.data.code === 200) {
-        setReservations(res.data.result);
+        setReservations(res.data.result.data || []);
       } else {
         setError("Không tìm thấy đặt bàn nào.");
       }

@@ -16,4 +16,7 @@ public interface BillRepository extends JpaRepository<Bill,Integer> {
             "JOIN FETCH oi.menuItem " +
             "WHERE b.billId = :billId")
     public Bill findByIdWithOrderAndItems(@Param("billId") Integer billId);
+    boolean existsByOrder_OrderId(Integer orderId);
+    Optional<Bill> findByOrder_OrderId(Integer orderId);
 }
+

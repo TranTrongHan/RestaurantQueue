@@ -41,7 +41,9 @@ const ReservationsPages = () => {
             if (status) params.push(`status=${status}`);
             if (params.length) url += `?${params.join("&")}`;
             const res = await authApis(cookies.token).get(url);
-            if (res.status === 200) setReservations(res.data.result);
+            if (res.status === 200) {
+                setReservations(res.data.result.data || []);
+            }
         } catch (err) {
             setError(err.response?.data?.message || "Lỗi kết nối mạng. Vui lòng thử lại sau.");
         } finally {

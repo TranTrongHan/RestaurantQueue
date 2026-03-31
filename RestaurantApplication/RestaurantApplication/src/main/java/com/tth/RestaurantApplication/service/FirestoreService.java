@@ -127,18 +127,6 @@ public class FirestoreService {
         }
     }
 
-    public void updatePaymentStatus(Integer reservationId, String paymentStatus) {
-        try {
-            Firestore db = FirestoreClient.getFirestore();
-            DocumentReference resRef = db.collection(RESERVATIONS_COLLECTION)
-                    .document(String.valueOf(reservationId));
-
-            resRef.update("paymentStatus", paymentStatus, "lastUpdated", FieldValue.serverTimestamp());
-            log.info("✅ Cập nhật trạng thái thanh toán Reservation {} thành {}", reservationId, paymentStatus);
-        } catch (Exception e) {
-            log.error("❌ Lỗi khi cập nhật trạng thái thanh toán Reservation {}: {}", reservationId, e.getMessage());
-        }
-    }
 
     /**
      * Xóa món ăn khỏi Firestore và trừ tiền tương ứng.
@@ -167,4 +155,24 @@ public class FirestoreService {
             log.error("❌ Lỗi khi xóa OrderItem {} khỏi Firestore: {}", orderItemId, e.getMessage());
         }
     }
+
+    /**
+     * Xóa toàn bộ Reservation khỏi Firestore sau khi đã thanh toán xong (Checkout).
+     */
+    public void deleteReservation(Integer reservationId) {
+        try {
+            Firestore db = FirestoreClient.getFirestore();
+            DocumentReference resRef = db.collection(RESERVATIONS_COLLECTION)
+                    .document(String.valueOf(reservationId));
+
+            // Xóa tài liệu chính (Reservation). 
+            // Lưu ý: Firestore không tự xóa sub-collection khi xóa doc chính, 
+            // nhưng vì FE lắng nghe theo Doc chính nên xóa Doc chính là đủ để FE nhảy layout.
+            resRef.delete().get();
+            log.info("✅ Đã xóa Reservation {} khỏi Firestore (Checkout thành công)", reservationId);
+        } catch (Exception e) {
+            log.error("❌ Lỗi khi xóa Reservation {} khỏi Firestore: {}", reservationId, e.getMessage());
+        }
+    }
 }
+

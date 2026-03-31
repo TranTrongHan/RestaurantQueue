@@ -7,6 +7,7 @@ import com.tth.RestaurantApplication.entity.OrderItem;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+/*
 @Mapper(componentModel = "spring",uses = {ChefMapper.class, OrderItemMapper.class})
 public interface KitchenAssignmentMapper {
 
@@ -25,3 +26,4 @@ public interface KitchenAssignmentMapper {
         return orderItem != null ? orderItem.getOrderItemId() : null;
     }
 }
+*/

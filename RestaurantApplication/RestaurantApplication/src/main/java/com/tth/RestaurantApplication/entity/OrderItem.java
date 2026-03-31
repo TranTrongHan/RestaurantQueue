@@ -51,8 +51,8 @@ public class OrderItem {
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
-    @OneToOne(mappedBy = "orderItem", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private KitchenAssignment kitchenAssignment;
+//    @OneToOne(mappedBy = "orderItem", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+//    private KitchenAssignment kitchenAssignment;
 
     // Enum cho trạng thái của món ăn trong order
     public enum OrderItemStatus {

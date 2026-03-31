@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-
 @Entity
 @Table(name = "reservation")
 @Data
@@ -48,7 +47,7 @@ public class Reservation {
     private OrderSession orderSession;
 
     public enum ReservationStatus {
-        BOOKED, CHECKEDIN, CHECKEDOUT
+        BOOKED, CHECKEDIN, REQUEST_PAYMENT, CHECKEDOUT
     }
     // Getters and Setters...
 }
