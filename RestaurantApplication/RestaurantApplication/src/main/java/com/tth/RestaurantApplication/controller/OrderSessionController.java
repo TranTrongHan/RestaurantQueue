@@ -1,31 +1,22 @@
 package com.tth.RestaurantApplication.controller;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jwt.JWTClaimsSet;
 import com.tth.RestaurantApplication.dto.request.ApiResponse;
-import com.tth.RestaurantApplication.dto.request.OrderRequest;
 import com.tth.RestaurantApplication.dto.request.PaymentRequest;
 import com.tth.RestaurantApplication.dto.response.BillResponse;
-import com.tth.RestaurantApplication.dto.response.OrderItemResponse;
 import com.tth.RestaurantApplication.dto.response.OrderResponse;
 import com.tth.RestaurantApplication.dto.response.OrderSessionResponse;
 import com.tth.RestaurantApplication.entity.Order;
 import com.tth.RestaurantApplication.entity.User;
-import com.tth.RestaurantApplication.exception.AppException;
-import com.tth.RestaurantApplication.exception.ErrorCode;
 import com.tth.RestaurantApplication.service.AuthenticateService;
 import com.tth.RestaurantApplication.service.JwtService;
-import com.tth.RestaurantApplication.service.OnlineOrderService;
 import com.tth.RestaurantApplication.service.OrderSessionService;
-import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-import java.text.ParseException;
-import java.util.List;
+import java.math.BigDecimal;
 import java.util.Map;
 
 @RestController
@@ -36,8 +27,8 @@ import java.util.Map;
 public class OrderSessionController {
     AuthenticateService authenticateService;
     OrderSessionService orderSessionService;
-    OnlineOrderService onlineOrderService;
     JwtService jwtService;
+    com.tth.RestaurantApplication.service.payment.PaymentManagerService paymentManagerService;
 
     @GetMapping("/validate")
     public ApiResponse<OrderSessionResponse> validateSession(@RequestParam("token") String token) {
@@ -78,7 +69,15 @@ public class OrderSessionController {
         log.info("return url received: {}", returnUrl);
         User currentUser = authenticateService.getCurrentAuthenticatedUser();
         Order order = orderSessionService.getCurrentUserOrder(sessionId);
-        String paymentUrl = onlineOrderService.createPaymentUrl(currentUser, request, "DINE_IN", order, returnUrl);
+        BigDecimal subTotal = orderSessionService.getSubTotal(currentUser, order);
+        
+        String paymentUrl = paymentManagerService.createPaymentUrl(
+                order, 
+                request != null ? request.getPaymentType() : com.tth.RestaurantApplication.constant.PaymentType.VNPAY, 
+                subTotal.longValue(), 
+                returnUrl
+        );
+        
         return ApiResponse.<String>builder()
                 .result(paymentUrl)
                 .message("Create payment url success")
@@ -88,7 +87,7 @@ public class OrderSessionController {
     @GetMapping("/vnpayReturn")
     public ApiResponse<BillResponse> vnpayReturn(@RequestParam Map<String, String> params) throws Exception {
         User currentUser = authenticateService.getCurrentAuthenticatedUser();
-        BillResponse bill = onlineOrderService.handleVnpayReturn(params, currentUser);
+        BillResponse bill = paymentManagerService.handlePaymentReturn(com.tth.RestaurantApplication.constant.PaymentType.VNPAY, params, currentUser);
         return ApiResponse.<BillResponse>builder()
                 .result(bill)
                 .message("Payment verified and bill created")
@@ -97,7 +96,7 @@ public class OrderSessionController {
 
     @GetMapping("/vnpayIpn")
     public String vnpayIpn(@RequestParam Map<String, String> params) throws Exception {
-        return onlineOrderService.handleVnpayIpn(params);
+        return paymentManagerService.handlePaymentIpn(com.tth.RestaurantApplication.constant.PaymentType.VNPAY, params);
     }
 
 

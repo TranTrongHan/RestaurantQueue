@@ -59,7 +59,7 @@ public class OrderManagementService {
     }
 
     @Transactional
-    BigDecimal createOrderItemsFromCartForOnlineOrderAndGetSubTotal(User currentUser, Order order) {
+    public BigDecimal createOrderItemsFromCartForOnlineOrderAndGetSubTotal(User currentUser, Order order) {
         List<OnlineCart> onlineCartList = cartRepository.findByUserOrderByAddedAtDesc(currentUser);
         BigDecimal subTotal = BigDecimal.ZERO;
         if (onlineCartList == null || onlineCartList.isEmpty()) {

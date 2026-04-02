@@ -16,6 +16,7 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.text.ParseException;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,7 @@ public class OnlineOrderController {
     OnlineOrderService onlineOrderService;
     AuthenticateService authenticateService;
     OrderManagementService orderManagementService;
+    com.tth.RestaurantApplication.service.payment.PaymentManagerService paymentManagerService;
 
     @PostMapping("/createPayment")
     public ApiResponse<String> createPayment(@RequestBody(required = false) PaymentRequest request,
@@ -37,7 +39,14 @@ public class OnlineOrderController {
         log.info("return url received: {}",returnUrl);
         User currentUser = authenticateService.getCurrentAuthenticatedUser();
         Order order = orderManagementService.createForOnlineOrder(currentUser);
-        String paymentUrl = onlineOrderService.createPaymentUrl(currentUser, request,"TAKE_HOME",order,returnUrl);
+        BigDecimal subTotal = orderManagementService.createOrderItemsFromCartForOnlineOrderAndGetSubTotal(currentUser, order);
+        
+        String paymentUrl = paymentManagerService.createPaymentUrl(
+                order, 
+                request != null ? request.getPaymentType() : com.tth.RestaurantApplication.constant.PaymentType.VNPAY, 
+                subTotal.longValue(), 
+                returnUrl
+        );
 
         return ApiResponse.<String>builder()
                 .result(paymentUrl)
@@ -48,7 +57,7 @@ public class OnlineOrderController {
     @GetMapping("/vnpayReturn")
     public ApiResponse<BillResponse> vnpayReturn(@RequestParam Map<String, String> params) throws Exception {
         User currentUser = authenticateService.getCurrentAuthenticatedUser();
-        BillResponse bill = onlineOrderService.handleVnpayReturn(params, currentUser);
+        BillResponse bill = paymentManagerService.handlePaymentReturn(com.tth.RestaurantApplication.constant.PaymentType.VNPAY, params, currentUser);
         return ApiResponse.<BillResponse>builder()
                 .result(bill)
                 .message("Payment verified and bill created")
