@@ -16,11 +16,16 @@ public class RedisIndexInitializer {
 
     public void initIndex(RedisIndexDefinition redisIndexDefinition) {
         try {
+            // Test connection
+            String ping = jedis.ping();
+            log.info("Redis connection test: {}", ping);
+
             if(isIndexExists(redisIndexDefinition.indexName())) {
                 log.info("Index {} already exists", redisIndexDefinition.indexName());
                 return;
             }
 
+            log.info("Creating index {} with prefix {}...", redisIndexDefinition.indexName(), redisIndexDefinition.prefixName());
             jedis.ftCreate(
                     redisIndexDefinition.indexName(),
                     FTCreateParams.createParams()

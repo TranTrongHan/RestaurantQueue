@@ -39,10 +39,10 @@ public class MenuItemVectorDto implements Vectorizable{
     public Map<String, String> toMap() {
         return Map.of(
                 "id", stringify(id),
-                "name", name,
+                "name", stringify(name),
                 "description", safeLowerCase(description),
                 "price", stringify(price),
-                "image", image
+                "image", stringify(image)
         );
     }
 
@@ -51,7 +51,7 @@ public class MenuItemVectorDto implements Vectorizable{
     }
 
     private String safeLowerCase(String value) {
-        return value != null ? value.toLowerCase() : null;
+        return value != null ? value.toLowerCase() : "";
     }
 }
 

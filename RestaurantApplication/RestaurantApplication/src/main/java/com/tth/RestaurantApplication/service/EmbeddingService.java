@@ -6,18 +6,22 @@ import com.google.genai.types.EmbedContentConfig;
 import com.google.genai.types.EmbedContentResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
 import java.util.List;
 
 @Service
 public class EmbeddingService {
-    private final Client client;
+    @Value("${gemini.api.key}")
+    private String apiKey;
 
-    public EmbeddingService() {
+    private Client client;
+
+    @PostConstruct
+    public void init() {
         this.client = Client.builder()
-                .apiKey("AIzaSyB2MfA--PKS7akEBSV1b3c7NUALLlGR-xE")
+                .apiKey(apiKey)
                 .build();
     }
 
@@ -32,16 +36,19 @@ public class EmbeddingService {
             if (response != null && response.embeddings() != null && response.embeddings().isPresent()) {
                 List<ContentEmbedding> embeddings = response.embeddings().get();
 
-                if (!embeddings.isEmpty()) {
+                if (!embeddings.isEmpty() && embeddings.getFirst() != null) {
                     // Lấy embedding đầu tiên
                     List<Float> values = embeddings.getFirst().values().orElse(null);
 
-                    // Chuyển sang mảng float[]
-                    float[] result = new float[values.size()];
-                    for (int i = 0; i < values.size(); i++) {
-                        result[i] = values.get(i).floatValue();
+                    if (values != null && !values.isEmpty()) {
+                        // Gemini might return 768 or more dimensions. Our index expects 768.
+                        int dimension = Math.min(values.size(), 768);
+                        float[] result = new float[768]; // Always return 768 to match index
+                        for (int i = 0; i < dimension; i++) {
+                            result[i] = values.get(i).floatValue();
+                        }
+                        return result;
                     }
-                    return result;
                 }
             }
 

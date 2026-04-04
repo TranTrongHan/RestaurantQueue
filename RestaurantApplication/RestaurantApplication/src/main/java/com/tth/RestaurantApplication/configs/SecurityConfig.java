@@ -67,7 +67,7 @@ public class SecurityConfig {
                                                 .requestMatchers(HttpMethod.POST, "api/comments/add")
                                                 .hasRole("CUSTOMER")
                                                 .requestMatchers(HttpMethod.PUT, "api/comments/**").hasRole("ADMIN")
-                                                // .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
+                                                .requestMatchers("/api/menu-item-vector/**").permitAll()
                                                 .requestMatchers("/admin/**").permitAll()
                                                 .requestMatchers("/css/**",
                                                                 "/js/**", "/images/**")

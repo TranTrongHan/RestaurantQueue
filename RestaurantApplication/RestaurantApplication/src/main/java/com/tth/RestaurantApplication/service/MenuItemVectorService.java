@@ -17,7 +17,7 @@ public class MenuItemVectorService {
 
     private final MenuItemRepository menuItemRepository;
     private final MenuItemRedisService menuItemRedisService;
-//    private final MenuItem menuItems;
+    private final com.tth.RestaurantApplication.infracstructure.redis.MenuItemIndexSchema menuItemIndexSchema;
 
     /**
      * Đồng bộ tất cả job từ MySQL lên Redis Vector Database
@@ -25,21 +25,22 @@ public class MenuItemVectorService {
     @Transactional
     public void syncAllMenuItemsToRedis() {
         log.info("Starting to synchronize all job to Redis Vector Database...");
+        menuItemIndexSchema.initIndex();
         List<MenuItem> menuItems;
 
-
         menuItems = menuItemRepository.findByIsAvailableTrue();
-        List<MenuItemVectorDto> jobVectors = menuItems.stream().map(this::convertToJobVectorDto).toList();
-        menuItemRedisService.saveAllMenuItem(jobVectors, "menuItem: ");
+        List<MenuItemVectorDto> jobVectors = menuItems.stream().map(this::convertToMenuItemVectorDto).toList();
+        menuItemRedisService.saveAllMenuItem(jobVectors, "menuItem:");
 
         List<Integer> jobIds = jobVectors.stream().map((menuItem) -> Integer.parseInt(menuItem.getId())).toList();
 
-        if (jobIds.isEmpty()) return;
+        if (jobIds.isEmpty())
+            return;
 
         menuItemRepository.updateVectorUpdatedAtForJobs(jobIds);
     }
 
-    private MenuItemVectorDto convertToJobVectorDto(MenuItem menuItem) {
+    private MenuItemVectorDto convertToMenuItemVectorDto(MenuItem menuItem) {
         return MenuItemVectorDto.builder()
                 .id(menuItem.getMenuItemId())
                 .description(menuItem.getDescription())

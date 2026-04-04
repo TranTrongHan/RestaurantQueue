@@ -20,13 +20,9 @@ CREATE TABLE `user` (
     `role` ENUM('CUSTOMER', 'CHEF', 'STAFF','ADMIN') NOT NULL,
 	`is_vip` BOOLEAN DEFAULT NULL,
     `auth_provider` ENUM('LOCAL', 'GOOGLE') NOT NULL,
-    `image` VARCHAR(255) DEFAULT NULL
+    `image` VARCHAR(255) DEFAULT NULL,
+    `foodPreference` VARCHAR(255) DEFAULT NULL
 ) ENGINE=InnoDB;
-INSERT INTO `user` (`full_name`, `dob`, `email`, `phone`,`address`, `username`, `password`, `role`,`auth_provider`) VALUES
-('Le Thi B', '1988-11-20', 'lethib@example.com', '0987654321','TPHCM', 'lethib_chef', 'chefpass', 'CHEF','LOCAL'),
-('Hoang Thi E', '1985-02-10', 'hoangthe@example.com', '0903344556','TPHCM', 'hoange_chef', 'chefpass2', 'CHEF','LOCAL'),
-('Nguyen Van A', '1985-02-10', 'vân@example.com', '0903344556','TPHCM', 'vana', '123456', 'CUSTOMER','LOCAL'),
-('Tran D', '1985-02-10', 'd@example.com', '0903344556','TPHCM', 'd', '123456', 'CUSTOMER','LOCAL');
 -- Bảng Chef (thuộc tính riêng của đầu bếp)
 -- CREATE TABLE `chef` (
 --     `user_id` INT PRIMARY KEY,
@@ -192,23 +188,24 @@ CREATE TABLE `menu_item` (
     `is_available` BOOLEAN DEFAULT TRUE,
     `avg_cooking_time` DOUBLE PRECISION,
     `base_cooking_time` DOUBLE PRECISION,
+    `description`  VARCHAR(255) ,
     FOREIGN KEY (`category_id`) REFERENCES `category` (`category_id`) ON DELETE CASCADE ON UPDATE CASCADE,
     FULLTEXT(name) WITH PARSER ngram
 ) ENGINE=InnoDB;
-INSERT INTO `menu_item` (`category_id`, `name`, `price`,`image`, `is_available`, `avg_cooking_time`, `base_cooking_time`)
+INSERT INTO `menu_item` (`category_id`, `name`, `price`,`image`, `is_available`, `avg_cooking_time`, `base_cooking_time`, `description`)
 VALUES
-(1,'Lẩu Đài Bắc 1/2 Nồi ', 89000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092883/60001665-lau-dai-bac_1_2_mqyu8v.jpg',TRUE,1.1,13),
-(1,'Lẩu Mala 1/2 Nồi', 109000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092887/60001563-lau-mala-dai-loan_1_2_xqfdfl.jpg',TRUE,1.3,13),
-(2,'Ba Chỉ Cừu',79000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092905/bachicuu_fqi7yx.jpg',TRUE,2.8,6),
-(2,'Má Heo',99000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092912/m_heo_auhnxr.png',TRUE,3.7,6),
-(2,'Bắp Heo Mỹ Cuộn',59000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092919/b_p_heo_my_cu_n_j6oebd.jpg',TRUE,5,7),
-(2,'Ba Chỉ Heo Iberico',49000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092936/60001584-ba-chi-heo-iberico_2_1_t4ksk9.jpg',TRUE,2.3,6),
-(3,'Combo Bò Tươi Phong Dư',279000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092944/co_phong_du_xqtoxe.jpg',TRUE,2.9,11),
-(3,'Thăn Bò Tươi',139000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092954/co_diemthan_1_qdr5ne.jpg',TRUE,3.0,11),
-(4,'Sách Bò Nâu',79000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092959/sach_bo_nau_pp9yuu.jpg',TRUE,3.1,6),
-(4,'Cuống Tim Tươi',69000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092968/cuong_tim_bn5lab.jpg',TRUE,2.4,6),
-(4,'Lưỡi Bò',49000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092980/15l_i_bo_cu_n_aiiqln.jpg',TRUE,2.5,6),
-(5,'Sò Điệp',239000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092988/s_i_p_chpsuw.png',TRUE,5,6);
+(1,'Lẩu Đài Bắc 1/2 Nồi ', 89000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092883/60001665-lau-dai-bac_1_2_mqyu8v.jpg',TRUE,1.1,13,'Nước dùng lẩu Đài Bắc đặc trưng với hương vị thanh đạm, ngọt thanh từ xương hầm kết hợp cùng các loại thảo mộc truyền thống. Vị dịu nhẹ, bổ dưỡng, cực kỳ phù hợp cho những ai muốn cân bằng vị giác khi ăn kèm các món cay'),
+(1,'Lẩu Mala 1/2 Nồi', 109000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092887/60001563-lau-mala-dai-loan_1_2_xqfdfl.jpg',TRUE,1.3,13,'Nước dùng lẩu Mala cay nồng chuẩn vị Tứ Xuyên với sự kết hợp của ớt khô, hạt tiêu và các gia vị đặc trưng tạo cảm giác tê đầu lưỡi. Hương vị đậm đà, kích thích vị giác mạnh mẽ, là lựa chọn số một cho tín đồ ăn cay.'),
+(2,'Ba Chỉ Cừu',79000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092905/bachicuu_fqi7yx.jpg',TRUE,2.8,6,'Những lát thịt cừu thái mỏng với tỷ lệ nạc mỡ cân bằng, tạo độ mềm mượt khi nhúng lẩu. Thịt có mùi thơm đặc trưng của cừu, béo ngậy và rất giàu dinh dưỡng, hòa quyện tuyệt vời với nước lẩu đậm đà.'),
+(2,'Má Heo',99000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092912/m_heo_auhnxr.png',TRUE,3.7,6,'Phần thịt má heo có kết cấu độc đáo với những đường gân mỡ li ti xen kẽ, mang lại cảm giác giòn sần sật và béo thơm khi thưởng thức. Đây là lựa chọn thú vị cho những người yêu thích sự dai giòn tự nhiên.'),
+(2,'Bắp Heo Mỹ Cuộn',59000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092919/b_p_heo_my_cu_n_j6oebd.jpg',TRUE,5,7,'Thịt bắp heo Mỹ nhập khẩu chất lượng cao, được thái lát tròn đẹp mắt. Thịt chắc, ngọt tự nhiên và ít mỡ, khi nhúng chín vẫn giữ được độ mềm, không bị khô, mang lại vị ngọt thanh cho món lẩu.'),
+(2,'Ba Chỉ Heo Iberico',49000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092936/60001584-ba-chi-heo-iberico_2_1_t4ksk9.jpg',TRUE,2.3,6,'Loại heo đen cao cấp từ Tây Ban Nha, nổi tiếng với vân mỡ cẩm thạch và hương thơm hạt dẻ đặc trưng. Thịt mềm như tan trong miệng, mang đẳng cấp ẩm thực thượng hạng với độ béo ngậy tinh tế.'),
+(3,'Combo Bò Tươi Phong Dư',279000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092944/co_phong_du_xqtoxe.jpg',TRUE,2.9,11,' Tổng hợp các phần thịt bò tươi ngon nhất trong ngày, được tuyển chọn kỹ lưỡng. Combo mang đến trải nghiệm đa dạng về kết cấu từ mềm mịn đến giòn dai, giữ trọn vẹn vị ngọt nguyên bản của thịt bò tơ.'),
+(3,'Thăn Bò Tươi',139000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092954/co_diemthan_1_qdr5ne.jpg',TRUE,3.0,11,'Phần thịt thăn được lóc kỹ, ít mỡ, nhiều nạc nhưng cực kỳ mềm mại. Khi nhúng tái, thăn bò giữ được độ ẩm và vị ngọt sâu, là món ăn tinh túy dành cho những ai yêu thích hương vị bò thuần khiết.'),
+(4,'Sách Bò Nâu',79000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092959/sach_bo_nau_pp9yuu.jpg',TRUE,3.1,6,'Sách bò tươi được làm sạch tỉ mỉ, giữ lại màu nâu tự nhiên và độ giòn sần sật đặc trưng. Đây là món nhúng lẩu kinh điển, có khả năng bám nước dùng và nước sốt cực tốt, tạo cảm giác thú vị khi nhai.'),
+(4,'Cuống Tim Tươi',69000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092968/cuong_tim_bn5lab.jpg',TRUE,2.4,6,'Phần cuống tim có độ dai giòn cực kỳ bắt vị, không hề có mùi hôi. Đây là món nhắm tuyệt vời trong bữa lẩu, mang lại sự thay đổi khẩu vị với độ giòn cứng vừa phải và vị ngọt nhẹ.'),
+(4,'Lưỡi Bò',49000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092980/15l_i_bo_cu_n_aiiqln.jpg',TRUE,2.5,6,'Lưỡi bò thái mỏng là món khoái khẩu nhờ sự kết hợp giữa độ giòn, dai và vị béo nhẹ. Khi chín, lưỡi bò mang đến cảm giác đậm đà, lạ miệng và rất giàu chất sắt.'),
+(5,'Sò Điệp',239000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092988/s_i_p_chpsuw.png',TRUE,5,6,'Cồi sò điệp trắng nõn, tươi rói mang hương vị tinh khiết của biển cả. Thịt sò điệp ngọt lịm, mềm mại và giàu đạm, là điểm nhấn sang trọng giúp nâng tầm bữa tiệc lẩu của bạn.');
 
 
 

@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  redis-stack:
+    image: redis/redis-stack:latest
+    container_name: restaurant-redis-stack
+    ports:
+      - "6379:6379"     # Cổng Redis
+      - "8001:8001"     # Cổng Redis Insight (UI quản lý)
+    volumes:
+      - redis_data:/data # Đảm bảo data không mất khi tắt container
+    environment:
+      - REDIS_ARGS=--appendonly yes # Bật chế độ ghi log AOF để an toàn dữ liệu
+    restart: always
+
+volumes:
+  redis_data:
+    driver: local

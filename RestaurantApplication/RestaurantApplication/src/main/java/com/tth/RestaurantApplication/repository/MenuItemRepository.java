@@ -30,8 +30,8 @@ public interface MenuItemRepository extends JpaRepository<MenuItem,Integer> {
     List<MenuItem> findByNameContainingAndAvailable(@Param("keyword") String keyword);
 
     // Full-Text Search sử dụng N-gram
-    @Query(value = "SELECT * FROM menu_item m WHERE MATCH(m.name) AGAINST(:keyword IN NATURAL LANGUAGE MODE) AND m.is_available = true", nativeQuery = true)
-    List<MenuItem> searchByNameFts(@Param("keyword") String keyword);
+    @Query(value = "SELECT * FROM menu_item WHERE MATCH(name) AGAINST(?1 IN NATURAL LANGUAGE MODE) AND is_available = true", nativeQuery = true)
+    List<MenuItem> searchByNameFts(String keyword);
 
 
     List<MenuItem> findByCategory_CategoryId( Integer categoryId);

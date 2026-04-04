@@ -58,6 +58,9 @@ public class User {
 
     @Column(name = "is_vip")
     private Boolean isVip;
+
+    @Column(name = "food_preference", length = 1000)
+    private String foodPreference;
     @OneToOne(mappedBy = "user")
     private Chef chef;
 

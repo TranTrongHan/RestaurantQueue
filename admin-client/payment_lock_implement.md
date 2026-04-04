@@ -25,7 +25,7 @@ This plan outlines the steps to implement the "Payment Lock" mechanism for the T
 
 ## Open Questions
 
-1.  **Field for status**: Just to confirm, the "Lock" status from the backend will be in the `status` field of the reservation document as `REQUEST_PAYMENT`? My current implementation assumes this based on your `.md` file.
+1.  **Field for status**: Just to confirm, the "Lock" status from the backend will be in the `status` field of the reservation document as `REQUEST_PAYMENT`? My current implementation assumes this based on your `.md` file. yes it is
 
 ## Verification Plan
 
