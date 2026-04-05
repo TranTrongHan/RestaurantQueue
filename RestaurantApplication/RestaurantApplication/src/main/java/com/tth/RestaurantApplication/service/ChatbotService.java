@@ -37,7 +37,7 @@ public class ChatbotService {
 
     private static final String CHAT_HISTORY_PREFIX = "chat:history:";
     private static final int HISTORY_TTL_SECONDS = 3600; // 1 tiếng
-    private static final int MAX_HISTORY_ITEMS = 10;     // Lấy 10 dòng gần nhất
+    private static final int MAX_HISTORY_ITEMS = 4;     // Giảm xuống 4 để tiết kiệm Input Token
 
     public ChatbotService(JedisPooled jedis,
                           RecommendFood recommendFood,
@@ -88,8 +88,15 @@ public class ChatbotService {
         // 3. Lấy lịch sử chat ngắn hạn từ Redis (10 dòng cuối)
         List<String> chatHistory = jedis.lrange(historyKey, -MAX_HISTORY_ITEMS, -1);
 
-        // 4. Tìm kiếm món ăn liên quan bằng Vector Search (RAG)
-        List<MenuItemVectorResponse> recommendedFoods = recommendFood.recommendFoods(userMessage);
+        // 4. Mở rộng câu hỏi dựa trên lịch sử (Query Expansion) để hiểu "món đó" là gì
+        String extendedQuery = userMessage;
+        if (chatHistory != null && !chatHistory.isEmpty()) {
+            // Lấy dòng cuối cùng của Khách trong history (dòng lẻ thứ 2 từ cuối lên)
+            String lastUserMsg = chatHistory.get(chatHistory.size() - 2); 
+            extendedQuery = lastUserMsg + " " + userMessage;
+        }
+
+        List<MenuItemVectorResponse> recommendedFoods = recommendFood.recommendFoods(extendedQuery);
         String menuContext = buildMenuContext(recommendedFoods);
 
         // 5. Xây dựng Augmented Prompt
@@ -103,21 +110,30 @@ public class ChatbotService {
                             .parts(List.of(com.google.genai.types.Part.builder()
                                     .text("Bạn là một nhân viên phục vụ chuyên nghiệp, am hiểu ẩm thực. " +
                                           "Luôn trả lời bằng Tiếng Việt, thân thiện và ngắn gọn. " +
-                                          "Chỉ tư vấn về món ăn và thực đơn của nhà hàng. " +
-                                          "Nếu câu hỏi không liên quan đến ẩm thực, lịch sự từ chối.")
+                                          "Chỉ tư vấn về món ăn có trong thực đơn gợi ý. " +
+                                          "Dựa vào lịch sử hội thoại để hiểu các từ thay thế như 'món đó', 'nó', 'loại này'. " +
+                                          "QUAN TRỌNG: Nếu khách hàng bộc lộ sở thích mới, hãy viết kèm '[PREF: <sở thích>]'.")
                                     .build()))
                             .build())
                     .build();
 
             GenerateContentResponse response = client.models.generateContent(
-                    "gemini-2.0-flash", fullPrompt, config);
-            String aiResponse = response.text();
+                    "gemini-2.5-flash", fullPrompt, config);
+            String rawAiResponse = response.text();
 
-            // 7. Cập nhật lịch sử chat vào Redis
+            // 7. Trích xuất sở thích từ format [PREF: ...]
+            String aiResponse = rawAiResponse;
+            if (rawAiResponse.contains("[PREF:")) {
+                String preference = parsePreferenceFromResponse(rawAiResponse);
+                if (preference != null) {
+                    extractAndUpdatePreference(user, preference);
+                }
+                // Xóa tag [PREF: ...] trước khi trả về cho khách
+                aiResponse = rawAiResponse.replaceAll("\\[PREF:.*?\\]", "").trim();
+            }
+
+            // 8. Cập nhật lịch sử chat vào Redis
             saveHistoryToRedis(historyKey, userMessage, aiResponse);
-
-            // 8. AI trích xuất sở thích và cập nhật Profile User (Async-safe)
-            extractAndUpdatePreference(user, userMessage, aiResponse);
 
             log.info("Chat completed for userId={}", userId);
             return aiResponse;
@@ -160,11 +176,17 @@ public class ChatbotService {
         if (foods == null || foods.isEmpty()) {
             return "Không tìm thấy món ăn nào khớp trực tiếp. Hãy hỏi thêm để tôi hỗ trợ tốt hơn.";
         }
+        // Giới hạn 3 món để tiết kiệm Token
         return foods.stream()
-                .map(f -> String.format("• %s | Giá: %s VNĐ | Mô tả: %s",
+                .limit(3)
+                .map(f -> {
+                    String desc = f.getDescription() != null ? f.getDescription() : "Đang cập nhật";
+                    if (desc.length() > 100) desc = desc.substring(0, 97) + "..."; // Cắt ngắn mô tả
+                    return String.format("• %s | Giá: %s VNĐ | Mô tả: %s",
                         f.getName(),
                         f.getPrice().toPlainString(),
-                        f.getDescription() != null ? f.getDescription() : "Đang cập nhật"))
+                        desc);
+                })
                 .collect(Collectors.joining("\n"));
     }
 
@@ -174,31 +196,35 @@ public class ChatbotService {
         jedis.expire(historyKey, HISTORY_TTL_SECONDS);
     }
 
-    private void extractAndUpdatePreference(User user, String userMessage, String aiResponse) {
-        String extractionPrompt = String.format(
-                "Phân tích ngắn gọn: Từ câu hỏi '%s' và phản hồi '%s', " +
-                "khách hàng có lộ ra sở thích ẩm thực cụ thể nào không (ví dụ: Thích cay, Ăn chay, Dị ứng hải sản)? " +
-                "Chỉ trả về từ khóa ngắn (tối đa 10 từ). Nếu không có thông tin mới, trả về 'NONE'.",
-                userMessage, aiResponse);
-
+    private String parsePreferenceFromResponse(String rawResponse) {
         try {
-            GenerateContentResponse prefResponse = client.models.generateContent(
-                    "gemini-2.0-flash", extractionPrompt, null);
-            String extracted = prefResponse.text().trim();
-
-            if (!extracted.equalsIgnoreCase("NONE") && !extracted.isBlank()) {
-                String current = user.getFoodPreference() == null ? "" : user.getFoodPreference();
-                // Tránh thêm thông tin trùng lặp
-                if (!current.contains(extracted)) {
-                    String updated = current.isBlank() ? extracted : current + "; " + extracted;
-                    user.setFoodPreference(updated);
-                    userRepository.save(user);
-                    log.info("Cập nhật sở thích cho user {}: '{}'", user.getUsername(), extracted);
-                }
+            int start = rawResponse.indexOf("[PREF:");
+            int end = rawResponse.indexOf("]", start);
+            if (start != -1 && end != -1) {
+                return rawResponse.substring(start + 6, end).trim();
             }
         } catch (Exception e) {
-            // Không để lỗi phụ ảnh hưởng luồng chat chính
-            log.warn("Không thể trích xuất sở thích từ cuộc chat: {}", e.getMessage());
+            log.warn("Lỗi khi parse preference từ AI response: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private void extractAndUpdatePreference(User user, String extractedPreference) {
+        if (extractedPreference == null || extractedPreference.isBlank() || extractedPreference.equalsIgnoreCase("NONE")) {
+            return;
+        }
+
+        try {
+            String current = user.getFoodPreference() == null ? "" : user.getFoodPreference();
+            // Tránh thêm thông tin trùng lặp
+            if (!current.toLowerCase().contains(extractedPreference.toLowerCase())) {
+                String updated = current.isBlank() ? extractedPreference : current + "; " + extractedPreference;
+                user.setFoodPreference(updated);
+                userRepository.save(user);
+                log.info("Cập nhật sở thích cho user {}: '{}'", user.getUsername(), extractedPreference);
+            }
+        } catch (Exception e) {
+            log.warn("Không thể lưu sở thích mới: {}", e.getMessage());
         }
     }
 }

@@ -58,6 +58,26 @@ Dự án này triển khai một trợ lý ảo tư vấn ẩm thực tích hợ
 
 ---
 
+### 5. Tối ưu hóa API (Gemini Free Tier Optimization)
+
+Để tránh lỗi **429 Too Many Requests** và vượt hạn mức (Quota) của gói miễn phí, các thay đổi sau được áp dụng:
+
+#### 1. Gộp các cuộc gọi API (Consolidating API Calls)
+- **Trước**: 1 tin nhắn khách gửi = 3 lần gọi API (1 Embedding + 1 Chat + 1 Extraction).
+- **Sau**: 1 tin nhắn khách gửi = **2 lần gọi API** (1 Embedding + 1 Chat có tích hợp Extraction).
+- **Kỹ thuật**: Sử dụng System Prompt yêu cầu AI trả về kết quả kèm theo thẻ sở thích (ví dụ: `[PREF: <sở thích>]`) ở cuối câu trả lời. Backend sẽ dùng Regex để tách và cập nhật DB.
+
+#### 2. Quản lý Context & Token (Token Efficiency)
+- **Giới hạn RAG**: Chỉ gửi **tối đa 3 món ăn** gợi ý từ Vector Search vào Prompt thay vì 5 món để giảm `input_token_count`.
+- **Rút gọn mô tả**: Tự động cắt bớt mô tả món ăn nếu quá dài trước khi đưa vào context.
+
+#### 3. Ngữ cảnh hội thoại (Contextual RAG)
+- **Vấn đề**: Khi khách hỏi câu tiếp nối ("Món đó có cay không?"), câu này không có từ khóa về món ăn cụ thể nên tìm kiếm Vector sẽ bị sai.
+- **Giải pháp**: **Query Expansion**. Hệ thống tự động gộp tin nhắn cuối cùng của khách trong quá khứ vào câu hỏi hiện tại trước khi gửi lên Redis tìm kiếm.
+- **Kết quả**: Bot hiểu được "món đó", "nó", "loại này" đang ám chỉ món ăn nào đã thảo luận trước đó.
+
+---
+
 ## Senior Discussion Summary
 
 Chúng ta đã thống nhất các phương án tối ưu nhất cho nhà hàng:
