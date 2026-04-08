@@ -1,21 +1,23 @@
 package com.tth.RestaurantApplication.dto.request;
 
-
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import lombok.experimental.FieldDefaults;
+import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 @Data
-@FieldDefaults(level = AccessLevel.PRIVATE)
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class MenuItemRequest {
-    @NotBlank(message = "MenuItemId can not be blank ")
-    Integer menuItemId;
-    @NotBlank(message = "Quantity can not be blank")
-    @Min(value = 1, message = "INVALID_QUANTITY")
-    Integer quantity;
-
-    String note = null;
-
+    private Integer menuItemId;
+    private String name;
+    private BigDecimal price;
+    private Integer categoryId;
+    private Double avgCookingTime;
+    private MultipartFile file;
+    private String image;
+    private Boolean isAvailable;
 }

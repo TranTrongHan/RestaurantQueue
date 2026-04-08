@@ -5,6 +5,7 @@ import com.tth.RestaurantApplication.dto.request.ApiResponse;
 import com.tth.RestaurantApplication.dto.request.PaymentRequest;
 import com.tth.RestaurantApplication.dto.response.BillResponse;
 import com.tth.RestaurantApplication.dto.response.OnlineOrderResponse;
+import com.tth.RestaurantApplication.dto.response.PageResponse;
 import com.tth.RestaurantApplication.entity.Order;
 import com.tth.RestaurantApplication.entity.User;
 import com.tth.RestaurantApplication.service.AuthenticateService;
@@ -79,6 +80,24 @@ public class OnlineOrderController {
 
         return ApiResponse.<List<OnlineOrderResponse>>builder()
                 .result(onlineOrderService.getOnlineOrder(currentUser))
+                .build();
+    }
+
+    @GetMapping("/admin")
+    ApiResponse<PageResponse<OnlineOrderResponse>> getAllOrders(
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size,
+            @RequestParam Map<String, String> params
+    ) {
+        return ApiResponse.<PageResponse<OnlineOrderResponse>>builder()
+                .result(onlineOrderService.getAllOnlineOrders(page, size, params))
+                .build();
+    }
+
+    @GetMapping("/admin/{onlineOrderId}")
+    ApiResponse<OnlineOrderResponse> getOrderDetail(@PathVariable Integer onlineOrderId) {
+        return ApiResponse.<OnlineOrderResponse>builder()
+                .result(onlineOrderService.getOnlineOrderDetail(onlineOrderId))
                 .build();
     }
 }

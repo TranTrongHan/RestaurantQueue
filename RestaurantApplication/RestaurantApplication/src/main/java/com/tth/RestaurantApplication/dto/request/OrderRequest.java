@@ -10,5 +10,5 @@ import java.util.List;
 @Data
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class OrderRequest {
-    List<MenuItemRequest> menuItemRequestList;
+    List<OrderItemRequest> menuItemRequestList;
 }

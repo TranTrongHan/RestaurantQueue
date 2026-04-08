@@ -1,7 +1,7 @@
 package com.tth.RestaurantApplication.service;
 
 
-import com.tth.RestaurantApplication.dto.request.MenuItemForm;
+import com.tth.RestaurantApplication.dto.request.MenuItemRequest;
 import com.tth.RestaurantApplication.dto.response.MenuItemResponse;
 import com.tth.RestaurantApplication.entity.Category;
 import com.tth.RestaurantApplication.entity.MenuItem;
@@ -38,41 +38,43 @@ public class MenuItemService {
     MenuItemMapper menuItemMapper;
     CloudinaryService cloudinaryService;
 
-    public void addOrUpdateMenuItem(MenuItemForm form){
+    public void addOrUpdateMenuItem(MenuItemRequest request){
         MenuItem menuItem;
 
-        if (form.getMenuItemId() != null) {
+        if (request.getMenuItemId() != null) {
             // update
-            menuItem = menuItemRepository.findById(form.getMenuItemId())
+            menuItem = menuItemRepository.findById(request.getMenuItemId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy món ăn"));
         } else {
             // add new
             menuItem = new MenuItem();
+            // Default image for new items if not provided
+            menuItem.setImage("https://res.cloudinary.com/dfi68mgij/image/upload/v1755092988/s_i_p_chpsuw.png");
         }
 
         // map dữ liệu cơ bản
-        menuItem.setName(form.getName());
-        menuItem.setPrice(form.getPrice());
-        menuItem.setAvgCookingTime(form.getAvgCookingTime());
+        menuItem.setName(request.getName());
+        menuItem.setPrice(request.getPrice());
+        menuItem.setAvgCookingTime(request.getAvgCookingTime());
+        menuItem.setIsAvailable(request.getIsAvailable() != null ? request.getIsAvailable() : true);
 
         // map category từ id
-        if (form.getCategoryId() != null) {
-            Category category = categoryRepository.findById(String.valueOf(form.getCategoryId()))
+        if (request.getCategoryId() != null) {
+            Category category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục"));
             menuItem.setCategory(category);
         }
 
         // xử lý upload ảnh nếu có
-        if (form.getFile() != null && !form.getFile().isEmpty()) {
+        if (request.getFile() != null && !request.getFile().isEmpty()) {
             try {
-                Map uploadResult = cloudinaryService.upload(form.getFile());
+                Map uploadResult = cloudinaryService.upload(request.getFile());
                 menuItem.setImage((String) uploadResult.get("url"));
             } catch (Exception e) {
                 throw new RuntimeException("Lỗi upload ảnh", e);
             }
-        } else if (form.getImage() != null) {
-            menuItem.setImage("https://res.cloudinary.com/dfi68mgij/image/upload/v1755092988/s_i_p_chpsuw.png");
-        }
+        } 
+        // Nếu không có file mới, giữ nguyên ảnh cũ (không làm gì thêm)
 
         menuItemRepository.save(menuItem);
     }
@@ -91,7 +93,19 @@ public class MenuItemService {
     public List<MenuItemResponse> getListMenuItem(Integer categoryId){
         List<MenuItem> menuItems;
         if(categoryId!= null){
+            menuItems = menuItemRepository.findByCategory_CategoryIdAndIsAvailableTrue(categoryId);
+        } else {
+            menuItems = menuItemRepository.findByIsAvailableTrue();
+        }
 
+        return menuItems.stream()
+                .map(menuItemMapper::toMenuItemResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<MenuItemResponse> getAllMenuItemsForAdmin(Integer categoryId) {
+        List<MenuItem> menuItems;
+        if (categoryId != null) {
             menuItems = menuItemRepository.findByCategory_CategoryId(categoryId);
         } else {
             menuItems = menuItemRepository.findAll();
@@ -100,6 +114,13 @@ public class MenuItemService {
         return menuItems.stream()
                 .map(menuItemMapper::toMenuItemResponse)
                 .collect(Collectors.toList());
+    }
+
+    public void toggleMenuItemStatus(Integer menuItemId, boolean isAvailable) {
+        MenuItem menuItem = menuItemRepository.findById(menuItemId)
+                .orElseThrow(() -> new AppException(ErrorCode.MENUITEM_NOT_FOUND));
+        menuItem.setIsAvailable(isAvailable);
+        menuItemRepository.save(menuItem);
     }
     public double getAvgCookingTime(Integer menuItemId){
         MenuItem menuItem = this.menuItemRepository.findByMenuItemId(menuItemId)

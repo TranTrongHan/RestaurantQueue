@@ -1,6 +1,6 @@
 package com.tth.RestaurantApplication.service;
 
-import com.tth.RestaurantApplication.dto.request.MenuItemRequest;
+import com.tth.RestaurantApplication.dto.request.OrderItemRequest;
 import com.tth.RestaurantApplication.dto.request.OrderRequest;
 import com.tth.RestaurantApplication.dto.response.OrderItemResponse;
 import com.tth.RestaurantApplication.entity.MenuItem;
@@ -115,7 +115,7 @@ public class OrderItemService {
         }
 
         List<OrderItem> newOrderItems = new ArrayList<>();
-        for (MenuItemRequest menuItemRequest : request.getMenuItemRequestList()) {
+        for (OrderItemRequest menuItemRequest : request.getMenuItemRequestList()) {
             OrderItem orderItem = createAndSaveSingleOrderItem(order, menuItemRequest);
             newOrderItems.add(orderItem);
         }
@@ -134,7 +134,7 @@ public class OrderItemService {
                 .collect(Collectors.toList());
     }
 
-    private OrderItem createAndSaveSingleOrderItem(Order order, MenuItemRequest menuItemRequest) {
+    private OrderItem createAndSaveSingleOrderItem(Order order, OrderItemRequest menuItemRequest) {
         MenuItem item = menuItemRepository.findByMenuItemId(menuItemRequest.getMenuItemId())
                 .orElseThrow(() -> new AppException(ErrorCode.MENUITEM_NOT_FOUND));
 

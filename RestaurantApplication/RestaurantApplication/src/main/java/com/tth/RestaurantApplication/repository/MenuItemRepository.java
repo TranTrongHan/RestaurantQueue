@@ -36,6 +36,8 @@ public interface MenuItemRepository extends JpaRepository<MenuItem,Integer> {
 
     List<MenuItem> findByCategory_CategoryId( Integer categoryId);
 
+    List<MenuItem> findByCategory_CategoryIdAndIsAvailableTrue(Integer categoryId);
+
     // Tìm menu items theo khoảng giá
     @Query("SELECT m FROM MenuItem m WHERE m.price BETWEEN :minPrice AND :maxPrice AND m.isAvailable = true")
     List<MenuItem> findByPriceBetweenAndAvailable(@Param("minPrice") BigDecimal minPrice, @Param("maxPrice") BigDecimal maxPrice);

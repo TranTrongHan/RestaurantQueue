@@ -1,7 +1,7 @@
 package com.tth.RestaurantApplication.controller;
 
 
-import com.tth.RestaurantApplication.dto.request.MenuItemForm;
+import com.tth.RestaurantApplication.dto.request.MenuItemRequest;
 import com.tth.RestaurantApplication.dto.response.BillResponse;
 import com.tth.RestaurantApplication.dto.response.CommentAdminResponse;
 import com.tth.RestaurantApplication.dto.response.MenuItemResponse;
@@ -68,36 +68,6 @@ public class AdminController {
         });
         model.addAttribute("bill",bill);
         return "bill_detail.html";
-    }
-    @GetMapping("/menus")
-    public String adminMenus(Model model){
-        List<MenuItemResponse> menuItemResponses =  menuItemService.getListMenuItem(null);
-        model.addAttribute("menus",menuItemResponses);
-
-        return "menus";
-    }
-    @GetMapping("/menus/add")
-    public String adminAddMenuItemView(Model model){
-        MenuItemForm form = new MenuItemForm();
-        form.setMenuItemId(null);
-        model.addAttribute("item",form);
-        model.addAttribute("cates",categoryService.getCates());
-        return "menu";
-    }
-    @GetMapping("/menus/{menuItemId}")
-    public String adminUpdateMenuItemView(Model model, @PathVariable(value = "menuItemId") Integer menuItemId){
-
-        MenuItemResponse menuItem = menuItemService.getMenuItem(menuItemId);
-        MenuItemForm form = new MenuItemForm();
-        form.setMenuItemId(menuItem.getMenuItemId());
-        model.addAttribute("item",form);
-        model.addAttribute("cates",categoryService.getCates());
-        return "menu";
-    }
-    @PostMapping("/menus/add")
-    public String adminAddMenuItem(@ModelAttribute(value = "item") MenuItemForm form ){
-        menuItemService.addOrUpdateMenuItem(form);
-        return "redirect:/admin/menus";
     }
     @GetMapping("/comments")
     public String adminCommentView(@RequestParam Map<String, String> params,
