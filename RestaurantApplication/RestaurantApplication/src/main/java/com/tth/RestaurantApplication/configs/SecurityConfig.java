@@ -56,7 +56,7 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/reservation/**").hasAnyRole("STAFF", "CUSTOMER")
                                                 .requestMatchers("/api/tables/**").hasRole("CUSTOMER")
                                                 .requestMatchers("/api/orders/**").hasRole("CUSTOMER")
-                                                .requestMatchers("/api/online_order/admin/**").hasRole("ADMIN")
+                                                .requestMatchers("/api/online_order/admin/**").hasRole("STAFF")
                                                 .requestMatchers("/api/online_order/**").hasRole("CUSTOMER")
                                                 .requestMatchers(HttpMethod.GET, "/api/order_session/validate")
                                                 .permitAll()

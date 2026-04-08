@@ -1,0 +1,99 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /restaurantserver
+
+spring:
+  # config:
+  #   import: optional:file:./application.env
+  datasource:
+    url: jdbc:mysql://localhost:3306/restaurantdb?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: Admin@123
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    cache: false
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            redirect-uri: http://localhost:8080/restaurantserver/login/oauth2/code/google
+            client-id: 781083125417-mak36ibgk9tdda2g90n519d8if30s4mj.apps.googleusercontent.com
+            client-secret: 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
+            scope: email,profile
+
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+            user-name-attribute: sub
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: hintran6@gmail.com
+    password: lhikwyqeiedlholr
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  main:
+    allow-bean-definition-overriding: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+cloudinary:
+  cloud_name: dfi68mgij
+  api_key: 894594157357848
+  api_secret: 0sRNBJ784LZ8_Y6OTidPlNaJgQY
+
+jwt:
+  secret: 9a7b5c2d8e6f4a1c0d3e7b9f5a6c8d2e
+  expiration: 86400
+  issuer: restaurant-app
+
+vnpay:
+  tmnCode: K1L8ILZ3
+  secretKey: EHGJSI2HPHG4UNUNVLX30ZGEQ4K8KLXQ
+  baseUrl: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+  returnUrl: http://localhost:5173
+
+redis:
+  stream-key: kitchen-stream
+  zset-key: kitchen-priority-queue
+  stream:
+    group: bep_group
+    consumer: bep_1
+
+app:
+  firebase:
+    config: C:/secrets/firebase-service-account.json
+
+logging:
+  level:
+    root: INFO
+    org:
+      springframework:
+        security: INFO
+        web: INFO
+
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:AIzaSyBo5Gkh0ecfmiNlyXP1ClVVbjDBFncsz6s}
+

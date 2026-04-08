@@ -30,6 +30,8 @@ import { db } from "../configs/firebase";
 import { collection, onSnapshot, query, where, doc } from "firebase/firestore";
 import axios from "axios";
 import SpinnerComp from "../components/common/SpinnerComp";
+import FloatingChatButton from "../components/common/FloatingChatButton";
+import ChatbotDrawer from "../components/common/ChatbotDrawer";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -66,6 +68,12 @@ const CustomerOrderingPage = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
+
+    // Chatbot State
+    const [isChatOpen, setIsChatOpen] = useState(false);
+    const [chatMessages, setChatMessages] = useState([]);
+    const [isTypingChat, setIsTypingChat] = useState(false);
+    const [chatInputValue, setChatInputValue] = useState("");
 
     // Initialize & Persist Token
     useEffect(() => {
@@ -270,6 +278,36 @@ const CustomerOrderingPage = () => {
             toast.error(err.response?.data?.message || "Lỗi yêu cầu thanh toán");
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Chatbot Logic
+    const handleSendChatMessage = async (text) => {
+        if (!text.trim()) return;
+
+        const userMessage = { role: "user", content: text };
+        setChatMessages(prev => [...prev, userMessage]);
+        setChatInputValue("");
+        setIsTypingChat(true);
+
+        try {
+            const res = await axios.post(`${BASE_URL}/chat`, {
+                message: text,
+                sessionToken: sessionToken
+            });
+
+            if (res.status === 200) {
+                const botMessage = { role: "bot", content: res.data.result };
+                setChatMessages(prev => [...prev, botMessage]);
+            }
+        } catch (err) {
+            console.error("Chat error:", err);
+            setChatMessages(prev => [...prev, { 
+                role: "bot", 
+                content: "Xin lỗi, tôi đang gặp chút sự cố kết nối. Vui lòng thử lại sau nhé!" 
+            }]);
+        } finally {
+            setIsTypingChat(false);
         }
     };
 

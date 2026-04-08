@@ -19,4 +19,7 @@ public class MenuItemResponse {
     Boolean isAvailable;
     Double avgCookingTime;
     Double baseCookingTime;
+    Integer categoryId;
+    String categoryName;
+    String description;
 }

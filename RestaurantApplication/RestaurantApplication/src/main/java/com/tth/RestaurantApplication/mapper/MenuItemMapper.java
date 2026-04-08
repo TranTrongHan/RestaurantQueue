@@ -8,6 +8,7 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface MenuItemMapper {
     @Mapping(source = "image", target = "image")
-
+    @Mapping(source = "category.categoryId", target = "categoryId")
+    @Mapping(source = "category.name", target = "categoryName")
     MenuItemResponse toMenuItemResponse(MenuItem menuItem);
 }

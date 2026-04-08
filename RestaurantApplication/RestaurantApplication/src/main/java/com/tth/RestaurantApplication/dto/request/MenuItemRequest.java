@@ -19,5 +19,6 @@ public class MenuItemRequest {
     private Double avgCookingTime;
     private MultipartFile file;
     private String image;
+    private String description;
     private Boolean isAvailable;
 }

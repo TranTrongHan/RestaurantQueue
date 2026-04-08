@@ -56,6 +56,7 @@ public class MenuItemService {
         menuItem.setName(request.getName());
         menuItem.setPrice(request.getPrice());
         menuItem.setAvgCookingTime(request.getAvgCookingTime());
+        menuItem.setDescription(request.getDescription());
         menuItem.setIsAvailable(request.getIsAvailable() != null ? request.getIsAvailable() : true);
 
         // map category từ id
@@ -63,6 +64,9 @@ public class MenuItemService {
             Category category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục"));
             menuItem.setCategory(category);
+        } else if (menuItem.getMenuItemId() == null) {
+            // Trường hợp tạo mới món ăn mà không có categoryId
+            throw new RuntimeException("Danh mục (categoryId) là bắt buộc khi tạo món ăn mới");
         }
 
         // xử lý upload ảnh nếu có
