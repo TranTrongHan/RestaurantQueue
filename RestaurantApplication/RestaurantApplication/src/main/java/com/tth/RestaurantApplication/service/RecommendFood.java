@@ -34,8 +34,14 @@ public class RecommendFood {
         // B0: Ensure index exists
         menuItemIndexSchema.initIndex();
 
-        // B1: tạo embedding từ CV\
-        float[] embedding = embeddingService.getEmbedding(userQuery);
+        // B1: tạo embedding từ Query
+        float[] embedding;
+        try {
+            embedding = embeddingService.getEmbedding(userQuery);
+        } catch (Exception e) {
+            log.error("Failed to generate embedding for query '{}': {}", userQuery, e.getMessage());
+            return Collections.emptyList();
+        }
 
         // B2: tìm job gần nhất bằng KNN
         byte[] vecBytes = VectorService.floatArrayToBytes(embedding);

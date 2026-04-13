@@ -85,25 +85,24 @@ public class ChatbotService {
         String userId = String.valueOf(user.getUserId());
         String historyKey = CHAT_HISTORY_PREFIX + userId;
 
-        // 3. Lấy lịch sử chat ngắn hạn từ Redis (10 dòng cuối)
-        List<String> chatHistory = jedis.lrange(historyKey, -MAX_HISTORY_ITEMS, -1);
-
-        // 4. Mở rộng câu hỏi dựa trên lịch sử (Query Expansion) để hiểu "món đó" là gì
-        String extendedQuery = userMessage;
-        if (chatHistory != null && !chatHistory.isEmpty()) {
-            // Lấy dòng cuối cùng của Khách trong history (dòng lẻ thứ 2 từ cuối lên)
-            String lastUserMsg = chatHistory.get(chatHistory.size() - 2); 
-            extendedQuery = lastUserMsg + " " + userMessage;
-        }
-
-        List<MenuItemVectorResponse> recommendedFoods = recommendFood.recommendFoods(extendedQuery);
-        String menuContext = buildMenuContext(recommendedFoods);
-
-        // 5. Xây dựng Augmented Prompt
-        String fullPrompt = buildPrompt(user, chatHistory, menuContext, userMessage);
-
         try {
-            // 6. Gọi Gemini API (Sync, no streaming)
+            // 3. Lấy lịch sử chat ngắn hạn từ Redis
+            List<String> chatHistory = jedis.lrange(historyKey, -MAX_HISTORY_ITEMS, -1);
+
+            // 4. Mở rộng câu hỏi và gợi ý món ăn
+            String extendedQuery = userMessage;
+            if (chatHistory != null && chatHistory.size() >= 2) {
+                String lastUserMsg = chatHistory.get(chatHistory.size() - 2);
+                extendedQuery = lastUserMsg + " " + userMessage;
+            }
+
+            List<MenuItemVectorResponse> recommendedFoods = recommendFood.recommendFoods(extendedQuery);
+            String menuContext = buildMenuContext(recommendedFoods);
+
+            // 5. Xây dựng Augmented Prompt
+            String fullPrompt = buildPrompt(user, chatHistory, menuContext, userMessage);
+
+            // 6. Gọi Gemini API
             GenerateContentConfig config = GenerateContentConfig.builder()
                     .systemInstruction(com.google.genai.types.Content.builder()
                             .role("user")
@@ -117,22 +116,21 @@ public class ChatbotService {
                             .build())
                     .build();
 
-            GenerateContentResponse response = client.models.generateContent(
-                    "gemini-2.5-flash", fullPrompt, config);
+            log.info("Calling Gemini for user: {}", userId);
+            GenerateContentResponse response = client.models.generateContent("gemini-2.5-flash", fullPrompt, config);
             String rawAiResponse = response.text();
 
-            // 7. Trích xuất sở thích từ format [PREF: ...]
+            // 7. Trích xuất sở thích
             String aiResponse = rawAiResponse;
-            if (rawAiResponse.contains("[PREF:")) {
+            if (rawAiResponse != null && rawAiResponse.contains("[PREF:")) {
                 String preference = parsePreferenceFromResponse(rawAiResponse);
                 if (preference != null) {
                     extractAndUpdatePreference(user, preference);
                 }
-                // Xóa tag [PREF: ...] trước khi trả về cho khách
                 aiResponse = rawAiResponse.replaceAll("\\[PREF:.*?\\]", "").trim();
             }
 
-            // 8. Cập nhật lịch sử chat vào Redis
+            // 8. Cập nhật lịch sử
             saveHistoryToRedis(historyKey, userMessage, aiResponse);
 
             log.info("Chat completed for userId={}", userId);
@@ -141,8 +139,8 @@ public class ChatbotService {
         } catch (AppException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Lỗi khi gọi Gemini API cho userId={}: {}", userId, e.getMessage());
-            return "Xin lỗi, tôi đang gặp sự cố kỹ thuật. Bạn vui lòng thử lại sau nhé!";
+            log.error("Lỗi nghiêm trọng trong ChatbotService cho userId={}: {}", userId, e.getMessage(), e);
+            return "Xin lỗi " + user.getFullName() + ", tôi đang gặp sự cố kỹ thuật kết nối với trí tuệ nhân tạo. Bạn vui lòng thử lại sau nhé!";
         }
     }
 

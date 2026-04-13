@@ -292,19 +292,19 @@ const CustomerOrderingPage = () => {
 
         try {
             const res = await axios.post(`${BASE_URL}/chat`, {
-                message: text,
+                userMessage: text,
                 sessionToken: sessionToken
             });
 
             if (res.status === 200) {
-                const botMessage = { role: "bot", content: res.data.result };
+                const botMessage = { role: "bot", content: res.data.aiMessage };
                 setChatMessages(prev => [...prev, botMessage]);
             }
         } catch (err) {
             console.error("Chat error:", err);
-            setChatMessages(prev => [...prev, { 
-                role: "bot", 
-                content: "Xin lỗi, tôi đang gặp chút sự cố kết nối. Vui lòng thử lại sau nhé!" 
+            setChatMessages(prev => [...prev, {
+                role: "bot",
+                content: "Xin lỗi, tôi đang gặp chút sự cố kết nối. Vui lòng thử lại sau nhé!"
             }]);
         } finally {
             setIsTypingChat(false);
@@ -900,6 +900,22 @@ const CustomerOrderingPage = () => {
                     </div>
                 </div>
             )}
+
+            {/* Chatbot Interface */}
+            <FloatingChatButton
+                onClick={() => setIsChatOpen(true)}
+                isOpen={isChatOpen}
+            />
+
+            <ChatbotDrawer
+                isOpen={isChatOpen}
+                onClose={() => setIsChatOpen(false)}
+                messages={chatMessages}
+                onSendMessage={handleSendChatMessage}
+                isTyping={isTypingChat}
+                inputValue={chatInputValue}
+                onInputChange={setChatInputValue}
+            />
         </div>
     );
 };

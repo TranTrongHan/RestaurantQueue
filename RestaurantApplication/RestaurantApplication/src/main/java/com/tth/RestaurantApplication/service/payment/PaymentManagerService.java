@@ -27,6 +27,7 @@ public class PaymentManagerService {
     private final OrderRepository orderRepository;
     private final PaymentService paymentService;
     private final OnlineCartRepository cartRepository;
+    private final Map<String, String> pendingPayments = new java.util.concurrent.ConcurrentHashMap<>();
 
     public PaymentGateway getGateway(PaymentType type) {
         return gateways.stream()
@@ -37,7 +38,33 @@ public class PaymentManagerService {
 
     public String createPaymentUrl(Order order, PaymentType type, Long amount, String returnUrl) throws Exception {
         PaymentGateway gateway = getGateway(type);
-        return gateway.createPaymentUrl(order.getOrderId(), amount, returnUrl);
+        String url = gateway.createPaymentUrl(order.getOrderId(), amount, returnUrl);
+        
+        // Extract txnRef to use as key
+        String txnRef = extractTxnRef(url);
+        if (txnRef != null) {
+            pendingPayments.put(txnRef, url);
+            log.info("Stored pending payment for txnRef: {}", txnRef);
+        }
+        
+        return url;
+    }
+
+    private String extractTxnRef(String url) {
+        try {
+            java.net.URI uri = new java.net.URI(url);
+            String query = uri.getQuery();
+            if (query == null) return null;
+            for (String param : query.split("&")) {
+                String[] pair = param.split("=");
+                if (pair.length > 1 && pair[0].equals("vnp_TxnRef")) {
+                    return java.net.URLDecoder.decode(pair[1], java.nio.charset.StandardCharsets.UTF_8);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to extract vnp_TxnRef from url: {}", url);
+        }
+        return null;
     }
 
     @Transactional
@@ -45,7 +72,16 @@ public class PaymentManagerService {
         PaymentGateway gateway = getGateway(type);
 
         if (!gateway.verifySignature(params)) {
+            // Trick Lỏ: In local dev, we might want to be more lenient or log more
+            log.warn("Signature verification failed for params: {}", params);
             throw new AppException(ErrorCode.INVALID_SIGNATURE);
+        }
+
+        String txnRef = params.get("vnp_TxnRef");
+        if (pendingPayments.containsKey(txnRef)) {
+            log.info("Match found in pendingPayments cache for txnRef: {}", txnRef);
+            // Optionally compare amounts here if you want to be extra strict
+            pendingPayments.remove(txnRef); // Use once
         }
 
         String orderIdStr = gateway.getOrderId(params);

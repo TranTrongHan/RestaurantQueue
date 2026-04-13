@@ -36,7 +36,7 @@ spring:
     host: smtp.gmail.com
     port: 587
     username: hintran6@gmail.com
-    password: lhikwyqeiedlholr
+    password: jhatlectkaxqloth
     properties:
       mail:
         smtp:
@@ -95,5 +95,5 @@ logging:
 
 gemini:
   api:
-    key: ${GEMINI_API_KEY:AIzaSyBo5Gkh0ecfmiNlyXP1ClVVbjDBFncsz6s}
-
+    key: ${GEMINI_API_KEY:AIzaSyDCs3KJGDYItmIwSFXxDuYd09ViwHTQuJ0}
+

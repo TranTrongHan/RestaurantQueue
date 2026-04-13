@@ -5,12 +5,14 @@ import com.google.genai.types.ContentEmbedding;
 import com.google.genai.types.EmbedContentConfig;
 import com.google.genai.types.EmbedContentResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
 import java.util.List;
 
+@Slf4j
 @Service
 public class EmbeddingService {
     @Value("${gemini.api.key}")
@@ -53,6 +55,7 @@ public class EmbeddingService {
             }
 
         } catch (Exception e) {
+            log.error("Lỗi khi tạo embedding từ Gemini API. Kiểm tra API Key và kết nối mạng: {}", e.getMessage(), e);
             throw new RuntimeException("Lỗi khi tạo embedding: " + e.getMessage(), e);
         }
         return new float[0];

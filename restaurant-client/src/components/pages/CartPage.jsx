@@ -78,12 +78,11 @@ const CartPage = () => {
     const handlePayment = async () => {
         try {
             setLoading(true);
-            const returnUrl = window.location.href;
-            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['online_order']}/createPayment?returnUrl=${returnUrl}`;
-            const res = await authApis(cookies.token).post(url);
+            const returnUrl = window.location.origin + window.location.pathname;
+            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['online_order']}/createPayment?returnUrl=${encodeURIComponent(returnUrl)}`;
+            const res = await authApis(cookies.token).post(url, {});
             if (res.status === 200 && res.data.result) {
                 window.location.href = res.data.result;
-                clearCart();
             }
         } catch (err) {
             if (err.response) {
@@ -111,6 +110,13 @@ const CartPage = () => {
             setPaymentStatus("success");
             setBill(res.data.result);
             setShowModal(true);
+            storeClearCart(); // Clear local store and server cart
+            try {
+                const clearUrl = `${import.meta.env.VITE_API_BASE_URL}${endpoints['cart']}/clear`;
+                await authApis(cookies.token).delete(clearUrl);
+            } catch (err) {
+                console.error("Delayed clear cart error:", err);
+            }
         } catch {
             setPaymentStatus("failed");
             setShowModal(true);

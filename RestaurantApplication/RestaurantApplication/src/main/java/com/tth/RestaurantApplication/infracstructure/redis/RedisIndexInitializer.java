@@ -35,8 +35,15 @@ public class RedisIndexInitializer {
             );
 
             log.info("Created index {} success", redisIndexDefinition.indexName());
+        } catch (redis.clients.jedis.exceptions.JedisDataException e) {
+            if (e.getMessage().contains("unknown command")) {
+                log.error("CRITICAL: Redis Stack (RediSearch) is required but current Redis instance does not support it.");
+                log.error("Please ensure you are connected to the correct Redis Stack instance (image: redis/redis-stack:latest).");
+            } else {
+                log.error("Redis Data Error: {}", e.getMessage());
+            }
         } catch (Exception e) {
-            log.error("Error when create index: {}", e.getMessage(), e);
+            log.error("Error when create index {}: {}", redisIndexDefinition.indexName(), e.getMessage(), e);
         }
     }
 

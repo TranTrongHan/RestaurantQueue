@@ -22,7 +22,7 @@ const Header = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <span className="text-2xl font-bold tracking-tight text-primary dark:text-primary-400">
-              Restaurant<span className="text-gray-900 dark:text-gray-100 font-black">Queue</span>
+              Restaurant<span className="text-gray-900 dark:text-gray-100 font-black">App</span>
             </span>
           </Link>
 
@@ -44,7 +44,7 @@ const Header = () => {
           <div className="hidden md:flex items-center gap-4">
             {user ? (
               <div className="relative">
-                <button 
+                <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 hover:bg-gray-50 focus:outline-none transition-colors dark:border-gray-800 dark:hover:bg-gray-900"
@@ -105,15 +105,15 @@ const Header = () => {
               </>
             )}
             {user?.role === "CUSTOMER" && <Link to="/booking" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2.5 rounded-lg text-base font-semibold text-gray-800 hover:bg-gray-50 hover:text-primary transition-colors dark:text-gray-200 dark:hover:bg-gray-900">Đặt bàn</Link>}
-            
+
             <div className="border-t border-gray-100 dark:border-gray-800 mt-4 pt-4">
               {user ? (
                 <>
                   <div className="px-3 py-2 mb-2 flex items-center gap-3">
-                    <img src={user.image} className="w-10 h-10 rounded-full border border-gray-200" alt="avatar" /> 
+                    <img src={user.image} className="w-10 h-10 rounded-full border border-gray-200" alt="avatar" />
                     <div className="flex flex-col">
-                        <span className="text-base font-bold text-gray-800 dark:text-gray-100">{user.fullName}</span>
-                        <span className="text-xs text-gray-500">{user.role}</span>
+                      <span className="text-base font-bold text-gray-800 dark:text-gray-100">{user.fullName}</span>
+                      <span className="text-xs text-gray-500">{user.role}</span>
                     </div>
                   </div>
                   <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-primary transition-colors dark:text-gray-400">Thông tin cá nhân</Link>
