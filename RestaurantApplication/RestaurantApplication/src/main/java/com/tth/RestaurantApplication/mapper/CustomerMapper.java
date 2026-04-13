@@ -11,6 +11,5 @@ public interface CustomerMapper {
     @Mapping(source = "fullName", target = "fullName")
     @Mapping(source = "email", target = "email")
     @Mapping(source = "phone", target = "phone")
-    @Mapping(source = "isVip",target = "isVip")
     CustomerResponse toCustomerResponse(User user);
 }

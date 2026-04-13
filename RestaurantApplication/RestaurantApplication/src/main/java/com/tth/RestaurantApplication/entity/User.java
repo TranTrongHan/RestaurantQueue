@@ -1,6 +1,5 @@
 package com.tth.RestaurantApplication.entity;
 
-
 import jakarta.persistence.*;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -11,8 +10,6 @@ import lombok.NoArgsConstructor;
 import java.security.AuthProvider;
 import java.time.LocalDate;
 import java.util.List;
-
-
 
 @Entity
 @Table(name = "user")
@@ -56,11 +53,18 @@ public class User {
     @Column(name = "image")
     private String image;
 
-    @Column(name = "is_vip")
-    private Boolean isVip;
-
     @Column(name = "food_preference", length = 1000)
     private String foodPreference;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "membership_tier_id")
+    private MembershipTier membershipTier;
+
+    @Column(name = "total_spending", precision = 19, scale = 2)
+    private java.math.BigDecimal totalSpending;
+
+    @Column(name = "loyalty_points")
+    private Integer loyaltyPoints;
     @OneToOne(mappedBy = "user")
     private Chef chef;
 
@@ -71,6 +75,7 @@ public class User {
         LOCAL,
         GOOGLE,
     }
+
     @OneToMany(mappedBy = "user")
     private List<Reservation> reservations;
 
@@ -81,7 +86,7 @@ public class User {
     private List<OnlineCart> onlineCarts;
 
     public enum Role {
-        CUSTOMER, CHEF, STAFF,ADMIN
+        CUSTOMER, CHEF, STAFF, ADMIN
     }
 
 }

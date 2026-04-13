@@ -14,7 +14,13 @@ export const endpoints = {
     order_session: "/order_session",
     kitchen_order:"/kitchen",
     comments: "/comments",
-    stripe: "/stripe"
+    stripe: "/stripe",
+    membership_status: "/customer/membership/status",
+    membership_history: "/customer/membership/history",
+    my_vouchers: "/customer/vouchers/my-wallet",
+    exchangeable_vouchers: "/customer/vouchers/exchangeable",
+    redeem_voucher: "/customer/vouchers/redeem",
+    points_history: "/customer/points/transactions",
 }
 
 export default axios.create({

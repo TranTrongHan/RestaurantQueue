@@ -11,7 +11,11 @@ import {
   CalendarDays,
   ListFilter,
   Layers,
-  Soup
+  Soup,
+  Trophy,
+  Ticket,
+  Users,
+  History
 } from 'lucide-react';
 
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
@@ -19,6 +23,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     tongQuan: true,
     vanHanh: false,
     sanPham: false,
+    loyalty: false,
   });
 
   const toggleMenu = (menu) => {
@@ -138,6 +143,27 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
               <NavLink to="/product-groups" className={subItemClass}>
                 <Layers size={14} className="mr-3" />
                 <span>Nhóm món</span>
+              </NavLink>
+            </div>
+          )}
+        </div>
+        
+        {/* Thành Viên & Ưu Đãi */}
+        <div>
+          <MenuHeader icon={Trophy} label="Thành Viên & Ưu Đãi" menuKey="loyalty" />
+          {!isCollapsed && openMenus.loyalty && (
+            <div className="mb-2">
+              <NavLink to="/membership-tiers" className={subItemClass}>
+                <Users size={14} className="mr-3" />
+                <span>Hạng thành viên</span>
+              </NavLink>
+              <NavLink to="/vouchers" className={subItemClass}>
+                <Ticket size={14} className="mr-3" />
+                <span>Mã giảm giá</span>
+              </NavLink>
+              <NavLink to="/points-report" className={subItemClass}>
+                <History size={14} className="mr-3" />
+                <span>Lịch sử điểm</span>
               </NavLink>
             </div>
           )}

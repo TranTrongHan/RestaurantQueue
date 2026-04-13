@@ -1,10 +1,12 @@
 package com.tth.RestaurantApplication.service;
 
 import com.tth.RestaurantApplication.entity.User;
+import com.tth.RestaurantApplication.repository.MembershipTierRepository;
 import com.tth.RestaurantApplication.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -15,15 +17,20 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE,makeFinal = true)
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@Slf4j
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     UserRepository userRepository;
     CloudinaryService cloudinaryService;
+    MembershipTierRepository membershipTierRepository;
+    MembershipService membershipService;
+
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2User oAuth2User = new DefaultOAuth2UserService().loadUser(userRequest);
@@ -52,12 +59,19 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     newUser.setEmail(email);
                     newUser.setFullName(name);
                     newUser.setRole(User.Role.CUSTOMER);
-                    newUser.setIsVip(false);
                     newUser.setAuthProvider(User.AuthProvider.GOOGLE);
                     newUser.setPassword(null);
+                    // UC01: Gán hạng New Member khi đăng ký qua Google
+                    membershipTierRepository.findByTierName("New Member").ifPresent(newUser::setMembershipTier);
+                    newUser.setTotalSpending(BigDecimal.ZERO);
+                    newUser.setLoyaltyPoints(0);
 
-//                    newUser.setProvider(provider.toUpperCase());
-                    return userRepository.save(newUser);
+                    // newUser.setProvider(provider.toUpperCase());
+                    User savedUser = userRepository.save(newUser);
+                    // UC01: Tặng Voucher chào mừng
+                    membershipService.grantWelcomeVoucher(savedUser);
+                    log.info("New Google user registered: {}, welcome voucher granted.", email);
+                    return savedUser;
                 });
 
         // Trả về DefaultOAuth2User cho Spring Security

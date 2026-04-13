@@ -29,14 +29,21 @@ public class Bill {
     @Column(name = "create_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "sub_total", precision = 10, scale = 2, nullable = false)
+    @Column(name = "sub_total", precision = 19, scale = 2, nullable = false)
     private BigDecimal subTotal;
 
-    @Column(name = "discount_amount", precision = 10, scale = 2)
+    @Column(name = "discount_amount", precision = 19, scale = 2)
     private BigDecimal discountAmount;
 
-    @Column(name = "total_amount", precision = 10, scale = 2, nullable = false)
+    @Column(name = "vat_amount", precision = 19, scale = 2)
+    private BigDecimal vatAmount;
+
+    @Column(name = "total_amount", precision = 19, scale = 2, nullable = false)
     private BigDecimal totalAmount;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "voucher_id")
+    private Voucher voucherUsed;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)

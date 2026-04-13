@@ -7,6 +7,20 @@ CREATE DATABASE restaurantdb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 -- Sử dụng cơ sở dữ liệu vừa tạo
 USE restaurantdb;
 
+-- Bảng MembershipTier (Hạng thành viên)
+CREATE TABLE `membership_tier` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT,
+    `tier_name` VARCHAR(255) NOT NULL,
+    `min_spending` DECIMAL(19, 2) NOT NULL,
+    `point_earning_rate` DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+    `description` TEXT
+) ENGINE=InnoDB;
+
+INSERT INTO `membership_tier` (`tier_name`, `min_spending`, `point_earning_rate`, `description`) VALUES
+('New Member', 0.00, 1.0, 'Hạng mặc định cho thành viên mới'),
+('Silver', 1000000.00, 1.2, 'Hạng Bạc - Tích điểm x1.2'),
+('Gold', 3000000.00, 1.5, 'Hạng Vàng - Tích điểm x1.5');
+
 -- Bảng User (đại diện cho mọi người dùng)
 CREATE TABLE `user` (
     `user_id` INT PRIMARY KEY AUTO_INCREMENT,
@@ -18,57 +32,21 @@ CREATE TABLE `user` (
     `username` VARCHAR(255) UNIQUE NOT NULL,
     `password` VARCHAR(255),
     `role` ENUM('CUSTOMER', 'CHEF', 'STAFF','ADMIN') NOT NULL,
-	`is_vip` BOOLEAN DEFAULT NULL,
     `auth_provider` ENUM('LOCAL', 'GOOGLE') NOT NULL,
     `image` VARCHAR(255) DEFAULT NULL,
-    `foodPreference` VARCHAR(255) DEFAULT NULL
+    `foodPreference` VARCHAR(255) DEFAULT NULL,
+    `membership_tier_id` INT,
+    `total_spending` DECIMAL(19, 2) DEFAULT 0.00,
+    `loyalty_points` INT DEFAULT 0,
+    FOREIGN KEY (`membership_tier_id`) REFERENCES `membership_tier`(`id`)
 ) ENGINE=InnoDB;
-INSERT INTO `user` (`full_name`, `dob`, `email`, `phone`,`address`, `username`, `password`, `role`,`auth_provider`) VALUES
-('Nguyen Van A', '1985-02-10', 'vân@example.com', '0903344556','TPHCM', 'vana', '123456', 'CUSTOMER','LOCAL'),
-('Tran D', '1985-02-10', 'd@example.com', '0903344556','TPHCM', 'd', '123456', 'CUSTOMER','LOCAL');
--- Bảng Chef (thuộc tính riêng của đầu bếp)
--- CREATE TABLE `chef` (
---     `user_id` INT PRIMARY KEY,
---     `is_available` BOOLEAN DEFAULT TRUE,
---     FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
--- ) ENGINE=InnoDB;
--- INSERT INTO `chef` (`user_id`, `is_available`) VALUES
--- (1, TRUE),
--- (2, TRUE);
 
--- Bảng bình luận
--- CREATE TABLE `comments` (
---     `id` INT PRIMARY KEY AUTO_INCREMENT,
---     `user_id` INT NOT NULL,
---     `content` VARCHAR(500) NOT NULL,
---     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
---     `rating` TINYINT UNSIGNED NOT NULL CHECK (`rating` BETWEEN 1 AND 5),
---     `status` ENUM('PENDING', 'APPROVED', 'REJECTED') NOT NULL DEFAULT 'PENDING',
---     `is_spam` BOOLEAN NOT NULL DEFAULT FALSE,
---     FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
--- );
--- INSERT INTO `comments` (`user_id`, `content`, `created_at`, `rating`, `status`, `is_spam`) VALUES
--- (1, 'Món ăn rất ngon, phục vụ nhanh chóng!', NOW() - INTERVAL 2 DAY, 5, 'APPROVED', FALSE),
--- (2, 'Không gian quán hơi ồn nhưng đồ ăn ok.', NOW() - INTERVAL 1 DAY, 4, 'APPROVED', FALSE),
--- (3, 'Phục vụ chưa được nhiệt tình lắm.', NOW() - INTERVAL 5 HOUR, 3, 'PENDING', FALSE),
--- (4, 'Tôi bị phục vụ nhầm món, khá thất vọng.', NOW() - INTERVAL 3 DAY, 2, 'APPROVED', FALSE),
--- (1, 'Đồ ăn dở, không quay lại nữa.', NOW() - INTERVAL 7 DAY, 1, 'REJECTED', TRUE),
--- (2, 'Mình rất thích lẩu Đài Bắc ở đây, sẽ giới thiệu bạn bè.', NOW() - INTERVAL 10 HOUR, 5, 'APPROVED', FALSE),
--- (3, 'Quán đẹp, nhân viên thân thiện.', NOW() - INTERVAL 15 HOUR, 4, 'APPROVED', FALSE),
--- (4, 'Món Bò ra hơi chậm, mong quán cải thiện.', NOW() - INTERVAL 20 HOUR, 3, 'PENDING', FALSE);
-
--- Bảng Table (quản lý thông tin các bàn ăn)
 CREATE TABLE `table` (
     `table_id` INT PRIMARY KEY AUTO_INCREMENT,
     `status` ENUM('AVAILABLE', 'BOOKED', 'OCCUPIED') NOT NULL,
     `capacity` INT NOT NULL,
     `table_name` VARCHAR(255)
 ) ENGINE=InnoDB;
-INSERT INTO `table` (`status`, `capacity`, `table_name`) VALUES
-('AVAILABLE', 4, 'Table 1'),
-('AVAILABLE', 6, 'Table 2'),
-('AVAILABLE', 2, 'Table 3'),
-('AVAILABLE', 8, 'Table 4');
 
 
 -- Bảng Reservation (đặt bàn tại nhà hàng)
@@ -84,30 +62,7 @@ CREATE TABLE `reservation` (
     FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`),
     FOREIGN KEY (`table_id`) REFERENCES `table`(`table_id`)
 ) ENGINE=InnoDB;
-INSERT INTO `reservation` (`user_id`, `table_id`, `booking_time`, `checkin_time`, `checkout_time`, `status`, `note`) VALUES
--- January
-(1, 1, '2025-01-10 09:00:00', '2025-01-10 18:00:00', '2025-01-10 20:00:00', 'CHECKEDOUT', 'Tiệc bạn bè'),
-(2, 2, '2025-01-15 11:00:00', '2025-01-15 12:00:00', '2025-01-15 14:30:00', 'CHECKEDOUT', 'Gia đình'),
-
--- March
-(1, 1, '2025-03-05 17:00:00', '2025-03-05 18:10:00', '2025-03-05 20:30:00', 'CHECKEDOUT', 'Sinh nhật'),
-(2, 3, '2025-03-18 10:00:00', '2025-03-18 11:00:00', '2025-03-18 13:30:00', 'CHECKEDOUT', 'Khách công ty'),
-
--- May
-(1, 2, '2025-05-09 10:00:00', '2025-05-09 11:20:00', '2025-05-09 13:00:00', 'CHECKEDOUT', 'Tiệc gia đình'),
-
--- August 
-(2, 2, '2025-08-01 10:00:00', '2025-08-01 18:55:00','2025-08-01 20:55:00', 'CHECKEDOUT', 'Sinh nhật'),
-(1, 3, '2025-08-01 10:00:00', '2025-08-01 18:55:00','2025-08-01 20:55:00', 'CHECKEDOUT', 'Sinh nhật'),
-(2, 1, '2025-08-01 10:00:00', '2025-08-01 18:55:00','2025-08-01 20:55:00', 'CHECKEDOUT', 'Sinh nhật'),
-(1, 3, '2025-08-01 10:00:00', '2025-08-01 18:55:00','2025-08-01 20:55:00', 'CHECKEDOUT', 'Sinh nhật'),
-
--- October
-(1, 2, '2025-10-20 09:30:00', '2025-10-20 10:00:00', '2025-10-20 12:00:00', 'CHECKEDOUT', 'Hội họp bạn cũ'),
-
--- December
-(2, 1, '2025-12-25 18:00:00', '2025-12-25 18:30:00', '2025-12-25 21:30:00', 'CHECKEDOUT', 'Giáng sinh');
-;
+-- INSERT INTO `reservation` (`user_id`, `table_id`, `booking_time`, `checkin_time`, `checkout_time`, `status`, `note`) VALUES
 
 
 -- Bảng OrderSession (phiên đặt món tại bàn sau khi checkin)
@@ -120,19 +75,8 @@ CREATE TABLE `order_session` (
     `is_active` BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (`reservation_id`) REFERENCES `reservation`(`reservation_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
-INSERT INTO `order_session` (`reservation_id`, `session_token`, `create_at`, `expired_at`, `is_active`) VALUES
-(1, 'token_r1', '2025-01-10 18:05:00', '2025-01-10 22:00:00', TRUE),
-(2, 'token_r2', '2025-01-15 12:05:00', '2025-01-15 15:00:00', TRUE),
-(3, 'token_r3', '2025-03-05 18:15:00', '2025-03-05 22:00:00', TRUE),
-(4, 'token_r4', '2025-03-18 11:05:00', '2025-03-18 15:00:00', TRUE),
-(5, 'token_r5', '2025-05-09 11:25:00', '2025-05-09 14:00:00', TRUE),
-(6, 'token_r6', '2025-08-01 19:00:00', '2025-08-01 23:00:00', TRUE),
-(7, 'token_r7', '2025-08-01 19:05:00', '2025-08-01 23:00:00', TRUE),
-(8, 'token_r8', '2025-08-01 19:10:00', '2025-08-01 23:00:00', TRUE),
-(9, 'token_r9', '2025-08-01 19:15:00', '2025-08-01 23:00:00', TRUE),
-(10, 'token_r10','2025-10-20 10:10:00', '2025-10-20 14:00:00', TRUE),
-(11, 'token_r11','2025-12-25 18:40:00', '2025-12-25 23:00:00', TRUE);
-;
+-- INSERT INTO `order_session` (`reservation_id`, `session_token`, `create_at`, `expired_at`, `is_active`) VALUES
+
 
 
 -- Bảng OnlineOrder (đơn hàng online)
@@ -156,18 +100,8 @@ CREATE TABLE `order` (
     FOREIGN KEY (`session_id`) REFERENCES `order_session`(`session_id`) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (`online_order_id`) REFERENCES `online_order`(`online_order_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
-INSERT INTO `order` (`session_id`, `online_order_id`, `create_at`, `is_paid`) VALUES
-(1, NULL, '2025-01-10 18:10:00', TRUE),
-(2, NULL, '2025-01-15 12:10:00', TRUE),
-(3, NULL, '2025-03-05 18:20:00', TRUE),
-(4, NULL, '2025-03-18 11:10:00', FALSE),
-(5, NULL, '2025-05-09 11:30:00', TRUE),
-(6, NULL, '2025-08-01 19:20:00', TRUE),
-(7, NULL, '2025-08-01 19:25:00', FALSE),
-(8, NULL, '2025-08-01 19:30:00', TRUE),
-(9, NULL, '2025-08-01 19:35:00', TRUE),
-(10, NULL, '2025-10-20 10:15:00', TRUE),
-(11, NULL, '2025-12-25 18:45:00', TRUE);
+-- INSERT INTO `order` (`session_id`, `online_order_id`, `create_at`, `is_paid`) VALUES
+
 ;
 -- Bảng Category ( loại món ăn) 
 CREATE TABLE `category` (
@@ -224,8 +158,7 @@ CREATE TABLE `online_cart` (
 ) ENGINE=InnoDB;
 -- Thêm một vài món vào giỏ hàng của user_id = 4
 -- INSERT INTO `online_cart` (`user_id`, `menu_item_id`, `quantity`) VALUES
--- (4, 2, 2),
--- (4, 4, 3);
+
 
 
 -- Bảng OrderItem (chi tiết từng món trong đơn hàng)
@@ -243,83 +176,135 @@ CREATE TABLE `order_item` (
     FOREIGN KEY (`order_id`) REFERENCES `order`(`order_id`) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (`menu_item_id`) REFERENCES `menu_item`(`menu_item_id`)
 ) ENGINE=InnoDB;
-INSERT INTO `order_item` 
-(`order_id`, `menu_item_id`, `quantity`, `status`, `estimate_time`, `priority_score`, `start_time`, `deadline_time`, `note`) 
-VALUES
-(1, 1, 1, 'DONE', 12, 80, '2025-01-10 18:15:00', '2025-01-10 18:27:00', 'Ít cay'),
-(1, 3, 2, 'DONE', 10, 70, '2025-01-10 18:20:00', '2025-01-10 18:30:00', NULL),
+-- INSERT INTO `order_item` 
+-- (`order_id`, `menu_item_id`, `quantity`, `status`, `estimate_time`, `priority_score`, `start_time`, `deadline_time`, `note`) 
+-- VALUES
+-- (1, 1, 1, 'DONE', 12, 80, '2025-01-10 18:15:00', '2025-01-10 18:27:00', 'Ít cay'),
+-- (1, 3, 2, 'DONE', 10, 70, '2025-01-10 18:20:00', '2025-01-10 18:30:00', NULL),
 
-(2, 2, 1, 'DONE', 15, 85, '2025-01-15 12:15:00', '2025-01-15 12:30:00', 'Nhiều cay'),
-(2, 5, 1, 'DONE', 20, 75, '2025-01-15 12:20:00', '2025-01-15 12:40:00', NULL),
+-- (2, 2, 1, 'DONE', 15, 85, '2025-01-15 12:15:00', '2025-01-15 12:30:00', 'Nhiều cay'),
+-- (2, 5, 1, 'DONE', 20, 75, '2025-01-15 12:20:00', '2025-01-15 12:40:00', NULL),
 
-(3, 4, 2, 'DONE', 18, 90, '2025-03-05 18:25:00', '2025-03-05 18:43:00', NULL),
-(3, 7, 1, 'DONE', 25, 60, '2025-03-05 18:27:00', '2025-03-05 18:52:00', NULL),
+-- (3, 4, 2, 'DONE', 18, 90, '2025-03-05 18:25:00', '2025-03-05 18:43:00', NULL),
+-- (3, 7, 1, 'DONE', 25, 60, '2025-03-05 18:27:00', '2025-03-05 18:52:00', NULL),
 
-(4, 6, 1, 'DONE', 12, 88, '2025-03-18 11:15:00', '2025-03-18 11:27:00', NULL),
+-- (4, 6, 1, 'DONE', 12, 88, '2025-03-18 11:15:00', '2025-03-18 11:27:00', NULL),
 
-(5, 8, 2, 'DONE', 30, 92, '2025-05-09 11:35:00', '2025-05-09 12:05:00', NULL),
+-- (5, 8, 2, 'DONE', 30, 92, '2025-05-09 11:35:00', '2025-05-09 12:05:00', NULL),
 
-(6, 9, 1, 'DONE', 14, 85, '2025-08-01 19:25:00', '2025-08-01 19:39:00', NULL),
-(6, 10, 1, 'DONE', 16, 65, '2025-08-01 19:27:00', '2025-08-01 19:43:00', NULL),
+-- (6, 9, 1, 'DONE', 14, 85, '2025-08-01 19:25:00', '2025-08-01 19:39:00', NULL),
+-- (6, 10, 1, 'DONE', 16, 65, '2025-08-01 19:27:00', '2025-08-01 19:43:00', NULL),
 
-(7, 11, 1, 'DONE', 20, 70, '2025-08-01 19:30:00', '2025-08-01 19:50:00', NULL),
+-- (7, 11, 1, 'DONE', 20, 70, '2025-08-01 19:30:00', '2025-08-01 19:50:00', NULL),
 
-(8, 12, 2, 'DONE', 22, 95, '2025-08-01 19:40:00', '2025-08-01 20:02:00', NULL),
+-- (8, 12, 2, 'DONE', 22, 95, '2025-08-01 19:40:00', '2025-08-01 20:02:00', NULL),
 
-(9, 2, 3, 'DONE', 12, 80, '2025-08-01 19:45:00', '2025-08-01 19:57:00', NULL),
+-- (9, 2, 3, 'DONE', 12, 80, '2025-08-01 19:45:00', '2025-08-01 19:57:00', NULL),
 
-(10, 4, 2, 'DONE', 18, 88, '2025-10-20 10:20:00', '2025-10-20 10:38:00', NULL),
+-- (10, 4, 2, 'DONE', 18, 88, '2025-10-20 10:20:00', '2025-10-20 10:38:00', NULL),
 
-(11, 1, 1, 'DONE', 15, 85, '2025-12-25 18:50:00', '2025-12-25 19:05:00', 'Extra soup');
+-- (11, 1, 1, 'DONE', 15, 85, '2025-12-25 18:50:00', '2025-12-25 19:05:00', 'Extra soup');
 
--- Bảng KitchenAssignment (phân công món ăn cho/ đầu bếp)
--- CREATE TABLE `kitchen_assignment` (
---     `kitchen_assign_id` INT PRIMARY KEY AUTO_INCREMENT,
---     `chef_id` INT NOT NULL,
---     `order_item_id` INT NOT NULL UNIQUE,
---     `start_at` DATETIME NOT NULL,
---     `finish_at` DATETIME,
---     `deadline_time` DATETIME,
---     `status` ENUM( 'COOKING', 'DONE') NOT NULL,
---     `actual_cooking_time` DOUBLE PRECISION,
---     FOREIGN KEY (`chef_id`) REFERENCES `chef`(`user_id`),
---     FOREIGN KEY (`order_item_id`) REFERENCES `order_item`(`order_item_id`) ON DELETE CASCADE ON UPDATE CASCADE
--- ) ENGINE=InnoDB;-- -- 
 
+
+
+-- Bảng Voucher (Định nghĩa Voucher)
+CREATE TABLE `voucher` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT,
+    `voucher_code` VARCHAR(255) UNIQUE NOT NULL,
+    `voucher_name` VARCHAR(255) NOT NULL,
+    `voucher_type` ENUM('PERCENTAGE', 'FIXED') NOT NULL,
+    `discount_value` DECIMAL(19, 2) NOT NULL,
+    `max_discount_amount` DECIMAL(19, 2),
+    `min_order_value` DECIMAL(19, 2) DEFAULT 0.00,
+    `start_date` DATETIME NOT NULL,
+    `end_date` DATETIME NOT NULL,
+    `target_tier_id` INT,
+    `is_new_member_voucher` BOOLEAN DEFAULT FALSE,
+    `is_level_up_reward` BOOLEAN DEFAULT FALSE,
+    `points_required` INT DEFAULT 0,
+    `apply_type` ENUM('ONLINE', 'DINE_IN', 'BOTH') NOT NULL DEFAULT 'BOTH',
+    `description` TEXT,
+    FOREIGN KEY (`target_tier_id`) REFERENCES `membership_tier`(`id`)
+) ENGINE=InnoDB;
+
+INSERT INTO `voucher` (`voucher_code`, `voucher_name`, `voucher_type`, `discount_value`, `max_discount_amount`, `min_order_value`, `start_date`, `end_date`, `is_new_member_voucher`, `apply_type`, `description`) VALUES
+('WELCOME50', 'Voucher Chào Mừng', 'PERCENTAGE', 50.00, 50000.00, 100000.00, '2024-01-01 00:00:00', '2026-12-31 23:59:59', TRUE, 'BOTH', 'Giảm 50% tối đa 50k cho thành viên mới');
+
+INSERT INTO `voucher` (`voucher_code`, `voucher_name`, `voucher_type`, `discount_value`, `max_discount_amount`, `min_order_value`, `start_date`, `end_date`, `target_tier_id`, `is_level_up_reward`, `apply_type`, `description`) VALUES
+('SILVER10', 'Thăng hạng Bạc', 'PERCENTAGE', 10.00, 100000.00, 200000.00, '2024-01-01 00:00:00', '2026-12-31 23:59:59', 2, TRUE, 'BOTH', 'Giảm 10% tối đa 100k mừng lên hạng Bạc');
+
+-- Bảng UserVoucher (Kho Voucher của khách)
+CREATE TABLE `user_voucher` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT,
+    `user_id` INT NOT NULL,
+    `voucher_id` INT NOT NULL,
+    `is_used` BOOLEAN DEFAULT FALSE,
+    `acquired_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `used_at` DATETIME,
+    FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`),
+    FOREIGN KEY (`voucher_id`) REFERENCES `voucher`(`id`)
+) ENGINE=InnoDB;
+
+-- Bảng MembershipHistory (Lịch sử thăng hạng)
+CREATE TABLE `membership_history` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT,
+    `user_id` INT NOT NULL,
+    `old_tier_id` INT,
+    `new_tier_id` INT NOT NULL,
+    `changed_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`),
+    FOREIGN KEY (`old_tier_id`) REFERENCES `membership_tier`(`id`),
+    FOREIGN KEY (`new_tier_id`) REFERENCES `membership_tier`(`id`)
+) ENGINE=InnoDB;
 
 -- Bảng Bill (hóa đơn thanh toán)
 CREATE TABLE `bill` (
     `bill_id` INT PRIMARY KEY AUTO_INCREMENT,
     `order_id` INT NOT NULL,
     `create_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `sub_total` DECIMAL(10, 2) NOT NULL,
-    `discount_amount` DECIMAL(10, 2) DEFAULT 0.00,
-    `total_amount` DECIMAL(10, 2) NOT NULL,
+    `sub_total` DECIMAL(19, 2) NOT NULL,
+    `discount_amount` DECIMAL(19, 2) DEFAULT 0.00,
+    `vat_amount` DECIMAL(19, 2) DEFAULT 0.00,
+    `total_amount` DECIMAL(19, 2) NOT NULL,
     `status` ENUM('UNPAID', 'PAID', 'CANCELED') NOT NULL,
     `payment_time` DATETIME,
-    FOREIGN KEY (`order_id`) REFERENCES `order`(`order_id`) ON DELETE CASCADE ON UPDATE CASCADE
+    `voucher_id` INT,
+    FOREIGN KEY (`order_id`) REFERENCES `order`(`order_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (`voucher_id`) REFERENCES `voucher`(`id`)
 ) ENGINE=InnoDB;
-INSERT INTO `bill` (`order_id`, `create_at`, `sub_total`, `discount_amount`, `total_amount`, `status`, `payment_time`) VALUES
-(1, '2025-01-10 20:00:00', 247000.00, 0.00, 247000.00, 'PAID', '2025-01-10 20:05:00'),
-(2, '2025-01-15 14:30:00', 208000.00, 8000.00, 200000.00, 'PAID', '2025-01-15 14:35:00'),
-(3, '2025-03-05 20:30:00', 179000.00, 0.00, 179000.00, 'PAID', '2025-03-05 20:35:00'),
-(4, '2025-03-18 13:30:00', 49000.00, 0.00, 49000.00, 'UNPAID', NULL),
-(5, '2025-05-09 13:00:00', 278000.00, 0.00, 278000.00, 'PAID', '2025-05-09 13:05:00'),
-(6, '2025-08-01 20:55:00', 148000.00, 0.00, 148000.00, 'PAID', '2025-08-01 21:00:00'),
-(7, '2025-08-01 20:55:00', 49000.00, 0.00, 49000.00, 'UNPAID', NULL),
-(8, '2025-08-01 20:55:00', 478000.00, 20000.00, 458000.00, 'PAID', '2025-08-01 21:05:00'),
-(9, '2025-08-01 20:55:00', 327000.00, 0.00, 327000.00, 'PAID', '2025-08-01 21:10:00'),
-(10,'2025-10-20 12:00:00', 99000.00, 0.00, 99000.00, 'PAID', '2025-10-20 12:05:00'),
-(11,'2025-12-25 21:30:00', 89000.00, 0.00, 89000.00, 'PAID', '2025-12-25 21:35:00');
+
+-- Bảng PointTransaction (Lịch sử điểm thưởng)
+CREATE TABLE `point_transaction` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT,
+    `user_id` INT NOT NULL,
+    `base_points` INT DEFAULT 0,
+    `bonus_points` INT DEFAULT 0,
+    `amount` INT NOT NULL,
+    `transaction_type` ENUM('EARN', 'REDEEM', 'ADJUST') NOT NULL,
+    `description` TEXT,
+    `bill_id` INT,
+    `user_voucher_id` INT,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`),
+    FOREIGN KEY (`bill_id`) REFERENCES `bill`(`bill_id`),
+    FOREIGN KEY (`user_voucher_id`) REFERENCES `user_voucher`(`id`)
+) ENGINE=InnoDB;
+
+-- Đánh Index để tối ưu truy vấn
+ALTER TABLE `voucher` ADD INDEX `idx_voucher_code` (`voucher_code`);
+ALTER TABLE `point_transaction` ADD INDEX `idx_user_id` (`user_id`);
+ALTER TABLE `user_voucher` ADD INDEX `idx_user_status` (`user_id`, `is_used`);
+-- INSERT INTO `bill` (`order_id`, `create_at`, `sub_total`, `discount_amount`, `total_amount`, `status`, `payment_time`) VALUES
+-- (1, '2025-01-10 20:00:00', 247000.00, 0.00, 247000.00, 'PAID', '2025-01-10 20:05:00'),
+-- (2, '2025-01-15 14:30:00', 208000.00, 8000.00, 200000.00, 'PAID', '2025-01-15 14:35:00'),
+-- (3, '2025-03-05 20:30:00', 179000.00, 0.00, 179000.00, 'PAID', '2025-03-05 20:35:00'),
+-- (4, '2025-03-18 13:30:00', 49000.00, 0.00, 49000.00, 'UNPAID', NULL),
+-- (5, '2025-05-09 13:00:00', 278000.00, 0.00, 278000.00, 'PAID', '2025-05-09 13:05:00'),
+-- (6, '2025-08-01 20:55:00', 148000.00, 0.00, 148000.00, 'PAID', '2025-08-01 21:00:00'),
+-- (7, '2025-08-01 20:55:00', 49000.00, 0.00, 49000.00, 'UNPAID', NULL),
+-- (8, '2025-08-01 20:55:00', 478000.00, 20000.00, 458000.00, 'PAID', '2025-08-01 21:05:00'),
+-- (9, '2025-08-01 20:55:00', 327000.00, 0.00, 327000.00, 'PAID', '2025-08-01 21:10:00'),
+-- (10,'2025-10-20 12:00:00', 99000.00, 0.00, 99000.00, 'PAID', '2025-10-20 12:05:00'),
+-- (11,'2025-12-25 21:30:00', 89000.00, 0.00, 89000.00, 'PAID', '2025-12-25 21:35:00');
 ;
--- Bảng Promotion
--- CREATE TABLE `promotions`(
---     `id`INT AUTO_INCREMENT PRIMARY KEY,
---     `name` VARCHAR(255) NOT NULL,
---     `value` DECIMAL(10, 2) NOT NULL,
---     `usage_count` INT DEFAULT 0
--- );
--- INSERT INTO promotions (name, value, usage_count)
--- VALUES
--- ('DISCOUNT10', 0.10, 2),
--- ('DISCOUNT15', 0.15, 2);CREATE TABLE `comments` (     `id` INT PRIMARY KEY AUTO_INCREMENT,     `user_id` INT NOT NULL,     `content` VARCHAR(500) NOT NULL,     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,     `rating ` TINYINT UNSIGNED NOT NULL CHECK (`rating` BETWEEN 1 AND 5),     `status` ENUM('PENDING', 'APPROVED', 'REJECTED') NOT NULL DEFAULT 'PENDING',     `is_spam` BOOLEAN NOT NULL DEFAULT FALSE,     FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE )

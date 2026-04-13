@@ -2,12 +2,15 @@ package com.tth.RestaurantApplication.service.payment;
 
 import com.tth.RestaurantApplication.constant.PaymentType;
 import com.tth.RestaurantApplication.dto.response.BillResponse;
+import com.tth.RestaurantApplication.entity.Bill;
 import com.tth.RestaurantApplication.entity.Order;
 import com.tth.RestaurantApplication.entity.User;
 import com.tth.RestaurantApplication.exception.AppException;
 import com.tth.RestaurantApplication.exception.ErrorCode;
+import com.tth.RestaurantApplication.repository.BillRepository;
 import com.tth.RestaurantApplication.repository.OnlineCartRepository;
 import com.tth.RestaurantApplication.repository.OrderRepository;
+import com.tth.RestaurantApplication.service.MembershipService;
 import com.tth.RestaurantApplication.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +30,8 @@ public class PaymentManagerService {
     private final OrderRepository orderRepository;
     private final PaymentService paymentService;
     private final OnlineCartRepository cartRepository;
+    private final MembershipService membershipService;
+    private final BillRepository billRepository;
     private final Map<String, String> pendingPayments = new java.util.concurrent.ConcurrentHashMap<>();
 
     public PaymentGateway getGateway(PaymentType type) {
@@ -128,9 +133,6 @@ public class PaymentManagerService {
     }
 
     private BillResponse finalizePayment(Order order, Map<String, String> params, User currentUser) {
-        // Extract amount from params (gateway specific or generic if possible)
-        // For now, keep it simple or add getAmount to Gateway interface
-        // VNPay amount is in params.get("vnp_Amount") / 100
         Long amountLong = 0L;
         if (params.containsKey("vnp_Amount")) {
             amountLong = Long.parseLong(params.get("vnp_Amount")) / 100;
@@ -147,10 +149,30 @@ public class PaymentManagerService {
             cartRepository.deleteByUser(user);
         }
 
+        BillResponse billResponse;
         if (order.getOrderSession() != null) {
-            return paymentService.createBillForDineInOrder(order, null, BigDecimal.valueOf(amountLong));
+            billResponse = paymentService.createBillForDineInOrder(order, null, BigDecimal.valueOf(amountLong));
         } else {
-            return paymentService.createBill(order, null, BigDecimal.valueOf(amountLong));
+            billResponse = paymentService.createBill(order, null, BigDecimal.valueOf(amountLong));
         }
+
+        // === UC03 & UC04: Tích điểm và thăng hạng sau khi thanh toán thành công ===
+        if (user != null) {
+            try {
+                Bill bill = billRepository.findByOrder_OrderId(order.getOrderId())
+                        .orElse(null);
+                membershipService.processSuccessfulPayment(
+                        user,
+                        BigDecimal.valueOf(amountLong),
+                        bill
+                );
+                log.info("[Membership] Loyalty points processed for user={}, amount={}", user.getUsername(), amountLong);
+            } catch (Exception e) {
+                // Không để lỗi membership ảnh hưởng đến luồng thanh toán chính
+                log.error("[Membership] Failed to process loyalty for user={}: {}", user != null ? user.getUsername() : "unknown", e.getMessage());
+            }
+        }
+
+        return billResponse;
     }
 }

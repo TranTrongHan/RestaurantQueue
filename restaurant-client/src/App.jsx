@@ -16,6 +16,7 @@ import SessionPage from './components/pages/SessionPage/SessionPage'
 import KitchenPage from './components/pages/KitchenPage/KitchenPage'
 import OAuth2Success from './components/pages/OAuth2Succes'
 import ProfilePage from './components/pages/ProfilePage'
+import LoyaltyPortalPage from './components/pages/LoyaltyPortalPage'
 import useUserStore from './store/useUserStore'
 import useCartStore from './store/useCartStore'
 import { Toaster } from 'react-hot-toast'
@@ -74,6 +75,7 @@ const App = () => {
         <Route path='/order_session' element={<SessionPage />} />
         <Route path='/kitchen' element={<KitchenPage />} />
         <Route path='/profile' element={<ProfilePage />} />
+        <Route path='/loyalty' element={<LoyaltyPortalPage />} />
       </Routes>
     </BrowserRouter>
   )

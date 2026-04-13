@@ -8,6 +8,9 @@ import VNPayReturnPage from './pages/VNPayReturnPage';
 import CustomerOrderingPage from './pages/CustomerOrderingPage';
 import OnlineOrdersPage from './pages/OnlineOrdersPage';
 import ProductsPage from './pages/ProductsPage';
+import MembershipTiersPage from './pages/MembershipTiersPage';
+import VouchersPage from './pages/VouchersPage';
+import PointsReportPage from './pages/PointsReportPage';
 import MainLayout from './components/layout/MainLayout';
 import useAuthStore from './store/useAuthStore';
 import { Toaster } from 'react-hot-toast';
@@ -50,6 +53,11 @@ function App() {
           <Route path="payment-return" element={<VNPayReturnPage />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="product-groups" element={<HomePage />} />
+          
+          {/* Membership & Loyalty Routes */}
+          <Route path="membership-tiers" element={<MembershipTiersPage />} />
+          <Route path="vouchers" element={<VouchersPage />} />
+          <Route path="points-report" element={<PointsReportPage />} />
         </Route>
 
         {/* Standalone Customer Simulation Route */}

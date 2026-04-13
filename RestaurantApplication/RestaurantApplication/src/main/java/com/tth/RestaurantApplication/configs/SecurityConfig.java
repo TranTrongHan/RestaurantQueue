@@ -75,6 +75,9 @@ public class SecurityConfig {
                                                 .requestMatchers("/css/**",
                                                                 "/js/**", "/images/**")
                                                 .permitAll()
+                                                // ===== MEMBERSHIP & VOUCHER MODULE =====
+                                                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                                                .requestMatchers("/api/customer/**").hasRole("CUSTOMER")
                                                 .anyRequest().authenticated())
                                 .oauth2Login(oauth2 -> oauth2
                                                 .loginProcessingUrl("/login/oauth2/code/*")

@@ -87,7 +87,18 @@ public enum ErrorCode {
     INVALID_KEY(9998, "Invalid message key"),
     UNCATEGORIZED_EXCEPTION(9999, "Uncategorized exception"),
     INVALID_SIGNATURE(9997,"Invalid signature"),
-    PAYMENT_FAILED(9996,"Payment failed");
+    PAYMENT_FAILED(9996,"Payment failed"),
+
+    // ===== VOUCHER & MEMBERSHIP ERRORS =====
+    VOUCHER_NOT_FOUND(10001, "Voucher not found"),
+    VOUCHER_EXPIRED(10002, "Voucher has expired"),
+    VOUCHER_ALREADY_USED(10003, "Voucher has already been used"),
+    VOUCHER_MIN_ORDER_NOT_MET(10004, "Order value does not meet the minimum required for this voucher"),
+    VOUCHER_TIER_NOT_ELIGIBLE(10005, "Your membership tier is not eligible for this voucher"),
+    VOUCHER_APPLY_TYPE_MISMATCH(10006, "This voucher cannot be applied to this type of order"),
+    MEMBERSHIP_TIER_NOT_FOUND(10007, "Membership tier not found"),
+    INSUFFICIENT_POINTS(10008, "Insufficient loyalty points for this redemption"),
+    USER_VOUCHER_NOT_FOUND(10009, "User voucher not found");
     private final int code;
     private final String message;
 }

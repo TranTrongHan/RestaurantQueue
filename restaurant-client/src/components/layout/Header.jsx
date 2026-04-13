@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import useUserStore from '../../store/useUserStore';
 import { useCookies } from 'react-cookie';
-import { LogOut, User, Menu, X, Calendar, Utensils } from 'lucide-react';
+import { LogOut, User, Menu, X, Calendar, Utensils, Award } from 'lucide-react';
 
 const Header = () => {
   const { user, logout } = useUserStore();
@@ -58,6 +58,11 @@ const Header = () => {
                     <Link to="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors dark:text-gray-300 dark:hover:bg-gray-800" onClick={() => setIsDropdownOpen(false)}>
                       <User size={16} /> Thông tin cá nhân
                     </Link>
+                    {user?.role === "CUSTOMER" && (
+                      <Link to="/loyalty" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-amber-600 hover:bg-amber-50 transition-colors dark:text-amber-400 dark:hover:bg-amber-900/20" onClick={() => setIsDropdownOpen(false)}>
+                        <Award size={16} /> Thành viên & Ưu đãi
+                      </Link>
+                    )}
                     {user?.role === "CUSTOMER" && (
                       <Link to="/my-reservations" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors dark:text-gray-300 dark:hover:bg-gray-800" onClick={() => setIsDropdownOpen(false)}>
                         <Calendar size={16} /> Thông tin đặt bàn

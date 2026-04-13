@@ -13,5 +13,4 @@ public class CustomerResponse {
     String fullName;
     String email;
     String phone;
-    Boolean isVip;
 }
