@@ -69,8 +69,8 @@ jwt:
   issuer: restaurant-app
 
 vnpay:
-  tmnCode: K1L8ILZ3
-  secretKey: EHGJSI2HPHG4UNUNVLX30ZGEQ4K8KLXQ
+  tmnCode: DJXCG4I8
+  secretKey: X4IKQEA1T4JK48KTTG6D8MXIZAYHXNY6
   baseUrl: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
   returnUrl: http://localhost:5173
 
@@ -96,4 +96,3 @@ logging:
 gemini:
   api:
     key: ${GEMINI_API_KEY:AIzaSyDCs3KJGDYItmIwSFXxDuYd09ViwHTQuJ0}
-
