@@ -22,5 +22,6 @@ public class ReservationDetailResponse {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime checkoutTime;
     Reservation.ReservationStatus status;
+    Integer sessionId;
     BillResponse bill;
 }

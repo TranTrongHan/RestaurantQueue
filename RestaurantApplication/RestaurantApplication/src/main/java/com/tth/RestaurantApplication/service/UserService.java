@@ -2,6 +2,7 @@ package com.tth.RestaurantApplication.service;
 
 import com.tth.RestaurantApplication.dto.request.UserCreationRequest;
 import com.tth.RestaurantApplication.dto.request.UserUpdateRequest;
+import com.tth.RestaurantApplication.dto.response.PageResponse;
 import com.tth.RestaurantApplication.dto.response.UserResponse;
 import com.tth.RestaurantApplication.entity.MembershipTier;
 import com.tth.RestaurantApplication.entity.User;
@@ -15,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -60,6 +63,20 @@ public class UserService {
         // UC01: Tặng Voucher chào mừng
         membershipService.grantWelcomeVoucher(user);
         return userMapper.toUserResponse(user);
+    }
+
+    public PageResponse<UserResponse> getCustomers(int page, int size, String search) {
+        Pageable pageable = org.springframework.data.domain.PageRequest.of(page - 1, size,
+                org.springframework.data.domain.Sort.by("fullName").ascending());
+        Page<User> userPage = userRepository.findAllByRoleAndSearch(User.Role.CUSTOMER, search, pageable);
+
+        return PageResponse.<UserResponse>builder()
+                .currentPage(page)
+                .pageSize(size)
+                .totalPages(userPage.getTotalPages())
+                .totalElements(userPage.getTotalElements())
+                .data(userPage.getContent().stream().map(userMapper::toUserResponse).toList())
+                .build();
     }
 
     public List<UserResponse> getUsers() {

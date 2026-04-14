@@ -30,51 +30,6 @@ public class MenuItemController {
                 .build();
     }
 
-    @GetMapping("/admin")
-    @PreAuthorize("hasRole('ADMIN')")
-    ApiResponse<List<MenuItemResponse>> getMenuItemsForAdmin(@RequestParam(value = "cateId", required = false) Integer categoryId){
-        return ApiResponse.<List<MenuItemResponse>>builder()
-                .result(menuItemService.getAllMenuItemsForAdmin(categoryId))
-                .message("Get all menu items for admin successfully")
-                .build();
-    }
-
-    @PostMapping("/admin")
-    @PreAuthorize("hasRole('ADMIN')")
-    ApiResponse<Void> addMenuItem(@ModelAttribute MenuItemRequest request){
-        menuItemService.addOrUpdateMenuItem(request);
-        return ApiResponse.<Void>builder()
-                .message("Add menu item successfully")
-                .build();
-    }
-
-    @PutMapping("/admin/{menuItemId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    ApiResponse<Void> updateMenuItem(@PathVariable Integer menuItemId, @ModelAttribute MenuItemRequest request){
-        request.setMenuItemId(menuItemId);
-        menuItemService.addOrUpdateMenuItem(request);
-        return ApiResponse.<Void>builder()
-                .message("Update menu item successfully")
-                .build();
-    }
-
-    @PatchMapping("/admin/{menuItemId}/status")
-    @PreAuthorize("hasRole('ADMIN')")
-    ApiResponse<Void> toggleMenuItemStatus(@PathVariable Integer menuItemId, @RequestParam boolean isAvailable){
-        menuItemService.toggleMenuItemStatus(menuItemId, isAvailable);
-        return ApiResponse.<Void>builder()
-                .message("Toggle menu item status successfully")
-                .build();
-    }
-
-    @DeleteMapping("/admin/{menuItemId}")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<Void> deleteMenuItem(@PathVariable(value = "menuItemId") Integer menuItemId){
-        menuItemService.deleteMenuItem(menuItemId);
-        return ApiResponse.<Void>builder()
-                .message("Delete menu item successfully")
-                .build();
-    }
 
     @GetMapping("/search")
     public ApiResponse<List<MenuItemResponse>> searchMenuItems(@RequestParam(value = "q", required = false) String keyword) {

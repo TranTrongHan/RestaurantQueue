@@ -21,6 +21,7 @@ export const endpoints = {
     exchangeable_vouchers: "/customer/vouchers/exchangeable",
     redeem_voucher: "/customer/vouchers/redeem",
     points_history: "/customer/points/transactions",
+    user_voucher_detail: "/customer/vouchers",
 }
 
 export default axios.create({

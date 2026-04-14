@@ -1,10 +1,13 @@
 package com.tth.RestaurantApplication.service;
 
 import com.tth.RestaurantApplication.dto.response.MembershipStatusResponse;
+import com.tth.RestaurantApplication.dto.response.MembershipTierResponse;
 import com.tth.RestaurantApplication.dto.response.PointTransactionResponse;
 import com.tth.RestaurantApplication.entity.*;
 import com.tth.RestaurantApplication.exception.AppException;
 import com.tth.RestaurantApplication.exception.ErrorCode;
+import com.tth.RestaurantApplication.mapper.MembershipTierMapper;
+import com.tth.RestaurantApplication.mapper.PointTransactionMapper;
 import com.tth.RestaurantApplication.repository.*;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +34,8 @@ public class MembershipService {
     PointTransactionRepository pointTransactionRepository;
     VoucherRepository voucherRepository;
     UserVoucherRepository userVoucherRepository;
+    PointTransactionMapper pointTransactionMapper;
+    MembershipTierMapper membershipTierMapper;
 
     // ==================== BUSINESS CONSTANT ====================
     static final BigDecimal POINTS_PER_VND = BigDecimal.valueOf(1000); // 1,000 VNĐ = 1 điểm
@@ -201,27 +206,28 @@ public class MembershipService {
 
     // ==================== ADMIN APIs ====================
 
-    public List<MembershipTier> getAllTiers() {
+    public List<MembershipTierResponse> getAllTiers() {
         return membershipTierRepository.findAll()
                 .stream()
                 .sorted(Comparator.comparing(MembershipTier::getMinSpending))
+                .map(membershipTierMapper::toMembershipTierResponse)
                 .toList();
     }
 
     @Transactional
-    public MembershipTier createTier(MembershipTier tier) {
-        return membershipTierRepository.save(tier);
+    public MembershipTierResponse createTier(MembershipTier tier) {
+        return membershipTierMapper.toMembershipTierResponse(membershipTierRepository.save(tier));
     }
 
     @Transactional
-    public MembershipTier updateTier(Integer tierId, MembershipTier request) {
+    public MembershipTierResponse updateTier(Integer tierId, MembershipTier request) {
         MembershipTier tier = membershipTierRepository.findById(tierId)
                 .orElseThrow(() -> new AppException(ErrorCode.MEMBERSHIP_TIER_NOT_FOUND));
         if (request.getTierName() != null) tier.setTierName(request.getTierName());
         if (request.getMinSpending() != null) tier.setMinSpending(request.getMinSpending());
         if (request.getPointEarningRate() != null) tier.setPointEarningRate(request.getPointEarningRate());
         if (request.getDescription() != null) tier.setDescription(request.getDescription());
-        return membershipTierRepository.save(tier);
+        return membershipTierMapper.toMembershipTierResponse(membershipTierRepository.save(tier));
     }
 
     @Transactional
@@ -234,7 +240,9 @@ public class MembershipService {
     /**
      * Admin xem toàn bộ lịch sử giao dịch điểm
      */
-    public List<PointTransaction> getAllPointTransactions() {
-        return pointTransactionRepository.findAll();
+    public List<PointTransactionResponse> getAllPointTransactions() {
+        return pointTransactionRepository.findAll().stream()
+                .map(pointTransactionMapper::toPointTransactionResponse)
+                .toList();
     }
 }

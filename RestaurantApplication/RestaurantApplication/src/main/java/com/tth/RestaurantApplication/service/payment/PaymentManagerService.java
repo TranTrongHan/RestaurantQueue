@@ -44,14 +44,14 @@ public class PaymentManagerService {
     public String createPaymentUrl(Order order, PaymentType type, Long amount, String returnUrl) throws Exception {
         PaymentGateway gateway = getGateway(type);
         String url = gateway.createPaymentUrl(order.getOrderId(), amount, returnUrl);
-        
+
         // Extract txnRef to use as key
         String txnRef = extractTxnRef(url);
         if (txnRef != null) {
             pendingPayments.put(txnRef, url);
             log.info("Stored pending payment for txnRef: {}", txnRef);
         }
-        
+
         return url;
     }
 
@@ -59,7 +59,8 @@ public class PaymentManagerService {
         try {
             java.net.URI uri = new java.net.URI(url);
             String query = uri.getQuery();
-            if (query == null) return null;
+            if (query == null)
+                return null;
             for (String param : query.split("&")) {
                 String[] pair = param.split("=");
                 if (pair.length > 1 && pair[0].equals("vnp_TxnRef")) {
@@ -73,7 +74,8 @@ public class PaymentManagerService {
     }
 
     @Transactional
-    public BillResponse handlePaymentReturn(PaymentType type, Map<String, String> params, User currentUser) throws Exception {
+    public BillResponse handlePaymentReturn(PaymentType type, Map<String, String> params, User currentUser)
+            throws Exception {
         PaymentGateway gateway = getGateway(type);
 
         if (!gateway.verifySignature(params)) {
@@ -138,12 +140,16 @@ public class PaymentManagerService {
             amountLong = Long.parseLong(params.get("vnp_Amount")) / 100;
         }
 
+        String promotionName = params.get("promotionName");
+        com.tth.RestaurantApplication.dto.request.PaymentRequest paymentRequest = new com.tth.RestaurantApplication.dto.request.PaymentRequest();
+        paymentRequest.setPromotionName(promotionName);
+
         order.setIsPaid(true);
         orderRepository.save(order);
 
-        User user = (currentUser != null) ? currentUser :
-                (order.getOrderSession() != null ? order.getOrderSession().getReservation().getUser() :
-                        (order.getOnlineOrder() != null ? order.getOnlineOrder().getUser() : null));
+        User user = (currentUser != null) ? currentUser
+                : (order.getOrderSession() != null ? order.getOrderSession().getReservation().getUser()
+                        : (order.getOnlineOrder() != null ? order.getOnlineOrder().getUser() : null));
 
         if (user != null) {
             cartRepository.deleteByUser(user);
@@ -151,26 +157,10 @@ public class PaymentManagerService {
 
         BillResponse billResponse;
         if (order.getOrderSession() != null) {
-            billResponse = paymentService.createBillForDineInOrder(order, null, BigDecimal.valueOf(amountLong));
+            billResponse = paymentService.createBillForDineInOrder(order, paymentRequest,
+                    BigDecimal.valueOf(amountLong));
         } else {
-            billResponse = paymentService.createBill(order, null, BigDecimal.valueOf(amountLong));
-        }
-
-        // === UC03 & UC04: Tích điểm và thăng hạng sau khi thanh toán thành công ===
-        if (user != null) {
-            try {
-                Bill bill = billRepository.findByOrder_OrderId(order.getOrderId())
-                        .orElse(null);
-                membershipService.processSuccessfulPayment(
-                        user,
-                        BigDecimal.valueOf(amountLong),
-                        bill
-                );
-                log.info("[Membership] Loyalty points processed for user={}, amount={}", user.getUsername(), amountLong);
-            } catch (Exception e) {
-                // Không để lỗi membership ảnh hưởng đến luồng thanh toán chính
-                log.error("[Membership] Failed to process loyalty for user={}: {}", user != null ? user.getUsername() : "unknown", e.getMessage());
-            }
+            billResponse = paymentService.createBill(order, paymentRequest, BigDecimal.valueOf(amountLong));
         }
 
         return billResponse;

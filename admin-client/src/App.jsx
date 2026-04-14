@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import ReservationsPage from './pages/ReservationsPage';
+import ReservationDetailPage from './pages/ReservationDetailPage';
 import KitchenOrdersPage from './pages/KitchenOrdersPage';
 import VNPayReturnPage from './pages/VNPayReturnPage';
 import CustomerOrderingPage from './pages/CustomerOrderingPage';
@@ -11,6 +12,8 @@ import ProductsPage from './pages/ProductsPage';
 import MembershipTiersPage from './pages/MembershipTiersPage';
 import VouchersPage from './pages/VouchersPage';
 import PointsReportPage from './pages/PointsReportPage';
+import CustomersPage from './pages/CustomersPage';
+import CustomerDetailPage from './pages/CustomerDetailPage';
 import MainLayout from './components/layout/MainLayout';
 import useAuthStore from './store/useAuthStore';
 import { Toaster } from 'react-hot-toast';
@@ -49,6 +52,7 @@ function App() {
           <Route path="rfm" element={<HomePage />} />
           <Route path="orders" element={<OnlineOrdersPage />} />
           <Route path="reservations" element={<ReservationsPage />} />
+          <Route path="reservations/:id" element={<ReservationDetailPage />} />
           <Route path="kitchen" element={<KitchenOrdersPage />} />
           <Route path="payment-return" element={<VNPayReturnPage />} />
           <Route path="products" element={<ProductsPage />} />
@@ -58,6 +62,8 @@ function App() {
           <Route path="membership-tiers" element={<MembershipTiersPage />} />
           <Route path="vouchers" element={<VouchersPage />} />
           <Route path="points-report" element={<PointsReportPage />} />
+          <Route path="customers" element={<CustomersPage />} />
+          <Route path="customers/:userId" element={<CustomerDetailPage />} />
         </Route>
 
         {/* Standalone Customer Simulation Route */}

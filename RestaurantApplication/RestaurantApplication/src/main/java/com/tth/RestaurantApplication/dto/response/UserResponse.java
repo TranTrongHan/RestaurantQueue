@@ -26,4 +26,6 @@ public class UserResponse {
      String password;
      User.Role role;
      String image;
+     int loyaltyPoints;
+     String  membershipTier;
 }

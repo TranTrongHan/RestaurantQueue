@@ -10,6 +10,10 @@ import org.mapstruct.Mapping;
 public interface OnlineOrderMapper {
     @Mapping(source = "order.orderId",target = "orderId")
     @Mapping(source = "user", target = "customer")
-    @Mapping(source = "order.orderItems",target = "orderItems")
+    @Mapping(source = "order.orderItems", target = "orderItems")
+    @Mapping(source = "order.bill.subTotal", target = "subTotal")
+    @Mapping(source = "order.bill.discountAmount", target = "discountAmount")
+    @Mapping(source = "order.bill.totalAmount", target = "totalAmount")
+    @Mapping(source = "order.bill.status", target = "status")
     OnlineOrderResponse toOnlineOrderResponse(OnlineOrder onlineOrder);
 }

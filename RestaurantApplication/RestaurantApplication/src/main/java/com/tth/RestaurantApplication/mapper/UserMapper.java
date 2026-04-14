@@ -13,6 +13,7 @@ public interface UserMapper {
     User toUser(UserCreationRequest request);
 
     @Mapping(source = "userId", target = "userId")
+    @Mapping(source = "membershipTier.tierName", target = "membershipTier")
     UserResponse toUserResponse(User user);
     void updateUser(@MappingTarget User user, UserUpdateRequest request);
 }

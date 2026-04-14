@@ -4,7 +4,7 @@ import { authApis, endpoints } from "../configs/Apis";
 import { useCookies } from "react-cookie";
 import { Link, useLocation } from "react-router-dom";
 import SpinnerComp from "../common/SpinnerComp";
-import { ShoppingCart, Trash2, ArrowLeft, CheckCircle, XCircle, Minus, Plus, ShoppingBag, Tag } from "lucide-react";
+import { ShoppingCart, Trash2, ArrowLeft, CheckCircle, XCircle, Minus, Plus, ShoppingBag, Tag, Ticket, ChevronDown } from "lucide-react";
 import Header from "../layout/Header";
 import Footer from "../layout/Footer";
 import toast from 'react-hot-toast';
@@ -20,6 +20,12 @@ const CartPage = () => {
     const [paymentStatus, setPaymentStatus] = useState(null);
     const [bill, setBill] = useState(null);
     const [showModal, setShowModal] = useState(false);
+    const [vouchers, setVouchers] = useState([]);
+    const [selectedVoucher, setSelectedVoucher] = useState(null);
+    const [manualCode, setManualCode] = useState("");
+    const [isManualMode, setIsManualMode] = useState(false);
+    const [backendDiscountInfo, setBackendDiscountInfo] = useState(null);
+    const [showVoucherDropdown, setShowVoucherDropdown] = useState(false);
     const hasCalled = useRef(false);
     const location = useLocation();
 
@@ -75,22 +81,57 @@ const CartPage = () => {
         }
     };
 
+    useEffect(() => {
+        const fetchVouchers = async () => {
+            if (cookies.token) {
+                try {
+                    const res = await authApis(cookies.token).get(endpoints.my_vouchers);
+                    setVouchers(res.data?.result || []);
+                } catch (error) {
+                    console.error("Fetch vouchers error:", error);
+                }
+            }
+        };
+        fetchVouchers();
+    }, [cookies.token]);
+
+    const handleCheckVoucher = async (code) => {
+        if (!code) {
+            setBackendDiscountInfo(null);
+            return;
+        }
+        try {
+            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['online_order']}/check-voucher?voucherCode=${code}`;
+            const res = await authApis(cookies.token).post(url);
+            if (res.status === 200) {
+                setBackendDiscountInfo(res.data.result);
+            }
+        } catch (err) {
+            console.error("Check voucher error:", err);
+            setBackendDiscountInfo(null);
+            toast.error(err.response?.data?.message || "Mã giảm giá không hợp lệ");
+        }
+    };
+
+    const discountValue = backendDiscountInfo ? backendDiscountInfo.discount : 0;
+    const finalTotal = backendDiscountInfo ? backendDiscountInfo.finalTotal : total;
+
     const handlePayment = async () => {
         try {
             setLoading(true);
             const returnUrl = window.location.origin + window.location.pathname;
             const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints['online_order']}/createPayment?returnUrl=${encodeURIComponent(returnUrl)}`;
-            const res = await authApis(cookies.token).post(url, {});
+            const res = await authApis(cookies.token).post(url, {
+                promotionName: isManualMode ? manualCode : (selectedVoucher?.voucher?.voucherCode || null)
+            });
             if (res.status === 200 && res.data.result) {
                 window.location.href = res.data.result;
             }
         } catch (err) {
             if (err.response) {
                 if (Number(err.response.data.code) === 1030) {
-                    // setError("Vui lòng cập nhật địa chỉ trước khi thanh toán");
                     toast.error("Vui lòng cập nhật địa chỉ trước khi thanh toán");
                 } else {
-                    // setError(err.response.data.message || "Có lỗi xảy ra");
                     toast.error(err.response.data.message || "Có lỗi xảy ra");
                 }
             }
@@ -104,6 +145,7 @@ const CartPage = () => {
         if (!query.includes("vnp_") || hasCalled.current) return;
         hasCalled.current = true;
         try {
+            // Backend will handle the promotionName because it was appended to returnUrl
             const res = await authApis(cookies.token).get(
                 `${import.meta.env.VITE_API_BASE_URL}${endpoints['online_order']}/vnpayReturn${query}`
             );
@@ -117,16 +159,14 @@ const CartPage = () => {
             } catch (err) {
                 console.error("Delayed clear cart error:", err);
             }
-        } catch {
+        } catch (err) {
+            console.error("VnPay Return Error:", err);
             setPaymentStatus("failed");
             setShowModal(true);
         }
     };
 
     useEffect(() => { handleVnPayReturn(); }, [location]);
-    // useEffect(() => {
-    //     if (error) { const t = setTimeout(() => setError(null), 3000); return () => clearTimeout(t); }
-    // }, [error]);
     useEffect(() => {
         if (discountError) { const t = setTimeout(() => setDiscountError(null), 3000); return () => clearTimeout(t); }
     }, [discountError]);
@@ -264,30 +304,154 @@ const CartPage = () => {
                                     </div>
                                 </div>
 
-                                {/* Discount Input */}
-                                <div className="mb-4">
-                                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                        <Tag size={12} /> Mã ưu đãi
-                                    </label>
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            value={discount}
-                                            onChange={(e) => setDiscount(e.target.value)}
-                                            name="discount"
-                                            placeholder="Nhập mã giảm giá..."
-                                            className="flex-1 px-3 py-2 text-sm rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:border-primary transition"
-                                        />
+                                {/* Discount Input - Premium Custom Dropdown */}
+                                    <div className="flex items-center justify-between mb-3">
+                                        <label className="text-xs font-black text-slate-400 capitalize tracking-widest flex items-center gap-2">
+                                            <Tag size={14} className="text-primary" />
+                                            Mã giảm giá & Ưu đãi
+                                        </label>
+                                        <button 
+                                            onClick={() => {
+                                                setIsManualMode(!isManualMode);
+                                                setSelectedVoucher(null);
+                                                setManualCode("");
+                                                setBackendDiscountInfo(null);
+                                            }}
+                                            className="text-[10px] font-bold text-primary hover:underline"
+                                        >
+                                            {isManualMode ? "Chọn từ ví" : "Nhập mã tay"}
+                                        </button>
                                     </div>
-                                    {discountError && (
-                                        <p className="text-xs text-danger mt-1.5 font-medium">{discountError}</p>
-                                    )}
+                                    
+                                    <div className="relative">
+                                        {isManualMode ? (
+                                            <div className="flex gap-2">
+                                                <div className="relative flex-1">
+                                                    <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                                    <input 
+                                                        type="text"
+                                                        value={manualCode}
+                                                        onChange={(e) => setManualCode(e.target.value.toUpperCase())}
+                                                        placeholder="NHẬP MÃ GIẢM GIÁ"
+                                                        className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:border-primary/50 transition-all"
+                                                    />
+                                                </div>
+                                                <button 
+                                                    onClick={() => handleCheckVoucher(manualCode)}
+                                                    disabled={!manualCode}
+                                                    className="px-6 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-active transition-all disabled:opacity-50"
+                                                >
+                                                    ÁP DỤNG
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowVoucherDropdown(!showVoucherDropdown)}
+                                                    className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl border-2 transition-all duration-300 ${
+                                                        selectedVoucher 
+                                                        ? 'border-primary/30 bg-primary/5 shadow-lg shadow-primary/5' 
+                                                        : 'border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:border-primary/20'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-3 overflow-hidden">
+                                                        <div className={`p-2 rounded-xl ${selectedVoucher ? 'bg-primary text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+                                                            <Ticket size={18} />
+                                                        </div>
+                                                        <div className="text-left truncate">
+                                                            {selectedVoucher ? (
+                                                                <>
+                                                                    <p className="text-sm font-black text-slate-900 dark:text-slate-100">{selectedVoucher.voucher.voucherCode}</p>
+                                                                    <p className="text-[10px] font-bold text-primary uppercase">{selectedVoucher.voucher.voucherName}</p>
+                                                                </>
+                                                            ) : (
+                                                                <span className="text-sm font-bold text-slate-400">Chọn voucher từ ví của bạn</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <ChevronDown size={18} className={`text-slate-400 transition-transform duration-300 ${showVoucherDropdown ? 'rotate-180' : ''}`} />
+                                                </button>
+
+                                                {/* Custom Dropdown Menu */}
+                                                {showVoucherDropdown && (
+                                                    <div className="absolute z-50 left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top">
+                                                        <div className="max-h-60 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-800">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedVoucher(null);
+                                                                    setBackendDiscountInfo(null);
+                                                                    setShowVoucherDropdown(false);
+                                                                }}
+                                                                className="w-full px-5 py-3 text-left text-xs font-bold text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                                                            >
+                                                                Không sử dụng voucher
+                                                            </button>
+                                                            {vouchers.filter(v => !v.isUsed).length === 0 ? (
+                                                                <div className="px-5 py-8 text-center">
+                                                                    <p className="text-xs font-bold text-slate-400">Bạn chưa có voucher nào</p>
+                                                                </div>
+                                                            ) : vouchers.filter(v => !v.isUsed).map(v => (
+                                                                <button
+                                                                    key={v.id}
+                                                                    onClick={() => {
+                                                                        if (total < v.voucher.minOrderValue) {
+                                                                            toast.error(`Đơn hàng tối thiểu ${formatPrice(v.voucher.minOrderValue)}`);
+                                                                            return;
+                                                                        }
+                                                                        setSelectedVoucher(v);
+                                                                        handleCheckVoucher(v.voucher.voucherCode);
+                                                                        setShowVoucherDropdown(false);
+                                                                    }}
+                                                                    className={`w-full px-5 py-4 text-left flex items-start gap-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all ${selectedVoucher?.id === v.id ? 'bg-primary/5' : ''}`}
+                                                                >
+                                                                    <div className={`p-2 rounded-xl shrink-0 ${selectedVoucher?.id === v.id ? 'bg-primary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                                                                        <Tag size={16} />
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="flex justify-between items-center mb-0.5">
+                                                                            <p className="text-sm font-black text-slate-900 dark:text-slate-100">{v.voucher.voucherCode}</p>
+                                                                            <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                                                                                {v.voucher.voucherType === 'PERCENTAGE' ? `-${v.voucher.discountValue}%` : `-${formatPrice(v.voucher.discountValue)}`}
+                                                                            </span>
+                                                                        </div>
+                                                                        <p className="text-[11px] font-bold text-slate-500 line-clamp-1">{v.voucher.voucherName}</p>
+                                                                    </div>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+
+                                {/* Total Breakdown - High Contrast */}
+                                <div className="space-y-4 py-6 border-t border-slate-100 dark:border-slate-800 mb-6">
+                                    <div className="flex justify-between items-center px-2">
+                                        <span className="text-sm font-bold text-slate-400">Tạm tính:</span>
+                                        <span className="text-sm font-black text-slate-700 dark:text-slate-300">{formatPrice(total)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center px-2">
+                                        <span className="text-sm font-bold text-slate-400">Voucher giảm:</span>
+                                        <span className="text-sm font-black text-rose-500 flex items-center gap-1">
+                                            {discountValue > 0 ? `-${formatPrice(discountValue)}` : '0 ₫'}
+                                        </span>
+                                    </div>
                                 </div>
 
-                                {/* Total */}
-                                <div className="flex items-center justify-between bg-primary/10 dark:bg-primary/20 border border-primary/20 rounded-2xl px-5 py-4 mb-5">
-                                    <span className="font-bold text-gray-900 dark:text-gray-100">Tổng cộng:</span>
-                                    <span className="text-xl font-extrabold text-primary">{formatPrice(total)}</span>
+                                {/* Total - Brighter Premium Gradient */}
+                                <div className="relative overflow-hidden bg-gradient-to-br from-primary to-indigo-700 dark:from-primary/20 dark:to-primary/10 rounded-[2rem] p-7 mb-8 shadow-2xl shadow-primary/20 dark:shadow-none transition-all group">
+                                    <div className="absolute top-0 right-0 -mr-10 -mt-10 w-32 h-32 bg-white/10 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
+                                    <div className="relative z-10 flex flex-col gap-2">
+                                        <span className="text-[11px] font-black text-white/70 uppercase tracking-[0.2em]">Tổng tiền thanh toán</span>
+                                        <div className="flex items-end justify-between gap-4">
+                                            <span className="text-3xl font-black text-white tracking-tighter leading-none">{formatPrice(finalTotal)}</span>
+                                            <div className="bg-white/20 backdrop-blur-md text-white text-[10px] font-black px-3.5 py-1.5 rounded-full border border-white/20 shadow-sm shrink-0">
+                                                +{Math.floor(finalTotal / 1000).toLocaleString()} ĐIỂM
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* CTA Buttons */}
@@ -331,13 +495,33 @@ const CartPage = () => {
                                 <CheckCircle size={64} className="text-success mx-auto mb-5 animate-bounce" />
                                 <h2 className="text-2xl font-extrabold text-success mb-3">Thanh toán thành công!</h2>
                                 <p className="text-sm text-gray-500 mb-6">
-                                    Cảm ơn bạn đã thanh toán. Đơn hàng đã được xử lý thành công.
+                                    Cảm ơn bạn đã lựa chọn nhà hàng. Đơn hàng của bạn đang được chuẩn bị.
                                 </p>
+                                
+                                {bill && (
+                                    <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-5 mb-6 text-left space-y-3 border border-gray-100 dark:border-gray-700">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-400">Tạm tính:</span>
+                                            <span className="font-bold text-gray-700 dark:text-gray-300">{formatPrice(bill.subTotal)}</span>
+                                        </div>
+                                        {bill.discountAmount > 0 && (
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-gray-400">Giảm giá:</span>
+                                                <span className="font-bold text-rose-500">-{formatPrice(bill.discountAmount)}</span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-600">
+                                            <span className="text-sm font-extrabold text-gray-900 dark:text-gray-100">Tổng thanh toán:</span>
+                                            <span className="text-lg font-black text-primary">{formatPrice(bill.totalAmount)}</span>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <button
                                     onClick={() => setShowModal(false)}
-                                    className="w-full py-3 rounded-2xl font-bold text-white bg-success hover:bg-success-active transition shadow-lg shadow-success/20"
+                                    className="w-full py-4 rounded-2xl font-black text-white bg-success hover:bg-success-active transition shadow-lg shadow-success/20 uppercase tracking-widest text-sm"
                                 >
-                                    Xác nhận
+                                    Tuyệt vời
                                 </button>
                             </>
                         ) : (

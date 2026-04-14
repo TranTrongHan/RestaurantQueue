@@ -41,28 +41,14 @@ public class OnlineOrderService {
     private final OnlineOrderMapper onlineOrderMapper;
 
     public List<OnlineOrderResponse> getOnlineOrder(User currenUser) {
-        List<OnlineOrderResponse> onlineOrderResponses = new ArrayList<>();
-
         List<OnlineOrder> onlineOrders = onlineOrderRepository.findByUser_UserId(currenUser.getUserId());
         if (onlineOrders.isEmpty()) {
             return Collections.emptyList();
         }
-        onlineOrders.forEach(onlineOrder -> {
-            Order order = orderRepository.findByOnlineOrder_OnlineOrderId(onlineOrder.getOnlineOrderId());
-            if (order == null) {
-                throw new AppException(ErrorCode.ORDER_NOT_FOUND);
-            }
-            List<OrderItem> orderItems = orderItemRepository.findByOrder_OrderId(order.getOrderId());
-            List<OrderItemResponse> orderItemResponses = new ArrayList<>();
-            if (!orderItems.isEmpty()) {
-                orderItems.forEach(item -> {
-                    orderItemResponses.add(orderItemMapper.toOrderItemResponse(item));
-                });
-            }
-            onlineOrderResponses.add(onlineOrderMapper.toOnlineOrderResponse(onlineOrder));
-        });
 
-        return onlineOrderResponses;
+        return onlineOrders.stream()
+                .map(onlineOrderMapper::toOnlineOrderResponse)
+                .toList();
     }
 
     public BillResponse processOnlinePayment(User currentUser, PaymentRequest request) {

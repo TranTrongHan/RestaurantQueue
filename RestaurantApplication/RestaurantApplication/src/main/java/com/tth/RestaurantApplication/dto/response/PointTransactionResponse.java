@@ -19,5 +19,6 @@ public class PointTransactionResponse {
     PointTransaction.PointTransactionType transactionType;
     String description;
     Integer billId;
+    UserResponse user;
     LocalDateTime createdAt;
 }

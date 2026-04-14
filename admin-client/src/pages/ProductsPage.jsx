@@ -125,13 +125,13 @@ const MenuItemFormModal = ({
 
       if (mode === "create") {
         await authApis(token).post(
-          `${BASE_URL}${endpoints.menu_items}/admin`,
+          `${BASE_URL}${endpoints.admin_menu_items}`,
           formData
         );
         toast.success("Thêm món ăn thành công!");
       } else {
         await authApis(token).put(
-          `${BASE_URL}${endpoints.menu_items}/admin/${item.menuItemId}`,
+          `${BASE_URL}${endpoints.admin_menu_items}/${item.menuItemId}`,
           formData
         );
         toast.success("Cập nhật món ăn thành công!");
@@ -369,7 +369,7 @@ const ProductsPage = () => {
       const params = {};
       if (filterCat) params.cateId = filterCat;
       const res = await authApis(token).get(
-        `${BASE_URL}${endpoints.menu_items}/admin`,
+        `${BASE_URL}${endpoints.admin_menu_items}`,
         { params }
       );
       setItems(res.data?.result || []);
@@ -404,7 +404,7 @@ const ProductsPage = () => {
     try {
       setDeleteLoading(true);
       await authApis(token).delete(
-        `${BASE_URL}${endpoints.menu_items}/admin/${deleteTarget.menuItemId}`
+        `${BASE_URL}${endpoints.admin_menu_items}/${deleteTarget.menuItemId}`
       );
       toast.success("Đã xóa món ăn!");
       setDeleteTarget(null);
@@ -420,7 +420,7 @@ const ProductsPage = () => {
     try {
       setToggleLoading(item.menuItemId);
       await authApis(token).patch(
-        `${BASE_URL}${endpoints.menu_items}/admin/${item.menuItemId}/status`,
+        `${BASE_URL}${endpoints.admin_menu_items}/${item.menuItemId}/status`,
         null,
         { params: { isAvailable: !item.isAvailable } }
       );

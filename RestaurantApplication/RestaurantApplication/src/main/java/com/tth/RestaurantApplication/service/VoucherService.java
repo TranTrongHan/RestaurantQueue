@@ -45,6 +45,27 @@ public class VoucherService {
     }
 
     /**
+     * Lấy chi tiết một voucher trong ví
+     */
+    public UserVoucherResponse getUserVoucherDetail(User user, Integer userVoucherId) {
+        UserVoucher uv = userVoucherRepository.findById(userVoucherId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_VOUCHER_NOT_FOUND));
+
+        if (!uv.getUser().getUserId().equals(user.getUserId())) {
+            throw new AppException(ErrorCode.ACCESS_DENIED);
+        }
+
+        return toUserVoucherResponse(uv);
+    }
+
+    public List<UserVoucherResponse> getVouchersByUserId(Integer userId) {
+        return userVoucherRepository.findByUserUserId(userId)
+                .stream()
+                .map(this::toUserVoucherResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Lấy danh sách voucher có thể đổi bằng điểm
      */
     public List<VoucherResponse> getExchangeableVouchers() {
@@ -100,7 +121,8 @@ public class VoucherService {
                 .build();
         pointTransactionRepository.save(tx);
 
-        log.info("User {} redeemed voucher {} for {} points", user.getUsername(), voucher.getVoucherCode(), pointsToRedeem);
+        log.info("User {} redeemed voucher {} for {} points", user.getUsername(), voucher.getVoucherCode(),
+                pointsToRedeem);
         return toUserVoucherResponse(userVoucher);
     }
 
@@ -118,9 +140,11 @@ public class VoucherService {
 
     /**
      * Validate voucher trước khi áp dụng vào đơn hàng (UC07)
+     * 
      * @return Số tiền giảm thực tế
      */
-    public BigDecimal validateAndCalculateDiscount(String voucherCode, BigDecimal orderValue, User user, Voucher.ApplyType orderType) {
+    public BigDecimal validateAndCalculateDiscount(String voucherCode, BigDecimal orderValue, User user,
+            Voucher.ApplyType orderType) {
         Voucher voucher = voucherRepository.findByVoucherCode(voucherCode)
                 .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_NOT_FOUND));
 
@@ -144,7 +168,8 @@ public class VoucherService {
         if (voucher.getTargetTier() != null) {
             if (user.getMembershipTier() == null ||
                     !user.getMembershipTier().getMinSpending().equals(voucher.getTargetTier().getMinSpending()) &&
-                    user.getMembershipTier().getMinSpending().compareTo(voucher.getTargetTier().getMinSpending()) < 0) {
+                            user.getMembershipTier().getMinSpending()
+                                    .compareTo(voucher.getTargetTier().getMinSpending()) < 0) {
                 throw new AppException(ErrorCode.VOUCHER_TIER_NOT_ELIGIBLE);
             }
         }
@@ -152,7 +177,8 @@ public class VoucherService {
         // Tính toán số tiền giảm
         BigDecimal discount;
         if (voucher.getVoucherType() == Voucher.VoucherType.PERCENTAGE) {
-            discount = orderValue.multiply(voucher.getDiscountValue()).divide(BigDecimal.valueOf(100), 0, RoundingMode.DOWN);
+            discount = orderValue.multiply(voucher.getDiscountValue()).divide(BigDecimal.valueOf(100), 0,
+                    RoundingMode.DOWN);
             // Áp dụng giới hạn tối đa
             if (voucher.getMaxDiscountAmount() != null && discount.compareTo(voucher.getMaxDiscountAmount()) > 0) {
                 discount = voucher.getMaxDiscountAmount();
@@ -200,6 +226,25 @@ public class VoucherService {
 
     @Transactional
     public VoucherResponse createVoucher(VoucherCreateRequest request) {
+        // 1. Validation logic for conflicting flags
+        boolean isNewMember = Boolean.TRUE.equals(request.getIsNewMemberVoucher());
+        boolean isLevelUp = Boolean.TRUE.equals(request.getIsLevelUpReward());
+
+        if (isNewMember && isLevelUp) {
+            throw new AppException(ErrorCode.INVALID_VOUCHER_CONFIG);
+        }
+
+        if (isLevelUp && request.getTargetTierId() == null) {
+            // Thưởng thăng hạng BẮT BUỘC phải có hạng chỉ định
+            throw new AppException(ErrorCode.INVALID_VOUCHER_CONFIG);
+        }
+
+        if (isNewMember && request.getTargetTierId() != null) {
+            // Voucher chào mừng thường không giới hạn hạng (hoặc mặc định hạng thấp nhất)
+            // Để tránh nhầm lẫn, ta yêu cầu không chọn hạng cụ thể cho loại này
+            throw new AppException(ErrorCode.INVALID_VOUCHER_CONFIG);
+        }
+
         MembershipTier targetTier = null;
         if (request.getTargetTierId() != null) {
             targetTier = membershipTierRepository.findById(request.getTargetTierId())
@@ -222,7 +267,32 @@ public class VoucherService {
                 .applyType(request.getApplyType())
                 .description(request.getDescription())
                 .build();
-        return toVoucherResponse(voucherRepository.save(voucher));
+        final Voucher savedVoucher = voucherRepository.save(voucher);
+
+        // Phân phát voucher cho khách hàng nếu không phải loại nhận điều kiện (LevelUp/NewMember/Đổi điểm)
+        if (!Boolean.TRUE.equals(savedVoucher.getIsNewMemberVoucher()) && 
+            !Boolean.TRUE.equals(savedVoucher.getIsLevelUpReward()) && 
+            (savedVoucher.getPointsRequired() == null || savedVoucher.getPointsRequired() == 0)) {
+            
+            List<User> targetUsers;
+            if (targetTier == null) {
+                targetUsers = userRepository.findByRole(User.Role.CUSTOMER);
+            } else {
+                targetUsers = userRepository.findByMembershipTierAndRole(targetTier, User.Role.CUSTOMER);
+            }
+            
+            List<UserVoucher> userVouchers = targetUsers.stream().map(u -> UserVoucher.builder()
+                    .user(u)
+                    .voucher(savedVoucher)
+                    .isUsed(false)
+                    .acquiredAt(LocalDateTime.now())
+                    .build()).collect(Collectors.toList());
+                    
+            userVoucherRepository.saveAll(userVouchers);
+            log.info("Distributed voucher {} to {} targeted customers.", savedVoucher.getVoucherCode(), userVouchers.size());
+        }
+
+        return toVoucherResponse(savedVoucher);
     }
 
     @Transactional

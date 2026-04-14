@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { authApis, endpoints } from '../configs/Apis';
 import { useCookies } from 'react-cookie';
 import Header from '../layout/Header';
@@ -8,6 +9,7 @@ import { Award, Wallet, ShoppingBag, History, ChevronRight, Star, Info, Ticket, 
 import toast from 'react-hot-toast';
 
 const LoyaltyPortalPage = () => {
+    const navigate = useNavigate();
     const [cookies] = useCookies(['token']);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('card');
@@ -53,11 +55,11 @@ const LoyaltyPortalPage = () => {
         }
     };
 
-    const getTierGradient = (tierName) => {
+    const getTierCardStyle = (tierName) => {
         const name = tierName?.toLowerCase() || '';
-        if (name.includes('gold')) return 'from-amber-400 via-amber-500 to-yellow-600';
-        if (name.includes('silver')) return 'from-slate-300 via-slate-400 to-slate-500';
-        return 'from-blue-500 via-indigo-500 to-purple-600';
+        if (name.includes('gold')) return 'bg-gradient-to-br from-amber-600 to-amber-800 border-t-4 border-amber-300 shadow-amber-500/20';
+        if (name.includes('silver')) return 'bg-gradient-to-br from-slate-500 to-slate-700 border-t-4 border-slate-200 shadow-slate-400/20';
+        return 'bg-gradient-to-br from-blue-600 to-indigo-800 border-t-4 border-blue-300 shadow-blue-500/20';
     };
 
     if (loading) return <div className="min-h-screen flex flex-col"><Header /><div className="flex-1 flex items-center justify-center"><SpinnerComp /></div><Footer /></div>;
@@ -68,11 +70,11 @@ const LoyaltyPortalPage = () => {
             
             <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
                 {/* Hero Section / Card */}
-                <div className="mb-10">
-                    <div className={`relative overflow-hidden rounded-[2rem] p-8 text-white shadow-2xl bg-gradient-to-br ${getTierGradient(status?.tierName)}`}>
+                <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
+                    <div className={`relative overflow-hidden rounded-[2.5rem] p-10 text-white shadow-2xl transition-all ${getTierCardStyle(status?.tierName)}`}>
                         {/* Decorative background elements */}
-                        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-                        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 bg-black/10 rounded-full blur-3xl"></div>
+                        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
+                        <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl"></div>
                         
                         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                             <div className="space-y-4">
@@ -173,18 +175,21 @@ const LoyaltyPortalPage = () => {
                                     <button onClick={() => setActiveTab('shop')} className="text-primary font-bold hover:underline">Khám phá kho đổi thưởng ngay →</button>
                                 </div>
                             ) : myVouchers.map((uv) => (
-                                <div key={uv.id} className={`group relative bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-6 flex gap-6 overflow-hidden transition-all ${uv.isUsed ? 'opacity-60 saturate-0' : 'hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5 cursor-default'}`}>
+                                <div 
+                                    key={uv.id} 
+                                    onClick={() => navigate(`/loyalty/voucher/${uv.id}`)}
+                                    className={`group relative bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-6 flex gap-6 overflow-hidden transition-all cursor-pointer ${uv.isUsed ? 'opacity-60 saturate-0' : 'hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5'}`}>
                                     {uv.isUsed && <div className="absolute top-4 right-4 bg-gray-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full rotate-12 z-10">ĐÃ DÙNG</div>}
-                                    <div className={`w-20 h-20 rounded-2xl flex items-center justify-center shrink-0 text-white ${uv.isUsed ? 'bg-gray-400' : 'bg-gradient-to-br from-indigo-500 to-purple-600'}`}>
-                                        <Ticket size={32} />
+                                    <div className={`w-24 h-24 rounded-3xl flex items-center justify-center shrink-0 text-slate-700 bg-slate-50 border border-slate-100 transition-colors group-hover:bg-primary group-hover:text-white ${uv.isUsed ? 'bg-gray-200 text-gray-400' : ''}`}>
+                                        <Ticket size={36} strokeWidth={1.5} />
                                     </div>
-                                    <div className="flex-1 space-y-2">
-                                        <h4 className="font-bold text-gray-900 dark:text-gray-100 text-lg leading-tight">{uv.voucher.voucherName}</h4>
+                                    <div className="flex-1 space-y-3">
+                                        <h4 className="font-bold text-slate-900 dark:text-slate-100 text-xl leading-tight">{uv.voucher.voucherName}</h4>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded font-mono font-bold text-gray-600 dark:text-gray-400">CODE: {uv.voucher.voucherCode}</span>
+                                            <span className="text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-lg font-mono font-black text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800">CODE: {uv.voucher.voucherCode}</span>
                                         </div>
-                                        <p className="text-xs text-gray-500 line-clamp-2">{uv.voucher.description || 'Sử dụng mã này khi thanh toán để nhận ưu đãi.'}</p>
-                                        <div className="pt-2 flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">{uv.voucher.description || 'Sử dụng mã này khi thanh toán để nhận ưu đãi.'}</p>
+                                        <div className="pt-2 flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
                                             <Calendar size={12} /> HSD: {new Date(uv.voucher.endDate).toLocaleDateString()}
                                         </div>
                                     </div>
@@ -232,15 +237,15 @@ const LoyaltyPortalPage = () => {
                                     </thead>
                                     <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                                         {history.map((tx) => (
-                                            <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                                                <td className="px-6 py-4 text-xs text-gray-500">
+                                            <tr key={tx.id} className="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all cursor-default group">
+                                                <td className="px-6 py-6 text-sm text-slate-500 font-medium">
                                                     {new Date(tx.createdAt).toLocaleString()}
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{tx.description}</p>
-                                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">{tx.transactionType}</span>
+                                                <td className="px-6 py-6">
+                                                    <p className="text-base font-bold text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors">{tx.description}</p>
+                                                    <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">{tx.transactionType}</span>
                                                 </td>
-                                                <td className={`px-6 py-4 text-sm font-black text-right ${tx.amount > 0 ? 'text-green-500' : 'text-danger'}`}>
+                                                <td className={`px-6 py-6 text-base font-black text-right ${tx.amount > 0 ? 'text-green-500' : 'text-rose-500'}`}>
                                                     {tx.amount > 0 ? `+${tx.amount}` : tx.amount}
                                                 </td>
                                             </tr>

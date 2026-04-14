@@ -12,11 +12,10 @@ import ReservationDetailPage from './components/pages/ReservationDetailPage'
 import CartPage from './components/pages/CartPage'
 import MyOnlineOrderPage from './components/pages/MyOnlineOrderPage'
 import ReservationsPages from './components/pages/ReservationsPages'
-import SessionPage from './components/pages/SessionPage/SessionPage'
-import KitchenPage from './components/pages/KitchenPage/KitchenPage'
 import OAuth2Success from './components/pages/OAuth2Succes'
 import ProfilePage from './components/pages/ProfilePage'
 import LoyaltyPortalPage from './components/pages/LoyaltyPortalPage'
+import VoucherDetailPage from './components/pages/VoucherDetailPage'
 import useUserStore from './store/useUserStore'
 import useCartStore from './store/useCartStore'
 import { Toaster } from 'react-hot-toast'
@@ -72,10 +71,9 @@ const App = () => {
         <Route path='/cart' element={<CartPage />} />
         <Route path='/online_order' element={<MyOnlineOrderPage />} />
         <Route path='/reservations' element={<ReservationsPages />} />
-        <Route path='/order_session' element={<SessionPage />} />
-        <Route path='/kitchen' element={<KitchenPage />} />
         <Route path='/profile' element={<ProfilePage />} />
         <Route path='/loyalty' element={<LoyaltyPortalPage />} />
+        <Route path='/loyalty/voucher/:id' element={<VoucherDetailPage />} />
       </Routes>
     </BrowserRouter>
   )

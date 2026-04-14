@@ -20,7 +20,7 @@ const PointsReportPage = () => {
         try {
             setLoading(true);
             const res = await authApis(token).get(endpoints.admin_points_report);
-            setTransactions(res.data.result);
+            setTransactions(res.data?.result || []);
         } catch (error) {
             toast.error("Không thể tải lịch sử giao dịch");
         } finally {

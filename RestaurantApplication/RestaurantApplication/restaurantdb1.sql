@@ -47,6 +47,17 @@ CREATE TABLE `table` (
     `capacity` INT NOT NULL,
     `table_name` VARCHAR(255)
 ) ENGINE=InnoDB;
+INSERT INTO `table` (`status`, `capacity`, `table_name`) VALUES
+('AVAILABLE', 2, 'Bàn 1 (Cửa sổ)'),
+('AVAILABLE', 2, 'Bàn 2'),
+('AVAILABLE', 4, 'Bàn 3 (Trung tâm)'),
+('AVAILABLE', 4, 'Bàn 4'),
+('AVAILABLE', 6, 'Bàn 5 (VIP)'),
+('AVAILABLE', 8, 'Bàn 6 (Họp mặt)'),
+('AVAILABLE', 2, 'Bàn 7'),
+('AVAILABLE', 4, 'Bàn 8'),
+('AVAILABLE', 10, 'Bàn 9 (Tiệc)'),
+('AVAILABLE', 4, 'Bàn 10');
 
 
 -- Bảng Reservation (đặt bàn tại nhà hàng)
@@ -95,6 +106,7 @@ CREATE TABLE `order` (
     `order_id` INT PRIMARY KEY AUTO_INCREMENT,
     `session_id` INT NULL UNIQUE,
     `online_order_id` INT NULL UNIQUE,
+    `applied_voucher_code` VARCHAR(255) DEFAULT NULL,
     `create_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `is_paid` BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (`session_id`) REFERENCES `order_session`(`session_id`) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -240,6 +252,8 @@ CREATE TABLE `user_voucher` (
     `user_id` INT NOT NULL,
     `voucher_id` INT NOT NULL,
     `is_used` BOOLEAN DEFAULT FALSE,
+    `is_locked` BOOLEAN DEFAULT FALSE,
+    `locked_at` DATETIME,
     `acquired_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `used_at` DATETIME,
     FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`),

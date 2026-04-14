@@ -7,7 +7,7 @@ const MainLayout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
-    <div className="flex bg-[#f8fafc] min-h-screen overflow-hidden">
+    <div className="flex bg-[#f8fafc] h-screen overflow-hidden">
       {/* Sidebar Navigation */}
       <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
 
@@ -15,7 +15,7 @@ const MainLayout = () => {
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
         <Header />
 
-        <main className="flex-1 p-6 lg:p-10 overflow-auto scrollbar-hide">
+        <main className="flex-1 p-6 lg:p-10 overflow-auto scrollbar-thin scrollbar-thumb-slate-200">
           <div className="max-w-7xl mx-auto space-y-6">
             <Outlet />
           </div>

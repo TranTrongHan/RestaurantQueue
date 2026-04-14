@@ -31,17 +31,6 @@ public class ReservationController {
     AuthenticateService authenticateService;
     ReservationService reservationService;
 
-    @GetMapping
-    ApiResponse<PageResponse<ReservationResponse>> getReservations(
-            @RequestParam(value = "page", defaultValue = "1") int page,
-            @RequestParam(value = "size", defaultValue = "10") int size,
-            @RequestParam Map<String, String> params){
-
-        return ApiResponse.<PageResponse<ReservationResponse>>builder()
-                .result(reservationService.getReservations(page, size, params))
-                .message("Get list successfull")
-                .build();
-    }
 
     @GetMapping("/my")
     ApiResponse<PageResponse<ReservationResponse>> getMyReservation(
@@ -90,12 +79,5 @@ public class ReservationController {
                 .build();
     }
 
-    @PostMapping("/{id}")
-    public ApiResponse<ReservationResponse> checkIn(@PathVariable(value = "id") Integer reservationId) throws JOSEException {
-        return ApiResponse.<ReservationResponse>builder()
-                .result(reservationService.checkIn(reservationId))
-                .message("Check in successfully")
-                .build();
-    }
 
 }

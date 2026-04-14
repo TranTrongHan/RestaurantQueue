@@ -9,8 +9,6 @@ import java.time.LocalDateTime;
 
 import java.util.List;
 
-
-
 @Entity
 @Table(name = "`order`")
 @Data
@@ -24,11 +22,11 @@ public class Order {
     private Integer orderId;
 
     @OneToOne
-    @JoinColumn(name = "session_id",nullable = true,unique = true)
+    @JoinColumn(name = "session_id", nullable = true, unique = true)
     private OrderSession orderSession;
 
     @OneToOne
-    @JoinColumn(name = "online_order_id", unique = true,nullable = true)
+    @JoinColumn(name = "online_order_id", unique = true, nullable = true)
     private OnlineOrder onlineOrder;
 
     @Column(name = "create_at", nullable = false)
@@ -37,11 +35,10 @@ public class Order {
     @Column(name = "is_paid")
     private Boolean isPaid;
 
-    @OneToMany(mappedBy = "order",fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
     private List<OrderItem> orderItems;
 
     @OneToOne(mappedBy = "order")
     private Bill bill;
-
 
 }

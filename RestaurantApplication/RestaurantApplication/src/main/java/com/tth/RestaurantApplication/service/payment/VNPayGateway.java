@@ -35,12 +35,17 @@ public class VNPayGateway implements PaymentGateway {
         String vnp_SecureHash = params.get("vnp_SecureHash");
         if (vnp_SecureHash == null) return false;
 
-        Map<String, String> vnp_Params = new HashMap<>(params);
-        vnp_Params.remove("vnp_SecureHash");
-        vnp_Params.remove("vnp_SecureHashType");
+        Map<String, String> vnp_Params = new HashMap<>();
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+            if (key != null && key.startsWith("vnp_") && !key.equals("vnp_SecureHash") && !key.equals("vnp_SecureHashType")) {
+                vnp_Params.put(key, value);
+            }
+        }
 
         String signValue = VNPayService.hashAllFields(vnp_Params, vnp_HashSecret);
-        return signValue.equals(vnp_SecureHash);
+        return signValue.equalsIgnoreCase(vnp_SecureHash);
     }
 
     @Override

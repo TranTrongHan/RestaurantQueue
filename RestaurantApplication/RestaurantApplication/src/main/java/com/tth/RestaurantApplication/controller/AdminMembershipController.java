@@ -3,10 +3,10 @@ package com.tth.RestaurantApplication.controller;
 import com.tth.RestaurantApplication.dto.request.AdjustPointsRequest;
 import com.tth.RestaurantApplication.dto.request.ApiResponse;
 import com.tth.RestaurantApplication.dto.request.VoucherCreateRequest;
+import com.tth.RestaurantApplication.dto.response.MembershipTierResponse;
 import com.tth.RestaurantApplication.dto.response.PointTransactionResponse;
 import com.tth.RestaurantApplication.dto.response.VoucherResponse;
 import com.tth.RestaurantApplication.entity.MembershipTier;
-import com.tth.RestaurantApplication.entity.PointTransaction;
 import com.tth.RestaurantApplication.service.MembershipService;
 import com.tth.RestaurantApplication.service.VoucherService;
 import jakarta.validation.Valid;
@@ -28,23 +28,23 @@ public class AdminMembershipController {
     // ==================== MEMBERSHIP TIER APIs ====================
 
     @GetMapping("/membership-tiers")
-    public ApiResponse<List<MembershipTier>> getAllTiers() {
-        return ApiResponse.<List<MembershipTier>>builder()
+    public ApiResponse<List<MembershipTierResponse>> getAllTiers() {
+        return ApiResponse.<List<MembershipTierResponse>>builder()
                 .result(membershipService.getAllTiers())
                 .build();
     }
 
     @PostMapping("/membership-tiers")
-    public ApiResponse<MembershipTier> createTier(@RequestBody MembershipTier tier) {
-        return ApiResponse.<MembershipTier>builder()
+    public ApiResponse<MembershipTierResponse> createTier(@RequestBody MembershipTier tier) {
+        return ApiResponse.<MembershipTierResponse>builder()
                 .result(membershipService.createTier(tier))
                 .message("Membership tier created")
                 .build();
     }
 
     @PutMapping("/membership-tiers/{tierId}")
-    public ApiResponse<MembershipTier> updateTier(@PathVariable Integer tierId, @RequestBody MembershipTier tier) {
-        return ApiResponse.<MembershipTier>builder()
+    public ApiResponse<MembershipTierResponse> updateTier(@PathVariable Integer tierId, @RequestBody MembershipTier tier) {
+        return ApiResponse.<MembershipTierResponse>builder()
                 .result(membershipService.updateTier(tierId, tier))
                 .message("Membership tier updated")
                 .build();
@@ -86,8 +86,8 @@ public class AdminMembershipController {
     // ==================== POINT MANAGEMENT APIs ====================
 
     @GetMapping("/points/report")
-    public ApiResponse<List<PointTransaction>> getAllPointTransactions() {
-        return ApiResponse.<List<PointTransaction>>builder()
+    public ApiResponse<List<PointTransactionResponse>> getAllPointTransactions() {
+        return ApiResponse.<List<PointTransactionResponse>>builder()
                 .result(membershipService.getAllPointTransactions())
                 .build();
     }

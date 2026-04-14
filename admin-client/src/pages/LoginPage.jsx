@@ -37,11 +37,11 @@ const LoginPage = () => {
       const res = await Apis.post(endpoints.login, formData);
 
       if (res.data.code === 200) {
-        const token = res.data.result.token;
+        const token = res.data.result?.token;
         setCookie('token', token, { path: '/', maxAge: 86400 * 7 }); // 7 days
 
         const userRes = await authApis(token).get(endpoints.profile);
-        login(userRes.data.result, token);
+        login(userRes.data?.result, token);
 
         toast.success('Đăng nhập thành công!');
         navigate('/', { replace: true });

@@ -21,7 +21,7 @@ const MembershipTiersPage = () => {
         try {
             setLoading(true);
             const res = await authApis(token).get(endpoints.admin_tiers);
-            setTiers(res.data.result);
+            setTiers(res.data?.result || []);
         } catch (error) {
             toast.error("Không thể tải danh sách hạng thành viên");
         } finally {
@@ -120,7 +120,7 @@ const MembershipTiersPage = () => {
                                 <h3 className="text-xl font-bold text-slate-800">{tier.tierName}</h3>
                                 <p className="text-slate-500 text-sm mt-1">{tier.description || "Chưa có mô tả"}</p>
                             </div>
-                            
+
                             <div className="mt-6 space-y-4">
                                 <div className="flex justify-between items-center">
                                     <span className="text-slate-500 text-sm">Chi tiêu tối thiểu</span>
@@ -176,7 +176,7 @@ const MembershipTiersPage = () => {
                                     value={formData.pointEarningRate}
                                     onChange={(e) => setFormData({ ...formData, pointEarningRate: e.target.value })}
                                 />
-                                <p className="text-xs text-slate-400 mt-1 flex items-center gap-1"><Info size={12}/> Mặc định là 1.0 (1,000đ = 1đ)</p>
+                                <p className="text-xs text-slate-400 mt-1 flex items-center gap-1"><Info size={12} /> Mặc định là 1.0 (1,000 VNĐ = 1 điểm)</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Mô tả đặc quyền</label>

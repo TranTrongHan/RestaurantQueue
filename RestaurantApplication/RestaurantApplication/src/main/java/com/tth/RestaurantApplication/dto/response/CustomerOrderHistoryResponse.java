@@ -1,30 +1,40 @@
 package com.tth.RestaurantApplication.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.experimental.FieldDefaults;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class OnlineOrderResponse {
-    Integer onlineOrderId;
+public class CustomerOrderHistoryResponse {
     Integer orderId;
-    List<OrderItemResponse> orderItems;
-    CustomerResponse customer;
-    String deliveryAddress;
+    OrderType orderType;
+    
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    Date createdAt;
-    String note = null;
+    LocalDateTime createdAt;
+    
+    Boolean isPaid;
     BigDecimal subTotal;
     BigDecimal discountAmount;
     BigDecimal totalAmount;
     String status;
+    
+    List<OrderItemResponse> items;
+    Map<String, String> metadata; // e.g., deliveryAddress, tableName, reservationId
+
+    public enum OrderType {
+        ONLINE, DINE_IN
+    }
 }

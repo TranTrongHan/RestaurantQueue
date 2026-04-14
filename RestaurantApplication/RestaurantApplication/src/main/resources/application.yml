@@ -48,7 +48,7 @@ spring:
     database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
 
   main:
     allow-bean-definition-overriding: true

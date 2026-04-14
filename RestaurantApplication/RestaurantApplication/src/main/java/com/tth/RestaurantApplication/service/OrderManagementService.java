@@ -1,10 +1,13 @@
 package com.tth.RestaurantApplication.service;
 
 
+import com.tth.RestaurantApplication.dto.response.CustomerOrderHistoryResponse;
+import com.tth.RestaurantApplication.dto.response.OrderItemResponse;
 import com.tth.RestaurantApplication.entity.*;
 import com.tth.RestaurantApplication.exception.AppException;
 import com.tth.RestaurantApplication.exception.ErrorCode;
 import com.tth.RestaurantApplication.mapper.OnlineOrderMapper;
+import com.tth.RestaurantApplication.mapper.OrderItemMapper;
 import com.tth.RestaurantApplication.mapper.OrderMapper;
 import com.tth.RestaurantApplication.repository.*;
 import jakarta.transaction.Transactional;
@@ -34,6 +37,7 @@ public class OrderManagementService {
     OrderMapper orderMapper;
     OrderSessionRepository orderSessionRepository;
     ReservationRepository reservationRepository;
+    OrderItemMapper orderItemMapper;
 
     @Transactional
     public Order createForOnlineOrder(User currentUser) {
@@ -113,7 +117,90 @@ public class OrderManagementService {
 
 
         return orderSession;
+    }
 
+    @Transactional
+    public List<CustomerOrderHistoryResponse> getCustomerOrderHistory(Integer userId) {
+        List<CustomerOrderHistoryResponse> history = new java.util.ArrayList<>();
 
+        // 1. Fetch Online Orders
+        List<OnlineOrder> onlineOrders = onlineOrderRepository.findByUser_UserId(userId);
+        for (OnlineOrder oo : onlineOrders) {
+            Order order = oo.getOrder();
+            if (order != null) {
+                history.add(mapToHistoryResponse(order, CustomerOrderHistoryResponse.OrderType.ONLINE));
+            }
+        }
+
+        // 2. Fetch Dine-In Orders
+        List<Order> dineInOrders = orderRepository.findByOrderSession_Reservation_User_UserIdOrderByCreatedAtDesc(userId);
+        for (Order o : dineInOrders) {
+            history.add(mapToHistoryResponse(o, CustomerOrderHistoryResponse.OrderType.DINE_IN));
+        }
+
+        // 3. Sort by createdAt descending
+        history.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
+
+        return history;
+    }
+
+    private CustomerOrderHistoryResponse mapToHistoryResponse(Order order, CustomerOrderHistoryResponse.OrderType type) {
+        List<OrderItemResponse> itemResponses = order.getOrderItems().stream()
+                .map(orderItemMapper::toOrderItemResponse)
+                .toList();
+
+        BigDecimal subTotal = BigDecimal.ZERO;
+        BigDecimal discount = BigDecimal.ZERO;
+        BigDecimal total = BigDecimal.ZERO;
+        String status = "UNPAID";
+
+        if (order.getBill() != null) {
+            subTotal = order.getBill().getSubTotal();
+            discount = order.getBill().getDiscountAmount();
+            total = order.getBill().getTotalAmount();
+            status = order.getBill().getStatus().toString();
+        }
+
+        java.util.Map<String, String> metadata = new java.util.HashMap<>();
+        if (type == CustomerOrderHistoryResponse.OrderType.ONLINE && order.getOnlineOrder() != null) {
+            metadata.put("deliveryAddress", order.getOnlineOrder().getDeliveryAddress());
+            metadata.put("note", order.getOnlineOrder().getNote());
+        } else if (type == CustomerOrderHistoryResponse.OrderType.DINE_IN && order.getOrderSession() != null) {
+            metadata.put("tableName", order.getOrderSession().getReservation().getTable().getTableName());
+            metadata.put("reservationId", order.getOrderSession().getReservation().getReservationId().toString());
+        }
+
+        return CustomerOrderHistoryResponse.builder()
+                .orderId(order.getOrderId())
+                .orderType(type)
+                .createdAt(order.getCreatedAt())
+                .isPaid(order.getIsPaid())
+                .subTotal(subTotal)
+                .discountAmount(discount)
+                .totalAmount(total)
+                .status(status)
+                .items(itemResponses)
+                .metadata(metadata)
+                .build();
+    }
+
+    public BigDecimal calculateGrossSubtotal(Integer orderId) {
+        List<OrderItem> items = orderItemRepository.findByOrder_OrderId(orderId);
+        if (items == null || items.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        return items.stream()
+                .map(item -> item.getMenuItem().getPrice().multiply(new BigDecimal(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    public BigDecimal calculateCartSubtotal(User currentUser) {
+        List<OnlineCart> onlineCartList = cartRepository.findByUserOrderByAddedAtDesc(currentUser);
+        if (onlineCartList == null || onlineCartList.isEmpty()) {
+            throw new AppException(ErrorCode.CART_EMPTY);
+        }
+        return onlineCartList.stream()
+                .map(cartItem -> cartItem.getMenuItem().getPrice().multiply(new BigDecimal(cartItem.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

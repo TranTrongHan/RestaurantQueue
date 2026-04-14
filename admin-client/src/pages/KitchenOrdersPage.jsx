@@ -57,8 +57,8 @@ const KitchenOrdersPage = () => {
     const handleUpdateStatus = async (item, newStatus) => {
         try {
             setActionLoading(item.id);
-            // The new API endpoint is /api/order_item/{orderItemId}/status
-            const url = `${import.meta.env.VITE_API_BASE_URL}/order_item/${item.id}/status`;
+            // The new API endpoint is /api/admin/order_item/{orderItemId}/status
+            const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.admin_order_item}/${item.id}/status`;
             await authApis(token).put(url, null, {
                 params: { status: newStatus }
             });

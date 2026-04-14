@@ -232,6 +232,20 @@ public class ReservationService {
                 .orElseThrow(() -> new AppException(ErrorCode.RESERVATION_NOT_FOUND));
         if (!currentUser.getUserId().equals(reservation.getUser().getUserId()))
             throw new AppException(ErrorCode.FORBIDDEN);
-        return reservationDetailMapper.toReservationDetailResponse(reservation);
+        ReservationDetailResponse response = reservationDetailMapper.toReservationDetailResponse(reservation);
+        if (reservation.getOrderSession() != null) {
+            response.setSessionId(reservation.getOrderSession().getSessionId());
+        }
+        return response;
+    }
+
+    public ReservationDetailResponse getReservationById(Integer reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new AppException(ErrorCode.RESERVATION_NOT_FOUND));
+        ReservationDetailResponse response = reservationDetailMapper.toReservationDetailResponse(reservation);
+        if (reservation.getOrderSession() != null) {
+            response.setSessionId(reservation.getOrderSession().getSessionId());
+        }
+        return response;
     }
 }

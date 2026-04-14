@@ -7,7 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Target,
-  ShoppingCart,
+  ShoppingBag,
   CalendarDays,
   ListFilter,
   Layers,
@@ -73,7 +73,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   return (
     <aside
       className={`
-        h-screen bg-[#1a1f2e] border-r border-slate-800 flex flex-col transition-all duration-300 relative
+        h-full bg-[#1a1f2e] border-r border-slate-800 flex flex-col transition-all duration-300 relative
         ${isCollapsed ? 'w-20' : 'w-64'}
       `}
     >
@@ -116,7 +116,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           {!isCollapsed && openMenus.vanHanh && (
             <div className="mb-2">
               <NavLink to="/orders" className={subItemClass}>
-                <ShoppingCart size={14} className="mr-3" />
+                <ShoppingBag size={14} className="mr-3" />
                 <span>Đơn đặt hàng</span>
               </NavLink>
               <NavLink to="/reservations" className={subItemClass}>
@@ -126,6 +126,10 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
               <NavLink to="/kitchen" className={subItemClass}>
                 <Soup size={14} className="mr-3" />
                 <span>Đơn bếp</span>
+              </NavLink>
+              <NavLink to="/customers" className={subItemClass}>
+                <Users size={14} className="mr-3" />
+                <span>Khách hàng</span>
               </NavLink>
             </div>
           )}

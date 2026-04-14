@@ -13,10 +13,16 @@ export const endpoints = {
   online_order: "/online_order",
   order_session: "/order_session",
   kitchen_order: "/kitchen",
+  admin_menu_items: "/admin/menu_items",
+  admin_online_order: "/admin/online_order",
+  admin_reservation: "/admin/reservation",
+  admin_reservation_detail: "/admin/reservation",
+  admin_order_item: "/admin/order_item",
   admin_tiers: "/admin/membership-tiers",
   admin_vouchers: "/admin/vouchers",
   admin_points_report: "/admin/points/report",
   admin_points_adjust: "/admin/points/adjust",
+  admin_customers: "/admin/customers",
 }
 
 const instance = axios.create({

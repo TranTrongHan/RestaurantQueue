@@ -36,8 +36,8 @@ const VouchersPage = () => {
                 authApis(token).get(endpoints.admin_vouchers),
                 authApis(token).get(endpoints.admin_tiers)
             ]);
-            setVouchers(voucherRes.data.result);
-            setTiers(tierRes.data.result);
+            setVouchers(voucherRes.data?.result || []);
+            setTiers(tierRes.data?.result || []);
         } catch (error) {
             toast.error("Không thể tải dữ liệu");
         } finally {
@@ -218,10 +218,13 @@ const VouchersPage = () => {
                                     <div className="flex gap-4">
                                         <div className="flex-1">
                                             <label className="block text-sm font-medium text-slate-700 mb-1">Loại giảm</label>
-                                            <select className="form-input-indigo w-full" value={formData.voucherType} onChange={e => setFormData({...formData, voucherType: e.target.value})}>
-                                                <option value="PERCENTAGE">Phần trăm (%)</option>
-                                                <option value="FIXED">Số tiền cố định (đ)</option>
-                                            </select>
+                                            <div className="relative group">
+                                                <select className="form-input-indigo w-full appearance-none cursor-pointer pr-10 hover:border-indigo-300 transition-all" value={formData.voucherType} onChange={e => setFormData({...formData, voucherType: e.target.value})}>
+                                                    <option value="PERCENTAGE">Phần trăm (%)</option>
+                                                    <option value="FIXED">Số tiền cố định (đ)</option>
+                                                </select>
+                                                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-indigo-500 transition-colors pointer-events-none" />
+                                            </div>
                                         </div>
                                         <div className="flex-1">
                                             <label className="block text-sm font-medium text-slate-700 mb-1">Giá trị giảm *</label>
@@ -240,11 +243,14 @@ const VouchersPage = () => {
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Loại đơn áp dụng</label>
-                                        <select className="form-input-indigo w-full" value={formData.applyType} onChange={e => setFormData({...formData, applyType: e.target.value})}>
-                                            <option value="BOTH">Tất cả (Online & Tại chỗ)</option>
-                                            <option value="ONLINE">Chỉ đặt Online</option>
-                                            <option value="DINE_IN">Chỉ tại chỗ</option>
-                                        </select>
+                                        <div className="relative group">
+                                            <select className="form-input-indigo w-full appearance-none cursor-pointer pr-10 hover:border-indigo-300 transition-all" value={formData.applyType} onChange={e => setFormData({...formData, applyType: e.target.value})}>
+                                                <option value="BOTH">Tất cả (Online & Tại chỗ)</option>
+                                                <option value="ONLINE">Chỉ đặt Online</option>
+                                                <option value="DINE_IN">Chỉ tại chỗ</option>
+                                            </select>
+                                            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-indigo-500 transition-colors pointer-events-none" />
+                                        </div>
                                     </div>
                                 </div>
 
@@ -263,10 +269,13 @@ const VouchersPage = () => {
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Hạng thành viên áp dụng (Tất cả nếu bỏ trống)</label>
-                                        <select className="form-input-indigo w-full" value={formData.targetTierId} onChange={e => setFormData({...formData, targetTierId: e.target.value})}>
-                                            <option value="">-- Tất cả các hạng --</option>
-                                            {tiers.map(t => <option key={t.id} value={t.id}>{t.tierName}</option>)}
-                                        </select>
+                                        <div className="relative group">
+                                            <select className="form-input-indigo w-full appearance-none cursor-pointer pr-10 hover:border-indigo-300 transition-all" value={formData.targetTierId} onChange={e => setFormData({...formData, targetTierId: e.target.value})}>
+                                                <option value="">-- Tất cả các hạng --</option>
+                                                {tiers.map(t => <option key={t.id} value={t.id}>{t.tierName}</option>)}
+                                            </select>
+                                            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-indigo-500 transition-colors pointer-events-none" />
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Điểm yêu cầu đổi (0 nếu cho không)</label>
@@ -314,7 +323,7 @@ const VouchersPage = () => {
 
             <style>{`
                 .form-input-indigo {
-                    @apply px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all;
+                    @apply px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all bg-white text-sm font-medium text-slate-700;
                 }
                 .vertical-text {
                     writing-mode: vertical-rl;

@@ -57,6 +57,17 @@ public class CustomerMembershipController {
     }
 
     /**
+     * Lấy chi tiết một voucher cụ thể trong kho
+     */
+    @GetMapping("/vouchers/{userVoucherId}")
+    public ApiResponse<UserVoucherResponse> getUserVoucherDetail(@PathVariable Integer userVoucherId) {
+        User currentUser = authenticateService.getCurrentAuthenticatedUser();
+        return ApiResponse.<UserVoucherResponse>builder()
+                .result(voucherService.getUserVoucherDetail(currentUser, userVoucherId))
+                .build();
+    }
+
+    /**
      * UC05: Xem danh sách voucher có thể đổi bằng điểm
      */
     @GetMapping("/vouchers/exchangeable")

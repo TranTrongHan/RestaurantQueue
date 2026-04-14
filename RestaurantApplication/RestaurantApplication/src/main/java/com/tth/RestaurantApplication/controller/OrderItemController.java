@@ -56,12 +56,4 @@ public class OrderItemController {
                 .build();
     }
 
-    @PutMapping("/{orderItemId}/status")
-    public ApiResponse<OrderItemResponse> updateStatus(@PathVariable(value = "orderItemId") Integer orderItemId,
-                                                       @RequestParam("status") OrderItem.OrderItemStatus status) {
-        return ApiResponse.<OrderItemResponse>builder()
-                .result(orderItemService.updateStatus(orderItemId, status))
-                .message("Status updated successfully")
-                .build();
-    }
 }

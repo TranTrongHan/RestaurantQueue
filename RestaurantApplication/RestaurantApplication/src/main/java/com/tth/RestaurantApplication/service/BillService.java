@@ -16,6 +16,11 @@ import com.tth.RestaurantApplication.mapper.OrderItemMapper;
 import com.tth.RestaurantApplication.repository.BillRepository;
 import com.tth.RestaurantApplication.repository.OrderItemRepository;
 import com.tth.RestaurantApplication.repository.PromotionsRepository;
+import com.tth.RestaurantApplication.repository.UserRepository;
+import com.tth.RestaurantApplication.service.VoucherService;
+import com.tth.RestaurantApplication.entity.Voucher;
+import com.tth.RestaurantApplication.entity.User;
+import com.tth.RestaurantApplication.service.AuthenticateService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -39,24 +44,57 @@ public class BillService {
     BillSumaryMapper billSumaryMapper;
     OrderItemMapper orderItemMapper;
     PromotionsRepository promotionsRepository;
-    public Bill buildBill(Order order, PaymentRequest request, BigDecimal subTotal) {
-        Promotion promotions = null;
-        if (request != null) {
-            promotions = promotionsRepository.findByName(request.getPromotionName());
+    VoucherService voucherService;
+    AuthenticateService authenticateService;
+    OrderManagementService orderManagementService;
+
+    public Bill buildBill(Order order, PaymentRequest request, BigDecimal amountPaid) {
+        BigDecimal grossSubTotal = orderManagementService.calculateGrossSubtotal(order.getOrderId());
+        BigDecimal discountAmount = BigDecimal.ZERO;
+
+        if (request != null && request.getPromotionName() != null && !request.getPromotionName().isEmpty()) {
+            String code = request.getPromotionName();
+            // 1. Try Global Promotion first
+            Promotion promotions = promotionsRepository.findByName(code);
+            if (promotions != null) {
+                discountAmount = grossSubTotal.multiply(promotions.getValue());
+            } else {
+                // 2. Try User Voucher
+                try {
+                    User user = (order.getOrderSession() != null)
+                            ? order.getOrderSession().getReservation().getUser()
+                            : (order.getOnlineOrder() != null ? order.getOnlineOrder().getUser() : null);
+
+                    if (user != null) {
+                        // Identify order type (Online or Dine-In)
+                        Voucher.ApplyType applyType = (order.getOnlineOrder() != null) ? Voucher.ApplyType.ONLINE
+                                : Voucher.ApplyType.DINE_IN;
+
+                        discountAmount = voucherService.validateAndCalculateDiscount(code, grossSubTotal, user,
+                                applyType);
+
+                        // If successful, mark it as used
+                        voucherService.markVoucherAsUsed(user, code);
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to apply voucher code {}: {}", code, e.getMessage());
+                }
+            }
         }
 
-        BigDecimal discountAmount = promotions != null ? subTotal.multiply(promotions.getValue()) : BigDecimal.ZERO;
-        BigDecimal totalAmount = subTotal.subtract(discountAmount);
+        // Final sanity check or just trust the amountPaid
+        // totalAmount = amountPaid;
+        // discountAmount = grossSubTotal - amountPaid; (This is more accurate if gateway handles everything correctly)
 
         Bill bill = new Bill();
         bill.setOrder(order);
         bill.setCreatedAt(LocalDateTime.now());
-        bill.setSubTotal(subTotal);
-        bill.setDiscountAmount(discountAmount);
-        bill.setTotalAmount(totalAmount);
+        bill.setSubTotal(grossSubTotal);
+        bill.setDiscountAmount(grossSubTotal.subtract(amountPaid));
+        bill.setTotalAmount(amountPaid);
         bill.setStatus(Bill.BillStatus.PAID);
         bill.setPaymentTime(LocalDateTime.now());
-        log.info("return bill of order {}",order.getOrderId());
+        log.info("return bill of order {} with total {}", order.getOrderId(), amountPaid);
         return bill;
     }
     public BillResponse getBillDetail(Integer billId){
