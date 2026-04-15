@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authApis, endpoints } from '../configs/Apis';
+import { authApis, endpoints } from '../../src/components/configs/Apis';
 import { useCookies } from 'react-cookie';
-import Header from '../layout/Header';
-import Footer from '../layout/Footer';
-import SpinnerComp from '../common/SpinnerComp';
+import Header from '../../src/components/layout/Header';
+import Footer from '../../src/components/layout/Footer';
+import SpinnerComp from '../../src/components/common/SpinnerComp';
 import { Award, Wallet, ShoppingBag, History, ChevronRight, Star, Info, Ticket, TrendingUp, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -13,7 +13,7 @@ const LoyaltyPortalPage = () => {
     const [cookies] = useCookies(['token']);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('card');
-    
+
     // Data states
     const [status, setStatus] = useState(null);
     const [myVouchers, setMyVouchers] = useState([]);
@@ -67,7 +67,7 @@ const LoyaltyPortalPage = () => {
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
             <Header />
-            
+
             <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
                 {/* Hero Section / Card */}
                 <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
@@ -75,7 +75,7 @@ const LoyaltyPortalPage = () => {
                         {/* Decorative background elements */}
                         <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
                         <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl"></div>
-                        
+
                         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                             <div className="space-y-4">
                                 <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-sm font-bold border border-white/30">
@@ -86,7 +86,7 @@ const LoyaltyPortalPage = () => {
                                 </h1>
                                 <p className="text-white/80 font-medium">Tổng chi tiêu: {status?.totalSpending?.toLocaleString()} VNĐ</p>
                             </div>
-                            
+
                             {status?.nextTierMinSpending && (
                                 <div className="bg-black/10 backdrop-blur-md p-6 rounded-3xl border border-white/10 w-full md:w-80">
                                     <div className="flex justify-between items-end mb-2">
@@ -94,7 +94,7 @@ const LoyaltyPortalPage = () => {
                                         <span className="text-xs font-bold">{Math.round((status.totalSpending / status.nextTierMinSpending) * 100)}%</span>
                                     </div>
                                     <div className="w-full bg-white/20 h-2.5 rounded-full mb-4 overflow-hidden">
-                                        <div 
+                                        <div
                                             className="h-full bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)] transition-all duration-1000"
                                             style={{ width: `${Math.min(100, (status.totalSpending / status.nextTierMinSpending) * 100)}%` }}
                                         ></div>
@@ -119,11 +119,10 @@ const LoyaltyPortalPage = () => {
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all ${
-                                activeTab === tab.id 
-                                ? 'bg-primary text-white shadow-lg shadow-primary/20' 
-                                : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'
-                            }`}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === tab.id
+                                    ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                                    : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                }`}
                         >
                             <tab.icon size={18} />
                             {tab.label}
@@ -157,7 +156,7 @@ const LoyaltyPortalPage = () => {
                                         "Thanh toán qua ví điện tử VNPay nhanh chóng & tích điểm tức thì."
                                     ].map((tip, i) => (
                                         <div key={i} className="flex items-start gap-4 p-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-sm">
-                                            <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-500">{i+1}</div>
+                                            <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-500">{i + 1}</div>
                                             <p className="text-sm text-gray-700 dark:text-gray-300">{tip}</p>
                                         </div>
                                     ))}
@@ -175,8 +174,8 @@ const LoyaltyPortalPage = () => {
                                     <button onClick={() => setActiveTab('shop')} className="text-primary font-bold hover:underline">Khám phá kho đổi thưởng ngay →</button>
                                 </div>
                             ) : myVouchers.map((uv) => (
-                                <div 
-                                    key={uv.id} 
+                                <div
+                                    key={uv.id}
                                     onClick={() => navigate(`/loyalty/voucher/${uv.id}`)}
                                     className={`group relative bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-6 flex gap-6 overflow-hidden transition-all cursor-pointer ${uv.isUsed ? 'opacity-60 saturate-0' : 'hover:border-primary/50 hover:shadow-xl hover:shadow-primary/5'}`}>
                                     {uv.isUsed && <div className="absolute top-4 right-4 bg-gray-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full rotate-12 z-10">ĐÃ DÙNG</div>}
@@ -212,7 +211,7 @@ const LoyaltyPortalPage = () => {
                                     <div className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-xs font-black shadow-lg shadow-blue-200">
                                         {voucher.pointsRequired} ĐIỂM
                                     </div>
-                                    <button 
+                                    <button
                                         disabled={status?.loyaltyPoints < voucher.pointsRequired}
                                         onClick={() => handleRedeem(voucher.id)}
                                         className="w-full py-3 rounded-2xl text-sm font-bold transition-all bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-primary hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
@@ -257,7 +256,7 @@ const LoyaltyPortalPage = () => {
                     )}
                 </div>
             </main>
-            
+
             <Footer />
         </div>
     );

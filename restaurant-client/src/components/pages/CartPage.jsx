@@ -1,12 +1,12 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import useCartStore from "../../store/useCartStore";
-import { authApis, endpoints } from "../configs/Apis";
+import useCartStore from "../../src/store/useCartStore";
+import { authApis, endpoints } from "../../src/components/configs/Apis";
 import { useCookies } from "react-cookie";
 import { Link, useLocation } from "react-router-dom";
-import SpinnerComp from "../common/SpinnerComp";
+import SpinnerComp from "../../src/components/common/SpinnerComp";
 import { ShoppingCart, Trash2, ArrowLeft, CheckCircle, XCircle, Minus, Plus, ShoppingBag, Tag, Ticket, ChevronDown } from "lucide-react";
-import Header from "../layout/Header";
-import Footer from "../layout/Footer";
+import Header from "../../src/components/layout/Header";
+import Footer from "../../src/components/layout/Footer";
 import toast from 'react-hot-toast';
 
 const CartPage = () => {
@@ -305,126 +305,125 @@ const CartPage = () => {
                                 </div>
 
                                 {/* Discount Input - Premium Custom Dropdown */}
-                                    <div className="flex items-center justify-between mb-3">
-                                        <label className="text-xs font-black text-slate-400 capitalize tracking-widest flex items-center gap-2">
-                                            <Tag size={14} className="text-primary" />
-                                            Mã giảm giá & Ưu đãi
-                                        </label>
-                                        <button 
-                                            onClick={() => {
-                                                setIsManualMode(!isManualMode);
-                                                setSelectedVoucher(null);
-                                                setManualCode("");
-                                                setBackendDiscountInfo(null);
-                                            }}
-                                            className="text-[10px] font-bold text-primary hover:underline"
-                                        >
-                                            {isManualMode ? "Chọn từ ví" : "Nhập mã tay"}
-                                        </button>
-                                    </div>
-                                    
-                                    <div className="relative">
-                                        {isManualMode ? (
-                                            <div className="flex gap-2">
-                                                <div className="relative flex-1">
-                                                    <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                                                    <input 
-                                                        type="text"
-                                                        value={manualCode}
-                                                        onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                                                        placeholder="NHẬP MÃ GIẢM GIÁ"
-                                                        className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:border-primary/50 transition-all"
-                                                    />
-                                                </div>
-                                                <button 
-                                                    onClick={() => handleCheckVoucher(manualCode)}
-                                                    disabled={!manualCode}
-                                                    className="px-6 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-active transition-all disabled:opacity-50"
-                                                >
-                                                    ÁP DỤNG
-                                                </button>
+                                <div className="flex items-center justify-between mb-3">
+                                    <label className="text-xs font-black text-slate-400 capitalize tracking-widest flex items-center gap-2">
+                                        <Tag size={14} className="text-primary" />
+                                        Mã giảm giá & Ưu đãi
+                                    </label>
+                                    <button
+                                        onClick={() => {
+                                            setIsManualMode(!isManualMode);
+                                            setSelectedVoucher(null);
+                                            setManualCode("");
+                                            setBackendDiscountInfo(null);
+                                        }}
+                                        className="text-[10px] font-bold text-primary hover:underline"
+                                    >
+                                        {isManualMode ? "Chọn từ ví" : "Nhập mã tay"}
+                                    </button>
+                                </div>
+
+                                <div className="relative">
+                                    {isManualMode ? (
+                                        <div className="flex gap-2">
+                                            <div className="relative flex-1">
+                                                <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                                <input
+                                                    type="text"
+                                                    value={manualCode}
+                                                    onChange={(e) => setManualCode(e.target.value.toUpperCase())}
+                                                    placeholder="NHẬP MÃ GIẢM GIÁ"
+                                                    className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:border-primary/50 transition-all"
+                                                />
                                             </div>
-                                        ) : (
-                                            <>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowVoucherDropdown(!showVoucherDropdown)}
-                                                    className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl border-2 transition-all duration-300 ${
-                                                        selectedVoucher 
-                                                        ? 'border-primary/30 bg-primary/5 shadow-lg shadow-primary/5' 
+                                            <button
+                                                onClick={() => handleCheckVoucher(manualCode)}
+                                                disabled={!manualCode}
+                                                className="px-6 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-primary-active transition-all disabled:opacity-50"
+                                            >
+                                                ÁP DỤNG
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowVoucherDropdown(!showVoucherDropdown)}
+                                                className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl border-2 transition-all duration-300 ${selectedVoucher
+                                                        ? 'border-primary/30 bg-primary/5 shadow-lg shadow-primary/5'
                                                         : 'border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:border-primary/20'
                                                     }`}
-                                                >
-                                                    <div className="flex items-center gap-3 overflow-hidden">
-                                                        <div className={`p-2 rounded-xl ${selectedVoucher ? 'bg-primary text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
-                                                            <Ticket size={18} />
-                                                        </div>
-                                                        <div className="text-left truncate">
-                                                            {selectedVoucher ? (
-                                                                <>
-                                                                    <p className="text-sm font-black text-slate-900 dark:text-slate-100">{selectedVoucher.voucher.voucherCode}</p>
-                                                                    <p className="text-[10px] font-bold text-primary uppercase">{selectedVoucher.voucher.voucherName}</p>
-                                                                </>
-                                                            ) : (
-                                                                <span className="text-sm font-bold text-slate-400">Chọn voucher từ ví của bạn</span>
-                                                            )}
-                                                        </div>
+                                            >
+                                                <div className="flex items-center gap-3 overflow-hidden">
+                                                    <div className={`p-2 rounded-xl ${selectedVoucher ? 'bg-primary text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+                                                        <Ticket size={18} />
                                                     </div>
-                                                    <ChevronDown size={18} className={`text-slate-400 transition-transform duration-300 ${showVoucherDropdown ? 'rotate-180' : ''}`} />
-                                                </button>
+                                                    <div className="text-left truncate">
+                                                        {selectedVoucher ? (
+                                                            <>
+                                                                <p className="text-sm font-black text-slate-900 dark:text-slate-100">{selectedVoucher.voucher.voucherCode}</p>
+                                                                <p className="text-[10px] font-bold text-primary uppercase">{selectedVoucher.voucher.voucherName}</p>
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-sm font-bold text-slate-400">Chọn voucher từ ví của bạn</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <ChevronDown size={18} className={`text-slate-400 transition-transform duration-300 ${showVoucherDropdown ? 'rotate-180' : ''}`} />
+                                            </button>
 
-                                                {/* Custom Dropdown Menu */}
-                                                {showVoucherDropdown && (
-                                                    <div className="absolute z-50 left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top">
-                                                        <div className="max-h-60 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-800">
+                                            {/* Custom Dropdown Menu */}
+                                            {showVoucherDropdown && (
+                                                <div className="absolute z-50 left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top">
+                                                    <div className="max-h-60 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-800">
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedVoucher(null);
+                                                                setBackendDiscountInfo(null);
+                                                                setShowVoucherDropdown(false);
+                                                            }}
+                                                            className="w-full px-5 py-3 text-left text-xs font-bold text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                                                        >
+                                                            Không sử dụng voucher
+                                                        </button>
+                                                        {vouchers.filter(v => !v.isUsed).length === 0 ? (
+                                                            <div className="px-5 py-8 text-center">
+                                                                <p className="text-xs font-bold text-slate-400">Bạn chưa có voucher nào</p>
+                                                            </div>
+                                                        ) : vouchers.filter(v => !v.isUsed).map(v => (
                                                             <button
+                                                                key={v.id}
                                                                 onClick={() => {
-                                                                    setSelectedVoucher(null);
-                                                                    setBackendDiscountInfo(null);
+                                                                    if (total < v.voucher.minOrderValue) {
+                                                                        toast.error(`Đơn hàng tối thiểu ${formatPrice(v.voucher.minOrderValue)}`);
+                                                                        return;
+                                                                    }
+                                                                    setSelectedVoucher(v);
+                                                                    handleCheckVoucher(v.voucher.voucherCode);
                                                                     setShowVoucherDropdown(false);
                                                                 }}
-                                                                className="w-full px-5 py-3 text-left text-xs font-bold text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                                                                className={`w-full px-5 py-4 text-left flex items-start gap-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all ${selectedVoucher?.id === v.id ? 'bg-primary/5' : ''}`}
                                                             >
-                                                                Không sử dụng voucher
-                                                            </button>
-                                                            {vouchers.filter(v => !v.isUsed).length === 0 ? (
-                                                                <div className="px-5 py-8 text-center">
-                                                                    <p className="text-xs font-bold text-slate-400">Bạn chưa có voucher nào</p>
+                                                                <div className={`p-2 rounded-xl shrink-0 ${selectedVoucher?.id === v.id ? 'bg-primary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                                                                    <Tag size={16} />
                                                                 </div>
-                                                            ) : vouchers.filter(v => !v.isUsed).map(v => (
-                                                                <button
-                                                                    key={v.id}
-                                                                    onClick={() => {
-                                                                        if (total < v.voucher.minOrderValue) {
-                                                                            toast.error(`Đơn hàng tối thiểu ${formatPrice(v.voucher.minOrderValue)}`);
-                                                                            return;
-                                                                        }
-                                                                        setSelectedVoucher(v);
-                                                                        handleCheckVoucher(v.voucher.voucherCode);
-                                                                        setShowVoucherDropdown(false);
-                                                                    }}
-                                                                    className={`w-full px-5 py-4 text-left flex items-start gap-4 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all ${selectedVoucher?.id === v.id ? 'bg-primary/5' : ''}`}
-                                                                >
-                                                                    <div className={`p-2 rounded-xl shrink-0 ${selectedVoucher?.id === v.id ? 'bg-primary text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
-                                                                        <Tag size={16} />
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex justify-between items-center mb-0.5">
+                                                                        <p className="text-sm font-black text-slate-900 dark:text-slate-100">{v.voucher.voucherCode}</p>
+                                                                        <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                                                                            {v.voucher.voucherType === 'PERCENTAGE' ? `-${v.voucher.discountValue}%` : `-${formatPrice(v.voucher.discountValue)}`}
+                                                                        </span>
                                                                     </div>
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <div className="flex justify-between items-center mb-0.5">
-                                                                            <p className="text-sm font-black text-slate-900 dark:text-slate-100">{v.voucher.voucherCode}</p>
-                                                                            <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                                                                                {v.voucher.voucherType === 'PERCENTAGE' ? `-${v.voucher.discountValue}%` : `-${formatPrice(v.voucher.discountValue)}`}
-                                                                            </span>
-                                                                        </div>
-                                                                        <p className="text-[11px] font-bold text-slate-500 line-clamp-1">{v.voucher.voucherName}</p>
-                                                                    </div>
-                                                                </button>
-                                                            ))}
-                                                        </div>
+                                                                    <p className="text-[11px] font-bold text-slate-500 line-clamp-1">{v.voucher.voucherName}</p>
+                                                                </div>
+                                                            </button>
+                                                        ))}
                                                     </div>
-                                                )}
-                                            </>
-                                        )}
-                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
 
                                 {/* Total Breakdown - High Contrast */}
                                 <div className="space-y-4 py-6 border-t border-slate-100 dark:border-slate-800 mb-6">
@@ -497,7 +496,7 @@ const CartPage = () => {
                                 <p className="text-sm text-gray-500 mb-6">
                                     Cảm ơn bạn đã lựa chọn nhà hàng. Đơn hàng của bạn đang được chuẩn bị.
                                 </p>
-                                
+
                                 {bill && (
                                     <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl p-5 mb-6 text-left space-y-3 border border-gray-100 dark:border-gray-700">
                                         <div className="flex justify-between text-sm">

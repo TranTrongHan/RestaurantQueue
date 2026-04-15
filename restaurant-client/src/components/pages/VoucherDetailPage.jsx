@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { authApis, endpoints } from '../configs/Apis';
+import { authApis, endpoints } from '../../src/components/configs/Apis';
 import { useCookies } from 'react-cookie';
-import Header from '../layout/Header';
-import Footer from '../layout/Footer';
-import SpinnerComp from '../common/SpinnerComp';
-import { 
-    Ticket, 
-    Calendar, 
-    Info, 
-    ChevronLeft, 
-    Copy, 
-    CheckCircle2, 
-    Clock, 
+import Header from '../../src/components/layout/Header';
+import Footer from '../../src/components/layout/Footer';
+import SpinnerComp from '../../src/components/common/SpinnerComp';
+import {
+    Ticket,
+    Calendar,
+    Info,
+    ChevronLeft,
+    Copy,
+    CheckCircle2,
+    Clock,
     AlertCircle,
     ShoppingBag,
     Tag,
@@ -74,7 +74,7 @@ const VoucherDetailPage = () => {
 
             <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
                 {/* Back Link */}
-                <button 
+                <button
                     onClick={() => navigate('/loyalty')}
                     className="flex items-center gap-2 text-slate-500 hover:text-primary transition-colors mb-8 group"
                 >
@@ -89,7 +89,7 @@ const VoucherDetailPage = () => {
                             {/* Decorative bubbles */}
                             <div className="absolute top-0 right-0 -mr-10 -mt-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
                             <div className="absolute bottom-0 left-0 -ml-10 -mb-10 w-40 h-40 bg-black/10 rounded-full blur-2xl"></div>
-                            
+
                             <div className="relative z-10 h-full flex flex-col justify-between">
                                 <div className="flex justify-between items-start">
                                     <div className="bg-white/20 backdrop-blur-md p-3 rounded-2xl border border-white/30">
@@ -102,8 +102,8 @@ const VoucherDetailPage = () => {
 
                                 <div className="space-y-4">
                                     <h2 className="text-3xl font-black leading-tight">
-                                        {voucher.voucherType === 'PERCENTAGE' 
-                                            ? `Giảm ${voucher.discountValue}%` 
+                                        {voucher.voucherType === 'PERCENTAGE'
+                                            ? `Giảm ${voucher.discountValue}%`
                                             : `Giảm ${formatCurrency(voucher.discountValue)}`}
                                     </h2>
                                     <div className="space-y-1">

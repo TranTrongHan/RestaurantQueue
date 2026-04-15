@@ -100,7 +100,7 @@ const MyOnlineOrderPage = () => {
                                     <div className="w-1 h-4 bg-primary rounded-full"></div>
                                     <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Danh sách món ăn</h4>
                                 </div>
-                                
+
                                 <div className="space-y-4 mb-10">
                                     {(order.orderItems || []).map((item) => (
                                         <div key={item.orderItemId} className="flex items-center gap-6 p-5 bg-slate-50 dark:bg-slate-800/40 rounded-3xl border border-transparent hover:border-primary/10 hover:bg-white dark:hover:bg-slate-800 transition-all group/item">
@@ -114,7 +114,7 @@ const MyOnlineOrderPage = () => {
                                                     x{item.quantity}
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-start mb-4">
                                                     <div>
@@ -128,7 +128,7 @@ const MyOnlineOrderPage = () => {
                                                         <p className="font-black text-primary text-lg leading-none">{formatPrice(item.price * item.quantity)}</p>
                                                     </div>
                                                 </div>
-                                                
+
                                                 <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400">
                                                     <span className="flex items-center gap-1">Đơn giá: {formatPrice(item.price)}</span>
                                                 </div>
@@ -140,7 +140,7 @@ const MyOnlineOrderPage = () => {
                                 {/* Order Footer Section */}
                                 <div className="grid md:grid-cols-2 gap-6 p-6 bg-slate-900 dark:bg-slate-950 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
                                     <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-primary/10 rounded-full blur-3xl"></div>
-                                    
+
                                     <div className="relative z-10">
                                         <div className="flex items-center gap-2 mb-4">
                                             <div className="w-1 h-3 bg-primary rounded-full"></div>
@@ -176,7 +176,7 @@ const MyOnlineOrderPage = () => {
                                                     </div>
                                                 )}
                                             </div>
-                                            
+
                                             <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Tổng tiền thanh toán</p>
                                             <p className="text-3xl font-black text-white tracking-tighter mb-3">
                                                 {(order.totalAmount !== undefined && order.totalAmount !== null) ? formatPrice(order.totalAmount) : formatPrice(getTotalAmount(order.orderItems))}
