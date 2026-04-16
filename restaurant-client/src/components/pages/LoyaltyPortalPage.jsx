@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authApis, endpoints } from '../../src/components/configs/Apis';
+
 import { useCookies } from 'react-cookie';
-import Header from '../../src/components/layout/Header';
-import Footer from '../../src/components/layout/Footer';
-import SpinnerComp from '../../src/components/common/SpinnerComp';
+
 import { Award, Wallet, ShoppingBag, History, ChevronRight, Star, Info, Ticket, TrendingUp, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Header from '../layout/Header';
+import SpinnerComp from '../common/SpinnerComp';
+import Footer from '../layout/Footer';
+import { authApis, endpoints } from '../configs/Apis';
 
 const LoyaltyPortalPage = () => {
     const navigate = useNavigate();
@@ -120,8 +122,8 @@ const LoyaltyPortalPage = () => {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === tab.id
-                                    ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                                    : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                                : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'
                                 }`}
                         >
                             <tab.icon size={18} />

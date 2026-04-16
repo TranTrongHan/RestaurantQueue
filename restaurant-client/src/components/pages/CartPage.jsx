@@ -1,13 +1,16 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import useCartStore from "../../src/store/useCartStore";
-import { authApis, endpoints } from "../../src/components/configs/Apis";
+import useCartStore from "../../store/useCartStore";
+
 import { useCookies } from "react-cookie";
 import { Link, useLocation } from "react-router-dom";
-import SpinnerComp from "../../src/components/common/SpinnerComp";
+
 import { ShoppingCart, Trash2, ArrowLeft, CheckCircle, XCircle, Minus, Plus, ShoppingBag, Tag, Ticket, ChevronDown } from "lucide-react";
-import Header from "../../src/components/layout/Header";
-import Footer from "../../src/components/layout/Footer";
+
+import Header from "../layout/Header";
+import Footer from "../layout/Footer";
+import SpinnerComp from "../common/SpinnerComp";
 import toast from 'react-hot-toast';
+import { authApis, endpoints } from "../configs/Apis";
 
 const CartPage = () => {
     const { cart, addItem, removeItem: storeRemoveItem, clearCart: storeClearCart, updateItemId } = useCartStore();
@@ -350,8 +353,8 @@ const CartPage = () => {
                                                 type="button"
                                                 onClick={() => setShowVoucherDropdown(!showVoucherDropdown)}
                                                 className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl border-2 transition-all duration-300 ${selectedVoucher
-                                                        ? 'border-primary/30 bg-primary/5 shadow-lg shadow-primary/5'
-                                                        : 'border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:border-primary/20'
+                                                    ? 'border-primary/30 bg-primary/5 shadow-lg shadow-primary/5'
+                                                    : 'border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:border-primary/20'
                                                     }`}
                                             >
                                                 <div className="flex items-center gap-3 overflow-hidden">

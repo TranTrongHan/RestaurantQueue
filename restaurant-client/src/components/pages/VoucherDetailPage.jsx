@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { authApis, endpoints } from '../../src/components/configs/Apis';
+
 import { useCookies } from 'react-cookie';
-import Header from '../../src/components/layout/Header';
-import Footer from '../../src/components/layout/Footer';
-import SpinnerComp from '../../src/components/common/SpinnerComp';
+
 import {
     Ticket,
     Calendar,
@@ -19,6 +17,11 @@ import {
     ArrowRight
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+import Header from '../layout/Header';
+import SpinnerComp from '../common/SpinnerComp';
+import Footer from '../layout/Footer';
+import { authApis, endpoints } from '../configs/Apis';
 
 const VoucherDetailPage = () => {
     const { id } = useParams();

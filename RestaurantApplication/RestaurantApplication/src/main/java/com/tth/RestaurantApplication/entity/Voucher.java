@@ -59,6 +59,9 @@ public class Voucher {
     @Column(name = "points_required")
     private Integer pointsRequired = 0;
 
+    @Column(name = "is_point_apply")
+    private Boolean isPointApply = true;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "apply_type", nullable = false)
     private ApplyType applyType = ApplyType.BOTH;

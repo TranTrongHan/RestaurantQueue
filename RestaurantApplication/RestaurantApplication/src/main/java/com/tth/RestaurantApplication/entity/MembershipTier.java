@@ -37,6 +37,9 @@ public class MembershipTier {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "max_point_redemption_pct")
+    private Integer maxPointRedemptionPct;
+
     @OneToMany(mappedBy = "membershipTier")
     private List<User> users;
 }

@@ -7,7 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.security.AuthProvider;
+import java.math.BigDecimal;
+
 import java.time.LocalDate;
 import java.util.List;
 
@@ -61,7 +62,7 @@ public class User {
     private MembershipTier membershipTier;
 
     @Column(name = "total_spending", precision = 19, scale = 2)
-    private java.math.BigDecimal totalSpending;
+    private BigDecimal totalSpending;
 
     @Column(name = "loyalty_points")
     private Integer loyaltyPoints;

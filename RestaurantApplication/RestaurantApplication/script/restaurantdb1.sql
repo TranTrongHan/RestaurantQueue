@@ -13,13 +13,14 @@ CREATE TABLE `membership_tier` (
     `tier_name` VARCHAR(255) NOT NULL,
     `min_spending` DECIMAL(19, 2) NOT NULL,
     `point_earning_rate` DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+    `max_point_redemption_pct` INT DEFAULT 20,
     `description` TEXT
 ) ENGINE=InnoDB;
 
-INSERT INTO `membership_tier` (`tier_name`, `min_spending`, `point_earning_rate`, `description`) VALUES
-('New Member', 0.00, 1.0, 'Hạng mặc định cho thành viên mới'),
-('Silver', 1000000.00, 1.2, 'Hạng Bạc - Tích điểm x1.2'),
-('Gold', 3000000.00, 1.5, 'Hạng Vàng - Tích điểm x1.5');
+INSERT INTO `membership_tier` (`tier_name`, `min_spending`, `point_earning_rate`, `max_point_redemption_pct`, `description`) VALUES
+('New Member', 0.00, 1.0, 20, 'Hạng mặc định cho thành viên mới'),
+('Silver', 1000000.00, 1.2, 30, 'Hạng Bạc - Tích điểm x1.2 - Dùng điểm tối đa 30%'),
+('Gold', 3000000.00, 1.5, 50, 'Hạng Vàng - Tích điểm x1.5 - Dùng điểm tối đa 50%');
 
 -- Bảng User (đại diện cho mọi người dùng)
 CREATE TABLE `user` (
@@ -40,6 +41,16 @@ CREATE TABLE `user` (
     `loyalty_points` INT DEFAULT 0,
     FOREIGN KEY (`membership_tier_id`) REFERENCES `membership_tier`(`id`)
 ) ENGINE=InnoDB;
+
+-- Bảng LoyaltyConfig (Cấu hình hệ thống Loyalty)
+CREATE TABLE `loyalty_config` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT,
+    `point_to_vnd_rate` INT NOT NULL DEFAULT 100,
+    `min_redemption_threshold` INT NOT NULL DEFAULT 500,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+INSERT INTO `loyalty_config` (`point_to_vnd_rate`, `min_redemption_threshold`) VALUES (100, 500);
 
 CREATE TABLE `table` (
     `table_id` INT PRIMARY KEY AUTO_INCREMENT,
@@ -235,7 +246,7 @@ CREATE TABLE `voucher` (
     `is_new_member_voucher` BOOLEAN DEFAULT FALSE,
     `is_level_up_reward` BOOLEAN DEFAULT FALSE,
     `points_required` INT DEFAULT 0,
-    `apply_type` ENUM('ONLINE', 'DINE_IN', 'BOTH') NOT NULL DEFAULT 'BOTH',
+    `is_point_apply` BOOLEAN DEFAULT TRUE,
     `description` TEXT,
     FOREIGN KEY (`target_tier_id`) REFERENCES `membership_tier`(`id`)
 ) ENGINE=InnoDB;
@@ -243,8 +254,8 @@ CREATE TABLE `voucher` (
 INSERT INTO `voucher` (`voucher_code`, `voucher_name`, `voucher_type`, `discount_value`, `max_discount_amount`, `min_order_value`, `start_date`, `end_date`, `is_new_member_voucher`, `apply_type`, `description`) VALUES
 ('WELCOME50', 'Voucher Chào Mừng', 'PERCENTAGE', 50.00, 50000.00, 100000.00, '2024-01-01 00:00:00', '2026-12-31 23:59:59', TRUE, 'BOTH', 'Giảm 50% tối đa 50k cho thành viên mới');
 
-INSERT INTO `voucher` (`voucher_code`, `voucher_name`, `voucher_type`, `discount_value`, `max_discount_amount`, `min_order_value`, `start_date`, `end_date`, `target_tier_id`, `is_level_up_reward`, `apply_type`, `description`) VALUES
-('SILVER10', 'Thăng hạng Bạc', 'PERCENTAGE', 10.00, 100000.00, 200000.00, '2024-01-01 00:00:00', '2026-12-31 23:59:59', 2, TRUE, 'BOTH', 'Giảm 10% tối đa 100k mừng lên hạng Bạc');
+INSERT INTO `voucher` (`voucher_code`, `voucher_name`, `voucher_type`, `discount_value`, `max_discount_amount`, `min_order_value`, `start_date`, `end_date`, `target_tier_id`, `is_level_up_reward`, `is_point_apply`, `apply_type`, `description`) VALUES
+('SILVER10', 'Thăng hạng Bạc', 'PERCENTAGE', 10.00, 100000.00, 200000.00, '2024-01-01 00:00:00', '2026-12-31 23:59:59', 2, TRUE, TRUE, 'BOTH', 'Giảm 10% tối đa 100k mừng lên hạng Bạc');
 
 -- Bảng UserVoucher (Kho Voucher của khách)
 CREATE TABLE `user_voucher` (

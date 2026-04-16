@@ -12,15 +12,22 @@ Quản lý các cấp bậc khách hàng.
 - `tier_name`: Tên hạng (New Member, Silver, Gold).
 - `min_spending`: Ngưỡng chi tiêu để đạt hạng này.
 - `point_earning_rate`: Tỷ lệ tích điểm cộng thêm (Ví dụ: 1.0, 1.2, 1.5).
+- `max_point_redemption_pct`: **[NEW]** % tối đa hóa đơn có thể thanh toán bằng điểm (Admin chỉnh được).
 - `description`: Mô tả đặc quyền.
 
-### 2. User (Cập nhật)
+### 2. LoyaltyConfig (Cấu hình hệ thống) **[NEW]**
+Lưu trữ các tham số cấu hình toàn cục cho hệ thống Loyalty.
+- `id`: Primary Key.
+- `point_to_vnd_rate`: Giá trị quy đổi của 1 điểm sang VNĐ (VD: 1 điểm = 100đ).
+- `min_redemption_threshold`: Số điểm tối thiểu để bắt đầu được dùng (VD: 500 điểm).
+
+### 3. User (Cập nhật)
 Lưu trữ thông tin thành viên hiện tại.
 - `membership_tier_id`: Foreign Key đến hạng hiện tại.
 - `total_spending`: Tổng số tiền đã tiêu lũy kế (để thăng hạng).
-- `loyalty_points`: Số điểm hiện có.
+- `loyalty_points`: Số điểm hiện có (Số dư dùng để thanh toán).
 
-### 3. MembershipHistory (Lịch sử thăng hạng)
+### 4. MembershipHistory (Lịch sử thăng hạng)
 Lưu vết các mốc thăng hạng để làm báo cáo Marketing.
 - `id`: Primary Key.
 - `user_id`: Foreign Key.
@@ -28,7 +35,7 @@ Lưu vết các mốc thăng hạng để làm báo cáo Marketing.
 - `new_tier_id`: Hạng mới.
 - `changed_at`: Ngày thay đổi.
 
-### 4. Voucher (Định nghĩa Voucher)
+### 5. Voucher (Định nghĩa Voucher)
 Chi tiết các chương trình khuyến mãi.
 - `id`: Primary Key.
 - `voucher_code`: Mã giảm giá (VD: SILVER2024).
@@ -40,20 +47,21 @@ Chi tiết các chương trình khuyến mãi.
 - `target_tier_id`: Chỉ dành cho hạng nào (Optional).
 - `is_new_member_voucher`: Tặng khi đăng ký.
 - `is_level_up_reward`: Tặng khi thăng hạng.
+- `is_point_apply`: **[NEW]** Cho phép dùng kèm điểm thành viên hay không.
 - `points_required`: Điểm cần để đổi (nếu có).
 - `apply_type`: `ONLINE`, `DINE_IN`, hoặc `BOTH`.
 
-### 5. UserVoucher (Kho Voucher của khách)
+### 6. UserVoucher (Kho Voucher của khách)
 - `user_id`, `voucher_id`, `is_used`, `acquired_at`, `used_at`.
 
-### 6. PointTransaction (Lịch sử điểm thưởng) - TÍNH MINH BẠCH CAO
+### 7. PointTransaction (Lịch sử điểm thưởng)
 - `id`: Primary Key.
 - `user_id`: Foreign Key.
 - `base_points`: Điểm tính từ Bill.
 - `bonus_points`: Điểm thưởng thêm nhờ Hạng.
-- `amount`: Tổng điểm thay đổi.
+- `amount`: Tổng điểm thay đổi (Có thể âm nếu là giao dịch REDEEM).
 - `transaction_type`: `EARN`, `REDEEM`, `ADJUST`.
-- `description`: Text chi tiết (VD: "Tích 12 điểm - 10 gốc + 2 thưởng VIP").
+- `description`: Text chi tiết (VD: "Dùng 500 điểm thanh toán hóa đơn #123").
 - `bill_id`: ID hóa đơn liên quan.
 
 ---
@@ -65,11 +73,17 @@ Chi tiết các chương trình khuyến mãi.
    - Tặng Voucher dành cho người mới (nếu có cấu hình).
 
 2. **Giai đoạn Thanh toán (Online/Tại bàn):**
-   - Áp dụng Voucher (nếu có) -> Tính số tiền sau cùng (`total_amount`).
-   - Sau khi thanh toán thành công:
-     - Tính điểm: `Base = Total * Rate_Gốc`, `Bonus = Base * (Earning_Rate - 1)`.
-     - Lưu giao dịch điểm và thăng hạng nếu tổng chi tiêu đạt ngưỡng.
-     - Tặng Voucher thăng hạng tương ứng.
+   - **Thứ tự áp dụng:** `[Tổng hóa đơn] -> [Áp dụng Voucher] -> [Dùng điểm thành viên] = [Số tiền thực trả]`.
+   - **Luồng dùng điểm:**
+     - Kiểm tra `is_point_apply` của Voucher.
+     - Kiểm tra số dư điểm >= `min_redemption_threshold`.
+     - Tính số tiền giảm dựa trên `point_to_vnd_rate` nhưng không vượt quá `max_point_redemption_pct` của Hạng.
+   - **Sau khi thanh toán thành công:**
+     - Trừ điểm đã dùng (nếu có).
+     - Tính điểm thưởng mới: `Base = PaidAmount * Rate_Gốc`, `Bonus = Base * (Earning_Rate - 1)`.
+     - Cộng điểm vào `loyalty_points`.
+     - Tăng `total_spending` để xét thăng hạng (Cơ chế bảo vệ hạng: Dùng điểm không làm giảm `total_spending`).
+     - Tặng Voucher thăng hạng nếu có.
 
 3. **Giai đoạn Đổi điểm:**
    - Khách hàng có thể dùng `loyalty_points` để đổi lấy các Voucher có `points_required > 0`.
@@ -91,9 +105,18 @@ ALTER TABLE user_vouchers ADD INDEX idx_user_status (user_id, is_used);
 
 ---
 
-## IV. CÁC CÂU HỎI MỞ
+## IV. QUẢN TRỊ (ADMIN CONTROL) **[NEW]**
 
-- [ ] Sử dụng **BigDecimal** cho tiền tệ/điểm để tránh sai số dấu phẩy động?
+Admin có quyền điều chỉnh các tham số sau để tối ưu hóa chiến dịch Marketing:
+- Cấu hình tỉ lệ tích điểm và tỉ lệ quy đổi điểm sang tiền toàn hệ thống.
+- Thiết lập giới hạn dùng điểm theo % hóa đơn cho từng hạng thành viên (Gold được dùng nhiều hơn Silver).
+- Bật/tắt tính năng dùng điểm cho từng Voucher cụ thể để tránh "giảm chồng giảm" quá sâu.
+
+---
+
+## V. CÁC CÂU HỎI MỞ
+
+- [x] Sử dụng **BigDecimal** cho tiền tệ/điểm để tránh sai số dấu phẩy động? (Đã đồng ý).
 - [ ] Khởi tạo 3 hạng thành viên ban đầu bằng SQL Script hay viết API Admin để tạo?
 
 ---
