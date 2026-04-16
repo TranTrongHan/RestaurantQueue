@@ -67,10 +67,10 @@ public class RecommendFood {
             return Collections.emptyList();
         }
 
-        return result.getDocuments().stream().map(this::mapToJobResponse).toList();
+        return result.getDocuments().stream().map(this::mapToMenuItemResponse).toList();
     }
 
-    private MenuItemVectorResponse mapToJobResponse(Document doc) {
+    private MenuItemVectorResponse mapToMenuItemResponse(Document doc) {
         log.info("Mapping document ID: {}", doc.getId());
         return MenuItemVectorResponse.builder()
                 .menuItemId(Integer.parseInt(doc.getString("id")))

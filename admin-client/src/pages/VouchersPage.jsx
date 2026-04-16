@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { authApis, endpoints } from '../configs/Apis';
 import useAuthStore from '../store/useAuthStore';
-import { Ticket, Plus, Trash2, Search, Filter, Calendar, Tag, ChevronDown, CheckCircle2, Clock } from 'lucide-react';
+import { Ticket, Plus, Trash2, Search, Filter, Calendar, Tag, ChevronDown, CheckCircle2, Clock, Percent, Banknote, Globe, UtensilsCrossed, Shield, User, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const VouchersPage = () => {
@@ -10,9 +10,11 @@ const VouchersPage = () => {
     const [loading, setLoading] = useState(true);
     const { token } = useAuthStore();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [selectedVoucherId, setSelectedVoucherId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    const [formData, setFormData] = useState({
+    const initialFormState = {
         voucherCode: '',
         voucherName: '',
         voucherType: 'PERCENTAGE', // PERCENTAGE / FIXED
@@ -27,7 +29,81 @@ const VouchersPage = () => {
         pointsRequired: 0,
         applyType: 'BOTH', // ONLINE / DINE_IN / BOTH
         description: ''
-    });
+    };
+
+    const [formData, setFormData] = useState(initialFormState);
+
+    const handleOpenCreateModal = () => {
+        setFormData(initialFormState);
+        setIsEditMode(false);
+        setIsModalOpen(true);
+    };
+
+    const handleOpenEditModal = (voucher) => {
+        setFormData({
+            ...voucher,
+            targetTierId: voucher.targetTierId || '',
+            startDate: voucher.startDate?.split('T')[0] || '',
+            endDate: voucher.endDate?.split('T')[0] || '',
+            // Ensure boolean fields are correctly set
+            isNewMemberVoucher: !!voucher.isNewMemberVoucher,
+            isLevelUpReward: !!voucher.isLevelUpReward
+        });
+        setSelectedVoucherId(voucher.id);
+        setIsEditMode(true);
+        setIsModalOpen(true);
+    };
+
+    const CustomSelect = ({ label, value, options, onChange, placeholder = "Chọn một tùy chọn" }) => {
+        const [isOpen, setIsOpen] = useState(false);
+        const selectedOption = options.find(opt => opt.value === value);
+
+        return (
+            <div className="relative">
+                {label && <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>}
+                <div 
+                    className={`form-input-indigo flex items-center justify-between cursor-pointer group ${isOpen ? 'ring-4 ring-indigo-500/10 border-indigo-500 shadow-sm' : ''}`}
+                    onClick={() => setIsOpen(!isOpen)}
+                >
+                    <div className="flex items-center gap-3">
+                        {selectedOption?.icon && <selectedOption.icon size={16} className="text-indigo-500" />}
+                        <span className={selectedOption ? "text-slate-700 font-bold" : "text-slate-400 font-medium"}>
+                            {selectedOption ? selectedOption.label : placeholder}
+                        </span>
+                    </div>
+                    <ChevronDown size={16} className={`text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+                </div>
+
+                {isOpen && (
+                    <>
+                        <div className="fixed inset-0 z-[60]" onClick={() => setIsOpen(false)}></div>
+                        <div className="absolute z-[70] w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                            <div className="max-h-60 overflow-y-auto">
+                                {options.map((opt) => (
+                                    <div 
+                                        key={opt.value}
+                                        className={`px-4 py-3 hover:bg-slate-50 flex items-center gap-3 cursor-pointer transition-all border-l-4 ${value === opt.value ? 'bg-indigo-50/50 border-indigo-500 text-indigo-700' : 'border-transparent text-slate-600 hover:border-slate-200'}`}
+                                        onClick={() => {
+                                            onChange(opt.value);
+                                            setIsOpen(false);
+                                        }}
+                                    >
+                                        <div className={`p-2 rounded-lg ${value === opt.value ? 'bg-white text-indigo-600 shadow-sm' : 'bg-slate-100 text-slate-400'}`}>
+                                            {opt.icon && <opt.icon size={14} />}
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="font-bold text-sm leading-none mb-1">{opt.label}</span>
+                                            {opt.description && <span className="text-[10px] opacity-60 font-medium">{opt.description}</span>}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+        );
+    };
 
     const fetchData = async () => {
         try {
@@ -51,16 +127,34 @@ const VouchersPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Configuration Validation based on Documentation
+        if (formData.isNewMemberVoucher && formData.isLevelUpReward) {
+            return toast.error("Không thể vừa là Voucher thành viên mới vừa là Thưởng thăng hạng");
+        }
+        if (formData.isLevelUpReward && !formData.targetTierId) {
+            return toast.error("Thưởng thăng hạng yêu cầu chọn Hạng thành viên áp dụng");
+        }
+        if (formData.isNewMemberVoucher && formData.targetTierId) {
+            return toast.error("Voucher thành viên mới không thể giới hạn Hạng thành viên");
+        }
+
         try {
-            // Convert strings to proper types if needed
             const payload = {
                 ...formData,
                 targetTierId: formData.targetTierId ? parseInt(formData.targetTierId) : null,
                 startDate: formData.startDate + "T00:00:00",
                 endDate: formData.endDate + "T23:59:59"
             };
-            await authApis(token).post(endpoints.admin_vouchers, payload);
-            toast.success("Tạo voucher thành công");
+
+            if (isEditMode) {
+                await authApis(token).put(`${endpoints.admin_vouchers}/${selectedVoucherId}`, payload);
+                toast.success("Cập nhật voucher thành công");
+            } else {
+                await authApis(token).post(endpoints.admin_vouchers, payload);
+                toast.success("Tạo voucher thành công");
+            }
+            
             setIsModalOpen(false);
             fetchData();
         } catch (error) {
@@ -97,7 +191,7 @@ const VouchersPage = () => {
                     <p className="text-slate-500 text-sm">Tạo và quản lý các chương trình ưu đãi, khuyến mãi</p>
                 </div>
                 <button
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={handleOpenCreateModal}
                     className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-indigo-200 font-medium"
                 >
                     <Plus size={18} /> Tạo Voucher mới
@@ -145,9 +239,14 @@ const VouchersPage = () => {
                                 }`}>
                                     {isExpired(voucher.endDate) ? 'Hết hạn' : isUpcoming(voucher.startDate) ? 'Sắp tới' : 'Đang chạy'}
                                 </span>
-                                <button onClick={() => handleDelete(voucher.id)} className="text-slate-300 hover:text-red-500 transition-colors">
-                                    <Trash2 size={16} />
-                                </button>
+                                <div className="flex gap-2">
+                                    <button onClick={() => handleOpenEditModal(voucher)} className="text-slate-300 hover:text-indigo-500 transition-colors">
+                                        <Pencil size={16} />
+                                    </button>
+                                    <button onClick={() => handleDelete(voucher.id)} className="text-slate-300 hover:text-red-500 transition-colors">
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
                             </div>
 
                             <h3 className="font-bold text-slate-800 text-lg leading-tight mb-1">{voucher.voucherName}</h3>
@@ -186,7 +285,10 @@ const VouchersPage = () => {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-indigo-600 text-white">
-                            <h2 className="text-xl font-bold flex items-center gap-2"><Plus /> Thiết lập Voucher mới</h2>
+                            <h2 className="text-xl font-bold flex items-center gap-2">
+                                {isEditMode ? <Pencil size={20} /> : <Plus />} 
+                                {isEditMode ? 'Cập nhật Voucher' : 'Thiết lập Voucher mới'}
+                            </h2>
                             <button onClick={() => setIsModalOpen(false)} className="hover:rotate-90 transition-transform"><Plus className="rotate-45" /></button>
                         </div>
                         
@@ -196,8 +298,8 @@ const VouchersPage = () => {
                                 <div className="space-y-4">
                                     <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest border-b pb-1">Thông tin cơ bản</h4>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Mã Voucher *</label>
-                                        <input type="text" required className="form-input-indigo w-full" placeholder="VD: TET2024" 
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">Mã Voucher {isEditMode && '(Không thể thay đổi)'}</label>
+                                        <input type="text" required disabled={isEditMode} className={`form-input-indigo w-full ${isEditMode ? 'bg-slate-50 cursor-not-allowed opacity-70' : ''}`} placeholder="VD: TET2024" 
                                             value={formData.voucherCode} onChange={e => setFormData({...formData, voucherCode: e.target.value.toUpperCase()})} />
                                     </div>
                                     <div>
@@ -217,14 +319,15 @@ const VouchersPage = () => {
                                     <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest border-b pb-1">Cấu hình giảm giá</h4>
                                     <div className="flex gap-4">
                                         <div className="flex-1">
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Loại giảm</label>
-                                            <div className="relative group">
-                                                <select className="form-input-indigo w-full appearance-none cursor-pointer pr-10 hover:border-indigo-300 transition-all" value={formData.voucherType} onChange={e => setFormData({...formData, voucherType: e.target.value})}>
-                                                    <option value="PERCENTAGE">Phần trăm (%)</option>
-                                                    <option value="FIXED">Số tiền cố định (đ)</option>
-                                                </select>
-                                                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-indigo-500 transition-colors pointer-events-none" />
-                                            </div>
+                                    <CustomSelect 
+                                        label="Loại giảm"
+                                        value={formData.voucherType}
+                                        onChange={val => setFormData({...formData, voucherType: val})}
+                                        options={[
+                                            { value: 'PERCENTAGE', label: 'Phần trăm', description: 'Giảm theo % tổng đơn', icon: Percent },
+                                            { value: 'FIXED', label: 'Cố định', description: 'Trừ thẳng vào hóa đơn', icon: Banknote }
+                                        ]}
+                                    />
                                         </div>
                                         <div className="flex-1">
                                             <label className="block text-sm font-medium text-slate-700 mb-1">Giá trị giảm *</label>
@@ -241,17 +344,16 @@ const VouchersPage = () => {
                                             <input type="number" className="form-input-indigo w-full" value={formData.minOrderValue} onChange={e => setFormData({...formData, minOrderValue: e.target.value})} />
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Loại đơn áp dụng</label>
-                                        <div className="relative group">
-                                            <select className="form-input-indigo w-full appearance-none cursor-pointer pr-10 hover:border-indigo-300 transition-all" value={formData.applyType} onChange={e => setFormData({...formData, applyType: e.target.value})}>
-                                                <option value="BOTH">Tất cả (Online & Tại chỗ)</option>
-                                                <option value="ONLINE">Chỉ đặt Online</option>
-                                                <option value="DINE_IN">Chỉ tại chỗ</option>
-                                            </select>
-                                            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-indigo-500 transition-colors pointer-events-none" />
-                                        </div>
-                                    </div>
+                                    <CustomSelect 
+                                        label="Loại đơn áp dụng"
+                                        value={formData.applyType}
+                                        onChange={val => setFormData({...formData, applyType: val})}
+                                        options={[
+                                            { value: 'BOTH', label: 'Tất cả đơn hàng', description: 'Áp dụng cho mọi hình thức', icon: Globe },
+                                            { value: 'ONLINE', label: 'Chỉ đặt Online', description: 'Áp dụng cho đơn qua web/app', icon: Globe },
+                                            { value: 'DINE_IN', label: 'Chỉ tại chỗ', description: 'Áp dụng cho đơn tại quán', icon: UtensilsCrossed }
+                                        ]}
+                                    />
                                 </div>
 
                                 {/* Rules & Targets */}
@@ -267,16 +369,21 @@ const VouchersPage = () => {
                                             <input type="date" required className="form-input-indigo w-full" value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} />
                                         </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700 mb-1">Hạng thành viên áp dụng (Tất cả nếu bỏ trống)</label>
-                                        <div className="relative group">
-                                            <select className="form-input-indigo w-full appearance-none cursor-pointer pr-10 hover:border-indigo-300 transition-all" value={formData.targetTierId} onChange={e => setFormData({...formData, targetTierId: e.target.value})}>
-                                                <option value="">-- Tất cả các hạng --</option>
-                                                {tiers.map(t => <option key={t.id} value={t.id}>{t.tierName}</option>)}
-                                            </select>
-                                            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-indigo-500 transition-colors pointer-events-none" />
-                                        </div>
-                                    </div>
+                                    <CustomSelect 
+                                        label="Hạng thành viên áp dụng"
+                                        value={formData.targetTierId}
+                                        onChange={val => setFormData({...formData, targetTierId: val})}
+                                        placeholder="-- Tất cả các hạng --"
+                                        options={[
+                                            { value: '', label: 'Tất cả các hạng', description: 'Ai cũng có thể sử dụng', icon: User },
+                                            ...tiers.map(t => ({
+                                                value: t.id,
+                                                label: t.tierName,
+                                                description: `Tối thiểu ${t.minSpend?.toLocaleString()}đ chi tiêu`,
+                                                icon: Shield
+                                            }))
+                                        ]}
+                                    />
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-1">Điểm yêu cầu đổi (0 nếu cho không)</label>
                                         <input type="number" className="form-input-indigo w-full text-blue-600 font-bold" value={formData.pointsRequired} onChange={e => setFormData({...formData, pointsRequired: e.target.value})} />
@@ -314,7 +421,9 @@ const VouchersPage = () => {
 
                             <div className="flex gap-4 pt-4">
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-bold hover:bg-slate-50 transition-colors">Hủy bỏ</button>
-                                <button type="submit" className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200">Kích hoạt Voucher</button>
+                                <button type="submit" className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200">
+                                    {isEditMode ? 'Lưu thay đổi' : 'Kích hoạt Voucher'}
+                                </button>
                             </div>
                         </form>
                     </div>

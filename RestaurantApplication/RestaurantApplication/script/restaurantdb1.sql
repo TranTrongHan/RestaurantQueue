@@ -120,6 +120,7 @@ CREATE TABLE `order` (
     `applied_voucher_code` VARCHAR(255) DEFAULT NULL,
     `create_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `is_paid` BOOLEAN DEFAULT FALSE,
+    `status` ENUM('PENDING', 'SUCCESS', 'FAILED', 'CANCELLED') DEFAULT 'PENDING',
     FOREIGN KEY (`session_id`) REFERENCES `order_session`(`session_id`) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (`online_order_id`) REFERENCES `online_order`(`online_order_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
@@ -246,6 +247,7 @@ CREATE TABLE `voucher` (
     `is_new_member_voucher` BOOLEAN DEFAULT FALSE,
     `is_level_up_reward` BOOLEAN DEFAULT FALSE,
     `points_required` INT DEFAULT 0,
+    `apply_type` ENUM('ONLINE', 'DINE_IN', 'BOTH') NOT NULL DEFAULT 'BOTH',
     `is_point_apply` BOOLEAN DEFAULT TRUE,
     `description` TEXT,
     FOREIGN KEY (`target_tier_id`) REFERENCES `membership_tier`(`id`)

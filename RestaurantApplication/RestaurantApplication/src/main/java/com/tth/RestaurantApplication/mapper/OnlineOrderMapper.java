@@ -14,6 +14,6 @@ public interface OnlineOrderMapper {
     @Mapping(source = "order.bill.subTotal", target = "subTotal")
     @Mapping(source = "order.bill.discountAmount", target = "discountAmount")
     @Mapping(source = "order.bill.totalAmount", target = "totalAmount")
-    @Mapping(source = "order.bill.status", target = "status")
+    @Mapping(source = "order.status", target = "status")
     OnlineOrderResponse toOnlineOrderResponse(OnlineOrder onlineOrder);
 }

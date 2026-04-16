@@ -2,6 +2,7 @@ package com.tth.RestaurantApplication.service;
 
 import com.tth.RestaurantApplication.dto.request.AdjustPointsRequest;
 import com.tth.RestaurantApplication.dto.request.VoucherCreateRequest;
+import com.tth.RestaurantApplication.dto.request.VoucherUpdateRequest;
 import com.tth.RestaurantApplication.dto.response.*;
 import com.tth.RestaurantApplication.entity.*;
 import com.tth.RestaurantApplication.exception.AppException;
@@ -269,30 +270,77 @@ public class VoucherService {
                 .build();
         final Voucher savedVoucher = voucherRepository.save(voucher);
 
-        // Phân phát voucher cho khách hàng nếu không phải loại nhận điều kiện (LevelUp/NewMember/Đổi điểm)
-        if (!Boolean.TRUE.equals(savedVoucher.getIsNewMemberVoucher()) && 
-            !Boolean.TRUE.equals(savedVoucher.getIsLevelUpReward()) && 
-            (savedVoucher.getPointsRequired() == null || savedVoucher.getPointsRequired() == 0)) {
-            
+        // Phân phát voucher cho khách hàng nếu không phải loại nhận điều kiện
+        // (LevelUp/NewMember/Đổi điểm)
+        if (!Boolean.TRUE.equals(savedVoucher.getIsNewMemberVoucher()) &&
+                !Boolean.TRUE.equals(savedVoucher.getIsLevelUpReward()) &&
+                (savedVoucher.getPointsRequired() == null || savedVoucher.getPointsRequired() == 0)) {
+
             List<User> targetUsers;
             if (targetTier == null) {
                 targetUsers = userRepository.findByRole(User.Role.CUSTOMER);
             } else {
                 targetUsers = userRepository.findByMembershipTierAndRole(targetTier, User.Role.CUSTOMER);
             }
-            
+
             List<UserVoucher> userVouchers = targetUsers.stream().map(u -> UserVoucher.builder()
                     .user(u)
                     .voucher(savedVoucher)
                     .isUsed(false)
                     .acquiredAt(LocalDateTime.now())
                     .build()).collect(Collectors.toList());
-                    
+
             userVoucherRepository.saveAll(userVouchers);
-            log.info("Distributed voucher {} to {} targeted customers.", savedVoucher.getVoucherCode(), userVouchers.size());
+            log.info("Distributed voucher {} to {} targeted customers.", savedVoucher.getVoucherCode(),
+                    userVouchers.size());
         }
 
         return toVoucherResponse(savedVoucher);
+    }
+
+    @Transactional
+    public VoucherResponse updateVoucher(Integer voucherId, VoucherUpdateRequest request) {
+        Voucher voucher = voucherRepository.findById(voucherId)
+                .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_NOT_FOUND));
+
+        // 1. Validation logic for conflicting flags
+        boolean isNewMember = Boolean.TRUE.equals(request.getIsNewMemberVoucher());
+        boolean isLevelUp = Boolean.TRUE.equals(request.getIsLevelUpReward());
+
+        if (isNewMember && isLevelUp) {
+            throw new AppException(ErrorCode.INVALID_VOUCHER_CONFIG);
+        }
+
+        if (isLevelUp && request.getTargetTierId() == null) {
+            throw new AppException(ErrorCode.INVALID_VOUCHER_CONFIG);
+        }
+
+        if (isNewMember && request.getTargetTierId() != null) {
+            throw new AppException(ErrorCode.INVALID_VOUCHER_CONFIG);
+        }
+
+        MembershipTier targetTier = null;
+        if (request.getTargetTierId() != null) {
+            targetTier = membershipTierRepository.findById(request.getTargetTierId())
+                    .orElseThrow(() -> new AppException(ErrorCode.MEMBERSHIP_TIER_NOT_FOUND));
+        }
+
+        // 2. Map fields (voucherCode is NOT updated as per user request)
+        voucher.setVoucherName(request.getVoucherName());
+        voucher.setVoucherType(request.getVoucherType());
+        voucher.setDiscountValue(request.getDiscountValue());
+        voucher.setMaxDiscountAmount(request.getMaxDiscountAmount());
+        voucher.setMinOrderValue(request.getMinOrderValue() != null ? request.getMinOrderValue() : BigDecimal.ZERO);
+        voucher.setStartDate(request.getStartDate());
+        voucher.setEndDate(request.getEndDate());
+        voucher.setTargetTier(targetTier);
+        voucher.setIsNewMemberVoucher(request.getIsNewMemberVoucher() != null ? request.getIsNewMemberVoucher() : false);
+        voucher.setIsLevelUpReward(request.getIsLevelUpReward() != null ? request.getIsLevelUpReward() : false);
+        voucher.setPointsRequired(request.getPointsRequired() != null ? request.getPointsRequired() : 0);
+        voucher.setApplyType(request.getApplyType());
+        voucher.setDescription(request.getDescription());
+
+        return toVoucherResponse(voucherRepository.save(voucher));
     }
 
     @Transactional

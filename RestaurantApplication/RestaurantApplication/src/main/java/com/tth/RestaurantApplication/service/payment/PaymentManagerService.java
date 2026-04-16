@@ -100,6 +100,14 @@ public class PaymentManagerService {
             return finalizePayment(order, params, currentUser);
         } else {
             log.warn("Payment failed for order {} using {}", orderId, type);
+            // Check if it's a cancellation or a generic failure
+            String responseCode = params.get("vnp_ResponseCode");
+            if ("24".equals(responseCode)) {
+                order.setStatus(Order.OrderStatus.CANCELLED);
+            } else {
+                order.setStatus(Order.OrderStatus.FAILED);
+            }
+            orderRepository.save(order);
             throw new AppException(ErrorCode.PAYMENT_FAILED);
         }
     }
@@ -126,6 +134,13 @@ public class PaymentManagerService {
                 finalizePayment(order, params, null);
                 return "{\"RspCode\":\"00\",\"Message\":\"Confirm Success\"}";
             } else {
+                String responseCode = params.get("vnp_ResponseCode");
+                if ("24".equals(responseCode)) {
+                    order.setStatus(Order.OrderStatus.CANCELLED);
+                } else {
+                    order.setStatus(Order.OrderStatus.FAILED);
+                }
+                orderRepository.save(order);
                 return "{\"RspCode\":\"00\",\"Message\":\"Payment failed reported\"}";
             }
         } catch (Exception e) {
@@ -145,6 +160,7 @@ public class PaymentManagerService {
         paymentRequest.setPromotionName(promotionName);
 
         order.setIsPaid(true);
+        order.setStatus(Order.OrderStatus.SUCCESS);
         orderRepository.save(order);
 
         User user = (currentUser != null) ? currentUser

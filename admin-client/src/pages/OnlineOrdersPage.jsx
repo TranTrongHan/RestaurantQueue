@@ -109,6 +109,35 @@ const OnlineOrdersPage = () => {
   const formatPrice = (price) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
   const formatDate = (dateString) => moment(dateString).format("HH:mm, DD/MM/YYYY");
 
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'PENDING':
+        return (
+          <span className="px-4 py-1.5 bg-amber-50 text-amber-600 text-[10px] font-black uppercase rounded-lg border border-amber-100 flex items-center gap-2 w-fit">
+            <Clock size={10} /> Chờ xử lý
+          </span>
+        );
+      case 'SUCCESS':
+        return (
+          <span className="px-4 py-1.5 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase rounded-lg border border-emerald-100 flex items-center gap-2 w-fit">
+            <CheckCircle size={10} /> Hoàn tất
+          </span>
+        );
+      case 'CANCELLED':
+        return (
+          <span className="px-4 py-1.5 bg-rose-50 text-rose-600 text-[10px] font-black uppercase rounded-lg border border-rose-100 flex items-center gap-2 w-fit">
+            <X size={10} /> Đã hủy
+          </span>
+        );
+      default:
+        return (
+          <span className="px-4 py-1.5 bg-slate-50 text-slate-600 text-[10px] font-black uppercase rounded-lg border border-slate-100 flex items-center gap-2 w-fit">
+            <Clock size={10} /> {status}
+          </span>
+        );
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-10">
       {/* Header Section */}
@@ -214,9 +243,9 @@ const OnlineOrdersPage = () => {
                   </td>
                   <td className="px-8 py-6">
                     <div>
-                      <p className="font-black text-slate-800 leading-none mb-1.5">{order.customerName || order.fullName || "—"}</p>
+                      <p className="font-black text-slate-800 leading-none mb-1.5">{order.customer?.fullName || order.fullName || "—"}</p>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <Mail size={10} /> {order.email || "—"}
+                        <Mail size={10} /> {order.customer?.email || order.email || "—"}
                       </p>
                     </div>
                   </td>
@@ -224,15 +253,7 @@ const OnlineOrdersPage = () => {
                     {formatDate(order.createdAt)}
                   </td>
                   <td className="px-8 py-6">
-                    {order.isPaid ? (
-                      <span className="px-4 py-1.5 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase rounded-lg border border-emerald-100 flex items-center gap-2 w-fit">
-                        <CheckCircle size={10} /> Đã thanh toán
-                      </span>
-                    ) : (
-                      <span className="px-4 py-1.5 bg-rose-50 text-rose-600 text-[10px] font-black uppercase rounded-lg border border-rose-100 flex items-center gap-2 w-fit">
-                        <Clock size={10} /> Chờ thanh toán
-                      </span>
-                    )}
+                    {getStatusBadge(order.status)}
                   </td>
                   <td className="px-8 py-6 text-right">
                     <button 
@@ -288,17 +309,17 @@ const OnlineOrdersPage = () => {
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
                       <User size={14} className="text-blue-400" />
-                      <p className="text-sm font-bold">{selectedOrder.customerName || selectedOrder.fullName}</p>
+                      <p className="text-sm font-bold">{selectedOrder.customer?.fullName || selectedOrder.fullName}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <Mail size={14} className="text-blue-400" />
-                      <p className="text-sm font-bold opacity-80">{selectedOrder.email}</p>
+                      <p className="text-sm font-bold opacity-80">{selectedOrder.customer?.email || selectedOrder.email}</p>
                     </div>
                   </div>
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
                         <Phone size={14} className="text-blue-400" />
-                        <p className="text-sm font-bold">{selectedOrder.phone || 'N/A'}</p>
+                        <p className="text-sm font-bold">{selectedOrder.customer?.phone || selectedOrder.phone || 'N/A'}</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <CreditCard size={14} className="text-blue-400" />
@@ -348,11 +369,7 @@ const OnlineOrdersPage = () => {
                 <span className="text-3xl font-black text-blue-600">{formatPrice(selectedOrder.totalAmount || 0)}</span>
               </div>
               <div className="flex items-center gap-3">
-                 {selectedOrder.isPaid ? (
-                    <span className="px-6 py-3 bg-emerald-600 text-white text-[10px] font-black uppercase rounded-2xl shadow-lg shadow-emerald-500/20">Đã thanh toán</span>
-                 ) : (
-                    <span className="px-6 py-3 bg-rose-600 text-white text-[10px] font-black uppercase rounded-2xl shadow-lg shadow-rose-500/20">Chưa thanh toán</span>
-                 )}
+                 {getStatusBadge(selectedOrder.status)}
               </div>
             </div>
           </div>

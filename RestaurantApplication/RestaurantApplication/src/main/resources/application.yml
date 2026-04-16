@@ -95,4 +95,4 @@ logging:
 
 gemini:
   api:
-    key: ${GEMINI_API_KEY:AIzaSyDCs3KJGDYItmIwSFXxDuYd09ViwHTQuJ0}
+    key: ${GEMINI_API_KEY:AQ.Ab8RN6Lqn3kSJi1SJAwLS_ty39NApsfyI2Svga_JILSaMEhYLA}

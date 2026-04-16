@@ -41,4 +41,12 @@ public class Order {
     @OneToOne(mappedBy = "order")
     private Bill bill;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private OrderStatus status;
+
+    public enum OrderStatus {
+        PENDING, SUCCESS, FAILED, CANCELLED
+    }
+
 }

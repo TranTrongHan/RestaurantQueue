@@ -56,7 +56,8 @@ public class OrderManagementService {
         order.setOnlineOrder(onlineOrder);
         order.setOrderSession(null);
         order.setCreatedAt(LocalDateTime.now());
-        order.setIsPaid(true);
+        order.setIsPaid(false);
+        order.setStatus(Order.OrderStatus.PENDING);
         orderRepository.save(order);
         log.info(" order {} created", order.getOrderId());
         return order;
@@ -152,13 +153,12 @@ public class OrderManagementService {
         BigDecimal subTotal = BigDecimal.ZERO;
         BigDecimal discount = BigDecimal.ZERO;
         BigDecimal total = BigDecimal.ZERO;
-        String status = "UNPAID";
+        String status = order.getStatus() != null ? order.getStatus().toString() : "UNPAID";
 
         if (order.getBill() != null) {
             subTotal = order.getBill().getSubTotal();
             discount = order.getBill().getDiscountAmount();
             total = order.getBill().getTotalAmount();
-            status = order.getBill().getStatus().toString();
         }
 
         java.util.Map<String, String> metadata = new java.util.HashMap<>();

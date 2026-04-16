@@ -9,14 +9,15 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface BillRepository extends JpaRepository<Bill,Integer> {
+public interface BillRepository extends JpaRepository<Bill, Integer> {
     @Query("SELECT b FROM Bill b " +
             "JOIN FETCH b.order o " +
             "JOIN FETCH o.orderItems oi " +
             "JOIN FETCH oi.menuItem " +
             "WHERE b.billId = :billId")
     public Bill findByIdWithOrderAndItems(@Param("billId") Integer billId);
+
     boolean existsByOrder_OrderId(Integer orderId);
+
     Optional<Bill> findByOrder_OrderId(Integer orderId);
 }
-

@@ -3,6 +3,7 @@ package com.tth.RestaurantApplication.controller;
 import com.tth.RestaurantApplication.dto.request.AdjustPointsRequest;
 import com.tth.RestaurantApplication.dto.request.ApiResponse;
 import com.tth.RestaurantApplication.dto.request.VoucherCreateRequest;
+import com.tth.RestaurantApplication.dto.request.VoucherUpdateRequest;
 import com.tth.RestaurantApplication.dto.response.MembershipTierResponse;
 import com.tth.RestaurantApplication.dto.response.PointTransactionResponse;
 import com.tth.RestaurantApplication.dto.response.VoucherResponse;
@@ -72,6 +73,15 @@ public class AdminMembershipController {
         return ApiResponse.<VoucherResponse>builder()
                 .result(voucherService.createVoucher(request))
                 .message("Voucher created")
+                .build();
+    }
+
+    @PutMapping("/vouchers/{voucherId}")
+    public ApiResponse<VoucherResponse> updateVoucher(@PathVariable Integer voucherId,
+            @Valid @RequestBody VoucherUpdateRequest request) {
+        return ApiResponse.<VoucherResponse>builder()
+                .result(voucherService.updateVoucher(voucherId, request))
+                .message("Voucher updated")
                 .build();
     }
 
