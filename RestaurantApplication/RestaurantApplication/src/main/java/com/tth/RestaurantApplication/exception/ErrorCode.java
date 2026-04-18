@@ -32,9 +32,6 @@ public enum ErrorCode {
     TOKEN_MISSING(1015, "Authorization token is required"),
     ACCESS_DENIED(1016, "Access denied"),
     UNAUTHORIZED(1017, "Unauthorized access"),
-    COMMENT_TOO_FAST(1018, "Bạn đang bình luận quá nhanh, vui lòng thử lại sau."),
-    COMMENT_DUPLICATE(1019, "Nội dung bình luận bị trùng lặp."),
-    COMMENT_NOT_FOUND(1020, "Không tìm thấy bình luận."),
     FORBIDDEN(9997, "Forbidden access"),
 
     ORDER_SESSION_NOT_FOUND(1024, "Order session not found"),
@@ -75,11 +72,6 @@ public enum ErrorCode {
     // ===== ORDERITEM MANAGEMENT ERRORS =====
     ORDER_ITEM_NOT_FOUND(7001, "OrderItem not found"),
     HAS_ORDER_PENDING(7002, "Can not pay, has order item pending"),
-    // ===== ORDERITEM MANAGEMENT ERRORS =====
-    KITCHEN_ASSIGN_NOT_FOUND(8001, "KitchenAssign not found"),
-
-    // ===== CHEF MANAGEMENT ERRORS =====
-    CHEF_NOT_FOUND(9001, "Chef not found"),
     // ===== GENERAL ERRORS =====
     TABLE_LOCKED_FOR_PAYMENT(3005, "Table is locked for payment. No more orders allowed."),
     INVALID_KEY(9998, "Invalid message key"),

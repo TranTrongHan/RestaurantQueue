@@ -22,8 +22,10 @@ import {
     IceCream,
     Beef,
     Fish,
-    Utensils
+    Utensils,
+    Timer
 } from "lucide-react";
+import moment from "moment";
 import toast from "react-hot-toast";
 import ConfirmModal from "../components/common/ConfirmModal";
 import { db } from "../configs/firebase";
@@ -57,6 +59,14 @@ const CustomerOrderingPage = () => {
     const [activeCategory, setActiveCategory] = useState(null);
     const [activeTab, setActiveTab] = useState("menu"); // menu, tracking, bill
     const [showCart, setShowCart] = useState(false);
+
+    // Helper to safely convert Firestore Timestamp to Date/Moment
+    const toDate = (timestamp) => {
+        if (!timestamp) return null;
+        if (timestamp.toDate) return timestamp.toDate();
+        if (timestamp.seconds) return new Date(timestamp.seconds * 1000);
+        return new Date(timestamp);
+    };
 
     // Data State
     const [categories, setCategories] = useState([]);
@@ -351,12 +361,14 @@ const CustomerOrderingPage = () => {
                     progressColor: "bg-cyan-500"
                 };
             case "SERVED":
+            case "DONE":
                 return {
-                    label: "Đã phục vụ",
-                    icon: <CheckCircle2 size={16} />,
-                    color: "bg-emerald-100 text-emerald-600 border-emerald-200",
+                    label: "Đã xong",
+                    icon: <CheckCircle2 size={18} />,
+                    color: "bg-green-600 text-white border-green-700",
                     step: 4,
-                    progressColor: "bg-emerald-500"
+                    progressColor: "bg-green-500",
+                    isProminent: true
                 };
             case "CANCELLED":
                 return {
@@ -630,7 +642,7 @@ const CustomerOrderingPage = () => {
                                     <div className="py-20 flex flex-col items-center justify-center text-center opacity-40">
                                         <UtensilsCrossed size={64} strokeWidth={1} className="mb-6" />
                                         <p className="text-lg font-bold">Chưa có món nào được đặt</p>
-                                        <p className="text-sm">Hãy chọn món tại Menu và gửi đi!</p>
+                                    <p className="text-sm">Hãy chọn món tại Menu và gửi đi!</p>
                                     </div>
                                 ) : (
                                     <div className="grid gap-6">
@@ -638,6 +650,10 @@ const CustomerOrderingPage = () => {
                                             const config = getStatusConfig(item.status);
                                             const steps = ["PENDING", "COOKING", "READY", "SERVED"];
                                             const currentStepIdx = steps.indexOf(item.status);
+
+                                            const deadline = item.deadlineTime ? moment(toDate(item.deadlineTime)) : null;
+                                            const now = moment();
+                                            const minutesLeft = deadline ? deadline.diff(now, 'minutes') : null;
 
                                             return (
                                                 <div key={item.id} className="group bg-slate-50 rounded-[32px] p-8 border border-slate-100 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-500 relative overflow-hidden">
@@ -651,18 +667,28 @@ const CustomerOrderingPage = () => {
                                                             </div>
                                                             <div>
                                                                 <h4 className="text-lg font-black text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{item.name}</h4>
-                                                                <div className="flex items-center gap-3 mt-1.5">
+                                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-1.5">
                                                                     <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
                                                                         <Hash size={12} /> Số lượng: {item.quantity}
                                                                     </span>
-                                                                    <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
+                                                                    <span className="w-1 h-1 bg-slate-200 rounded-full hidden sm:block"></span>
                                                                     <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                                                                        <Clock size={12} /> {item.orderedAt ? new Date(item.orderedAt?.seconds * 1000).toLocaleTimeString() : "..."}
+                                                                        <Clock size={12} /> {item.orderedAt ? moment(toDate(item.orderedAt)).format('HH:mm') : "..."}
                                                                     </span>
+                                                                    {deadline && (item.status === "PENDING" || item.status === "COOKING") && (
+                                                                        <>
+                                                                            <span className="w-1 h-1 bg-slate-200 rounded-full hidden sm:block"></span>
+                                                                            <span className={`text-xs font-black flex items-center gap-1.5 px-3 py-1 rounded-lg border ${minutesLeft < 5 ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                                                                                <Timer size={14} />
+                                                                                <span>Dự kiến: {deadline.format('HH:mm')} {minutesLeft !== null && `(${minutesLeft > 0 ? `còn ${minutesLeft}p` : 'Sắp xong'})`}</span>
+                                                                            </span>
+                                                                        </>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <div className={`px-5 py-2 rounded-2xl ${config.color} text-[10px] font-black uppercase tracking-widest shadow-sm`}>
+                                                        <div className={`px-5 py-2.5 rounded-2xl ${config.color} ${config.isProminent ? 'text-sm' : 'text-[10px]'} font-black uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all`}>
+                                                            {config.icon}
                                                             {config.label}
                                                         </div>
                                                     </div>

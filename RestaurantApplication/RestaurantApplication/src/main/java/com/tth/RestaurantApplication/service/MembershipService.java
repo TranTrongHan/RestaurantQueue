@@ -24,21 +24,17 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Slf4j
 public class MembershipService {
-
-    UserRepository userRepository;
-    MembershipTierRepository membershipTierRepository;
-    MembershipHistoryRepository membershipHistoryRepository;
-    PointTransactionRepository pointTransactionRepository;
-    VoucherRepository voucherRepository;
-    UserVoucherRepository userVoucherRepository;
-    PointTransactionMapper pointTransactionMapper;
-    MembershipTierMapper membershipTierMapper;
-
-    // ==================== BUSINESS CONSTANT ====================
-    static final BigDecimal POINTS_PER_VND = BigDecimal.valueOf(1000); // 1,000 VNĐ = 1 điểm
+    private final UserRepository userRepository;
+    private final MembershipTierRepository membershipTierRepository;
+    private final MembershipHistoryRepository membershipHistoryRepository;
+    private final PointTransactionRepository pointTransactionRepository;
+    private final VoucherRepository voucherRepository;
+    private final UserVoucherRepository userVoucherRepository;
+    private final PointTransactionMapper pointTransactionMapper;
+    private final MembershipTierMapper membershipTierMapper;
+    private final SettingService settingService;
 
     // ==================== CUSTOMER APIs ====================
 
@@ -61,7 +57,8 @@ public class MembershipService {
             if (currentTier == null || tier.getMinSpending().compareTo(currentTier.getMinSpending()) > 0) {
                 nextTierMinSpending = tier.getMinSpending();
                 spendingToNextTier = nextTierMinSpending.subtract(totalSpending);
-                if (spendingToNextTier.compareTo(BigDecimal.ZERO) < 0) spendingToNextTier = BigDecimal.ZERO;
+                if (spendingToNextTier.compareTo(BigDecimal.ZERO) < 0)
+                    spendingToNextTier = BigDecimal.ZERO;
                 break;
             }
         }
@@ -88,9 +85,10 @@ public class MembershipService {
 
     /**
      * Xử lý tích điểm và thăng hạng sau khi thanh toán thành công (UC03, UC04)
-     * @param user Người dùng
+     * 
+     * @param user       Người dùng
      * @param paidAmount Số tiền đã thanh toán (TotalAmount của Bill)
-     * @param bill Bill tương ứng
+     * @param bill       Bill tương ứng
      */
     @Transactional
     public void processSuccessfulPayment(User user, BigDecimal paidAmount, Bill bill) {
@@ -103,7 +101,9 @@ public class MembershipService {
         MembershipTier currentTier = user.getMembershipTier();
         double earningRate = currentTier != null ? currentTier.getPointEarningRate() : 1.0;
 
-        int basePoints = paidAmount.divide(POINTS_PER_VND, 0, java.math.RoundingMode.DOWN).intValue();
+        BigDecimal pointsPerVndConfig = BigDecimal
+                .valueOf(settingService.getIntegerSetting("LOYALTY_POINTS_PER_VND", 1000));
+        int basePoints = paidAmount.divide(pointsPerVndConfig, 0, java.math.RoundingMode.DOWN).intValue();
         int bonusPoints = (int) (basePoints * (earningRate - 1.0));
         int totalNewPoints = basePoints + bonusPoints;
 
@@ -117,7 +117,8 @@ public class MembershipService {
                 .bonusPoints(bonusPoints)
                 .amount(totalNewPoints)
                 .transactionType(PointTransaction.PointTransactionType.EARN)
-                .description(String.format("Tích %d điểm - %d gốc + %d thưởng (%s)", totalNewPoints, basePoints, bonusPoints, currentTier != null ? currentTier.getTierName() : "New Member"))
+                .description(String.format("Tích %d điểm - %d gốc + %d thưởng (%s)", totalNewPoints, basePoints,
+                        bonusPoints, currentTier != null ? currentTier.getTierName() : "New Member"))
                 .bill(bill)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -127,7 +128,8 @@ public class MembershipService {
         processRankUp(user, newTotalSpending, currentTier);
 
         userRepository.save(user);
-        log.info("Processed payment for user={}, paid={}, +{}pts ({}base+{}bonus)", user.getUsername(), paidAmount, totalNewPoints, basePoints, bonusPoints);
+        log.info("Processed payment for user={}, paid={}, +{}pts ({}base+{}bonus)", user.getUsername(), paidAmount,
+                totalNewPoints, basePoints, bonusPoints);
     }
 
     /**
@@ -149,10 +151,8 @@ public class MembershipService {
         }
 
         // Nếu hạng mới cao hơn hạng hiện tại -> thăng hạng
-        boolean shouldUpgrade = bestEligibleTier != null && (
-                currentTier == null ||
-                bestEligibleTier.getMinSpending().compareTo(currentTier.getMinSpending()) > 0
-        );
+        boolean shouldUpgrade = bestEligibleTier != null && (currentTier == null ||
+                bestEligibleTier.getMinSpending().compareTo(currentTier.getMinSpending()) > 0);
 
         if (shouldUpgrade) {
             MembershipTier oldTier = user.getMembershipTier();
@@ -223,10 +223,14 @@ public class MembershipService {
     public MembershipTierResponse updateTier(Integer tierId, MembershipTier request) {
         MembershipTier tier = membershipTierRepository.findById(tierId)
                 .orElseThrow(() -> new AppException(ErrorCode.MEMBERSHIP_TIER_NOT_FOUND));
-        if (request.getTierName() != null) tier.setTierName(request.getTierName());
-        if (request.getMinSpending() != null) tier.setMinSpending(request.getMinSpending());
-        if (request.getPointEarningRate() != null) tier.setPointEarningRate(request.getPointEarningRate());
-        if (request.getDescription() != null) tier.setDescription(request.getDescription());
+        if (request.getTierName() != null)
+            tier.setTierName(request.getTierName());
+        if (request.getMinSpending() != null)
+            tier.setMinSpending(request.getMinSpending());
+        if (request.getPointEarningRate() != null)
+            tier.setPointEarningRate(request.getPointEarningRate());
+        if (request.getDescription() != null)
+            tier.setDescription(request.getDescription());
         return membershipTierMapper.toMembershipTierResponse(membershipTierRepository.save(tier));
     }
 

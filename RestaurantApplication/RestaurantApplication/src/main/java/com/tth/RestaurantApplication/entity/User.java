@@ -66,8 +66,6 @@ public class User {
 
     @Column(name = "loyalty_points")
     private Integer loyaltyPoints;
-    @OneToOne(mappedBy = "user")
-    private Chef chef;
 
     @Enumerated(EnumType.STRING)
     private AuthProvider authProvider;

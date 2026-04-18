@@ -1,6 +1,7 @@
 package com.tth.RestaurantApplication.repository;
 
 import com.tth.RestaurantApplication.entity.OrderItem;
+import com.tth.RestaurantApplication.entity.OrderItemStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -13,9 +14,9 @@ import java.util.Optional;
 
 @Repository
 public interface OrderItemRepository extends JpaRepository<OrderItem, Integer> {
-    List<OrderItem> findByStatusIn(List<OrderItem.OrderItemStatus> statuses);
+    List<OrderItem> findByStatusIn(List<OrderItemStatus> statuses);
 
-    List<OrderItem> findByStatus(OrderItem.OrderItemStatus status);
+    List<OrderItem> findByStatus(OrderItemStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT oi FROM OrderItem oi WHERE oi.orderItemId = :id")

@@ -32,6 +32,7 @@ public class VoucherService {
     PointTransactionRepository pointTransactionRepository;
     MembershipTierRepository membershipTierRepository;
     UserRepository userRepository;
+    SettingService settingService;
 
     // ==================== CUSTOMER APIs ====================
 
@@ -85,8 +86,14 @@ public class VoucherService {
         Voucher voucher = voucherRepository.findById(voucherId)
                 .orElseThrow(() -> new AppException(ErrorCode.VOUCHER_NOT_FOUND));
 
-        // Kiểm tra đủ điểm
-        if (user.getLoyaltyPoints() == null || user.getLoyaltyPoints() < voucher.getPointsRequired()) {
+        // Kiểm tra ngưỡng dùng điểm tối thiểu hệ thống
+        int minThreshold = settingService.getIntegerSetting("LOYALTY_MIN_REDEMPTION_THRESHOLD", 500);
+        if (user.getLoyaltyPoints() == null || user.getLoyaltyPoints() < minThreshold) {
+            throw new AppException(ErrorCode.INSUFFICIENT_POINTS); // Or a more specific error if needed
+        }
+
+        // Kiểm tra đủ điểm cho voucher cụ thể
+        if (user.getLoyaltyPoints() < voucher.getPointsRequired()) {
             throw new AppException(ErrorCode.INSUFFICIENT_POINTS);
         }
 

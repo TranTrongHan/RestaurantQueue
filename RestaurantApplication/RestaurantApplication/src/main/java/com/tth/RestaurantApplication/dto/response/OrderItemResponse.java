@@ -3,6 +3,7 @@ package com.tth.RestaurantApplication.dto.response;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.tth.RestaurantApplication.entity.OrderItem;
+import com.tth.RestaurantApplication.entity.OrderItemStatus;
 import jakarta.persistence.Column;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -19,7 +20,7 @@ public class OrderItemResponse {
     Integer orderItemId;
     Integer orderId;
     Integer quantity;
-    OrderItem.OrderItemStatus orderItemStatus;
+    OrderItemStatus orderItemStatus;
     String name;
     BigDecimal price;
     String image;

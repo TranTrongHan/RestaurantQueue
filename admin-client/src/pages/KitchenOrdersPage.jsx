@@ -11,7 +11,9 @@ import {
   LayoutGrid, 
   ListOrdered,
   AlertCircle,
-  Hash
+  Hash,
+  Zap,
+  Timer
 } from "lucide-react";
 import toast from 'react-hot-toast';
 import { db } from "../configs/firebase";
@@ -23,6 +25,14 @@ const KitchenOrdersPage = () => {
     const [actionLoading, setActionLoading] = useState(null);
     const [viewMode, setViewMode] = useState("QUEUE"); // "QUEUE" or "TABLE"
     const { token } = useAuthStore();
+
+    // Helper to safely convert Firestore Timestamp to Date/Moment
+    const toDate = (timestamp) => {
+        if (!timestamp) return null;
+        if (timestamp.toDate) return timestamp.toDate();
+        if (timestamp.seconds) return new Date(timestamp.seconds * 1000);
+        return new Date(timestamp);
+    };
 
     useEffect(() => {
         setLoading(true);
@@ -74,9 +84,28 @@ const KitchenOrdersPage = () => {
     const getTimeElapsed = (orderedAt) => {
         if (!orderedAt) return "";
         const now = moment();
-        const orderedTime = moment(orderedAt.toDate());
+        const orderedTime = moment(toDate(orderedAt));
         const minutes = now.diff(orderedTime, 'minutes');
         return minutes;
+    };
+
+    const getDeadlineInfo = (deadlineTime) => {
+        if (!deadlineTime) return null;
+        const now = moment();
+        const deadline = moment(toDate(deadlineTime));
+        const minutesLeft = deadline.diff(now, 'minutes');
+        return {
+            time: deadline.format('HH:mm'),
+            minutesLeft: minutesLeft,
+            isOverdue: minutesLeft < 0
+        };
+    };
+
+    const getDeadlineColor = (minutesLeft) => {
+        if (minutesLeft === null) return "text-slate-400";
+        if (minutesLeft < 0) return "bg-rose-100 text-rose-600 border-rose-200 animate-pulse";
+        if (minutesLeft <= 5) return "bg-orange-100 text-orange-600 border-orange-200";
+        return "bg-sky-50 text-sky-600 border-sky-100";
     };
 
     const getTimerColor = (minutes) => {
@@ -84,6 +113,29 @@ const KitchenOrdersPage = () => {
         if (minutes < 20) return "bg-amber-50 text-amber-600 border-amber-100";
         return "bg-red-50 text-red-600 border-red-100 animate-pulse";
     };
+
+    const getPriorityConfig = (priority) => {
+        switch(priority) {
+            case 3: return { label: "GOLD", color: "bg-amber-100 text-amber-600 border-amber-200", icon: <Zap size={14} className="fill-current" /> };
+            case 2: return { label: "SILVER", color: "bg-slate-200 text-slate-700 border-slate-300", icon: <Zap size={14} /> };
+            default: return { label: "NEW", color: "bg-slate-50 text-slate-400 border-slate-100", icon: null };
+        }
+    };
+
+    // Sorting logic
+    const sortedItems = [...orderItems].sort((a, b) => {
+        if (viewMode === "QUEUE") {
+            return (a.orderedAt?.seconds || 0) - (b.orderedAt?.seconds || 0);
+        }
+        if (viewMode === "PRIORITY") {
+            // Sort by priority DESC, then by time ASC
+            if ((b.priority || 1) !== (a.priority || 1)) {
+                return (b.priority || 1) - (a.priority || 1);
+            }
+            return (a.orderedAt?.seconds || 0) - (b.orderedAt?.seconds || 0);
+        }
+        return 0; // TABLE view handles grouping separately
+    });
 
     // Grouping logic for Table View
     const groupedItemsByTable = orderItems.reduce((acc, item) => {
@@ -93,11 +145,27 @@ const KitchenOrdersPage = () => {
         return acc;
     }, {});
 
+    // Grouping logic for Priority View
+    const groupedItemsByPriority = orderItems.reduce((acc, item) => {
+        const p = item.priority || 1;
+        if (!acc[p]) acc[p] = [];
+        acc[p].push(item);
+        return acc;
+    }, {});
+
     const renderItemCard = (item) => {
         const minutes = getTimeElapsed(item.orderedAt);
+        const deadlineInfo = getDeadlineInfo(item.deadlineTime);
+        const priorityConfig = getPriorityConfig(item.priority);
         
         return (
-            <div key={item.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col h-full">
+            <div key={item.id} className={`bg-white rounded-2xl border ${item.priority >= 2 ? 'border-amber-200' : 'border-slate-200'} shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col h-full relative`}>
+                {item.priority >= 2 && (
+                    <div className="absolute top-0 right-12 px-2 py-0.5 bg-amber-500 text-white text-[8px] font-black rounded-b-lg shadow-sm z-10">
+                        {priorityConfig.label}
+                    </div>
+                )}
+
                 {/* Header: Item name and Timer */}
                 <div className="p-4 border-b border-slate-50 flex justify-between items-start gap-3 min-h-[95px]">
                     <div className="flex items-start gap-3 flex-1 overflow-hidden">
@@ -105,9 +173,16 @@ const KitchenOrdersPage = () => {
                             {item.status === 'PENDING' ? <Clock size={20} /> : <ChefHat size={20} />}
                         </div>
                         <div className="min-w-0 flex-1">
-                            <h3 className="font-bold text-slate-800 leading-tight line-clamp-2 min-h-[2.5rem]">
-                                {item.name}
-                            </h3>
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <h3 className="font-bold text-slate-800 leading-tight line-clamp-2 flex-1">
+                                    {item.name}
+                                </h3>
+                                {priorityConfig.icon && (
+                                    <div className={`${priorityConfig.color} p-1 rounded-md border shrink-0`}>
+                                        {priorityConfig.icon}
+                                    </div>
+                                )}
+                            </div>
                             <p className="text-xs text-slate-400 mt-1">Số lượng: <span className="font-bold text-slate-700">{item.quantity}</span></p>
                         </div>
                     </div>
@@ -119,9 +194,18 @@ const KitchenOrdersPage = () => {
                 {/* Body: Note and Table info */}
                 <div className="p-4 flex-1 flex flex-col justify-between space-y-4">
                     <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                            <Hash size={14} className="text-slate-400" />
-                            <span>Bàn: <span className="font-bold text-slate-700">{item.tableName}</span></span>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <Hash size={14} className="text-slate-400" />
+                                <span>Bàn: <span className="font-bold text-slate-700">{item.tableName}</span></span>
+                            </div>
+                            
+                            {deadlineInfo && (
+                                <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[10px] font-bold ${getDeadlineColor(deadlineInfo.minutesLeft)}`}>
+                                    <Timer size={12} />
+                                    <span>{deadlineInfo.isOverdue ? 'Quá hạn' : `${deadlineInfo.minutesLeft}m`} ({deadlineInfo.time})</span>
+                                </div>
+                            )}
                         </div>
 
                         {item.note ? (
@@ -182,6 +266,13 @@ const KitchenOrdersPage = () => {
                         HÀNG ĐỢI
                     </button>
                     <button 
+                        onClick={() => setViewMode("PRIORITY")}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${viewMode === "PRIORITY" ? "bg-white text-amber-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+                    >
+                        <Zap size={16} />
+                        ƯU TIÊN
+                    </button>
+                    <button 
                         onClick={() => setViewMode("TABLE")}
                         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${viewMode === "TABLE" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
                     >
@@ -208,7 +299,31 @@ const KitchenOrdersPage = () => {
                 <div className="flex-1 overflow-y-auto pr-2 scrollbar-none">
                     {viewMode === "QUEUE" ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-10">
-                            {orderItems.map(item => renderItemCard(item))}
+                            {sortedItems.map(item => renderItemCard(item))}
+                        </div>
+                    ) : viewMode === "PRIORITY" ? (
+                        <div className="space-y-10 pb-10">
+                            {[3, 2, 1].map(priorityLevel => {
+                                const items = groupedItemsByPriority[priorityLevel] || [];
+                                if (items.length === 0) return null;
+                                const config = getPriorityConfig(priorityLevel);
+                                
+                                return (
+                                    <div key={priorityLevel} className="space-y-4">
+                                        <h2 className={`text-sm font-black uppercase tracking-widest flex items-center gap-3 ${config.label === 'GOLD' ? 'text-amber-500' : 'text-slate-400'}`}>
+                                            <div className={`h-1 flex-1 rounded-full opacity-20 ${config.label === 'GOLD' ? 'bg-amber-500' : 'bg-slate-200'}`}></div>
+                                            <span className="flex items-center gap-2">
+                                                {config.icon}
+                                                {config.label} MEMBER ({items.length})
+                                            </span>
+                                            <div className={`h-1 flex-1 rounded-full opacity-20 ${config.label === 'GOLD' ? 'bg-amber-500' : 'bg-slate-200'}`}></div>
+                                        </h2>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                            {items.sort((a, b) => (a.orderedAt?.seconds || 0) - (b.orderedAt?.seconds || 0)).map(item => renderItemCard(item))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     ) : (
                         <div className="space-y-10 pb-10">

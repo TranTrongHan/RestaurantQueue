@@ -1,7 +1,7 @@
 -- Xóa cơ sở dữ liệu trước đó (nếu tồn tại để update phiên bản mới nhất )
 DROP DATABASE IF EXISTS restaurantdb;
 
--- Tạo cơ sở dữ liệu mới tên là (clinicdb)
+-- Tạo cơ sở dữ liệu mới 
 CREATE DATABASE restaurantdb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Sử dụng cơ sở dữ liệu vừa tạo
@@ -14,13 +14,28 @@ CREATE TABLE `membership_tier` (
     `min_spending` DECIMAL(19, 2) NOT NULL,
     `point_earning_rate` DOUBLE PRECISION NOT NULL DEFAULT 1.0,
     `max_point_redemption_pct` INT DEFAULT 20,
+    `priority` INT DEFAULT 1,
     `description` TEXT
 ) ENGINE=InnoDB;
 
-INSERT INTO `membership_tier` (`tier_name`, `min_spending`, `point_earning_rate`, `max_point_redemption_pct`, `description`) VALUES
-('New Member', 0.00, 1.0, 20, 'Hạng mặc định cho thành viên mới'),
-('Silver', 1000000.00, 1.2, 30, 'Hạng Bạc - Tích điểm x1.2 - Dùng điểm tối đa 30%'),
-('Gold', 3000000.00, 1.5, 50, 'Hạng Vàng - Tích điểm x1.5 - Dùng điểm tối đa 50%');
+INSERT INTO `membership_tier` (`tier_name`, `min_spending`, `point_earning_rate`, `max_point_redemption_pct`, `priority`, `description`) VALUES
+('New Member', 0.00, 1.0, 20, 1, 'Hạng mặc định cho thành viên mới'),
+('Silver', 1000000.00, 1.2, 30, 2, 'Hạng Bạc - Tích điểm x1.2 - Dùng điểm tối đa 30%'),
+('Gold', 3000000.00, 1.5, 50, 3, 'Hạng Vàng - Tích điểm x1.5 - Dùng điểm tối đa 50%');
+
+-- Bảng SystemSetting (Cấu hình hệ thống động)
+CREATE TABLE `system_setting` (
+    `id` INT PRIMARY KEY AUTO_INCREMENT,
+    `config_key` VARCHAR(255) UNIQUE NOT NULL,
+    `config_value` VARCHAR(255) NOT NULL,
+    `description` TEXT
+) ENGINE=InnoDB;
+
+INSERT INTO `system_setting` (`config_key`, `config_value`, `description`) VALUES
+('KITCHEN_CAPACITY', '2', 'Số lượng đầu bếp/năng suất xử lý đồng thời của bếp'),
+('LOYALTY_POINTS_PER_VND', '1000', 'Số tiền VNĐ để đổi lấy 1 điểm (Ví dụ: 1000 VNĐ = 1 điểm)'),
+('LOYALTY_POINT_TO_VND_RATE', '100', 'Giá trị của 1 điểm khi quy đổi ra VNĐ (Ví dụ: 1 điểm = 100 VNĐ)'),
+('LOYALTY_MIN_REDEMPTION_THRESHOLD', '500', 'Số điểm tối thiểu khách hàng phải có để bắt đầu sử dụng điểm đổi voucher/thanh toán');
 
 -- Bảng User (đại diện cho mọi người dùng)
 CREATE TABLE `user` (
@@ -32,7 +47,7 @@ CREATE TABLE `user` (
     `address` VARCHAR(255),
     `username` VARCHAR(255) UNIQUE NOT NULL,
     `password` VARCHAR(255),
-    `role` ENUM('CUSTOMER', 'CHEF', 'STAFF','ADMIN') NOT NULL,
+    `role` ENUM('CUSTOMER', 'STAFF','ADMIN') NOT NULL,
     `auth_provider` ENUM('LOCAL', 'GOOGLE') NOT NULL,
     `image` VARCHAR(255) DEFAULT NULL,
     `foodPreference` VARCHAR(255) DEFAULT NULL,
@@ -42,22 +57,13 @@ CREATE TABLE `user` (
     FOREIGN KEY (`membership_tier_id`) REFERENCES `membership_tier`(`id`)
 ) ENGINE=InnoDB;
 
--- Bảng LoyaltyConfig (Cấu hình hệ thống Loyalty)
-CREATE TABLE `loyalty_config` (
-    `id` INT PRIMARY KEY AUTO_INCREMENT,
-    `point_to_vnd_rate` INT NOT NULL DEFAULT 100,
-    `min_redemption_threshold` INT NOT NULL DEFAULT 500,
-    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
-INSERT INTO `loyalty_config` (`point_to_vnd_rate`, `min_redemption_threshold`) VALUES (100, 500);
-
 CREATE TABLE `table` (
     `table_id` INT PRIMARY KEY AUTO_INCREMENT,
     `status` ENUM('AVAILABLE', 'BOOKED', 'OCCUPIED') NOT NULL,
     `capacity` INT NOT NULL,
     `table_name` VARCHAR(255)
 ) ENGINE=InnoDB;
+
 INSERT INTO `table` (`status`, `capacity`, `table_name`) VALUES
 ('AVAILABLE', 2, 'Bàn 1 (Cửa sổ)'),
 ('AVAILABLE', 2, 'Bàn 2'),
@@ -84,7 +90,6 @@ CREATE TABLE `reservation` (
     FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`),
     FOREIGN KEY (`table_id`) REFERENCES `table`(`table_id`)
 ) ENGINE=InnoDB;
--- INSERT INTO `reservation` (`user_id`, `table_id`, `booking_time`, `checkin_time`, `checkout_time`, `status`, `note`) VALUES
 
 
 -- Bảng OrderSession (phiên đặt món tại bàn sau khi checkin)
@@ -97,8 +102,6 @@ CREATE TABLE `order_session` (
     `is_active` BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (`reservation_id`) REFERENCES `reservation`(`reservation_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
--- INSERT INTO `order_session` (`reservation_id`, `session_token`, `create_at`, `expired_at`, `is_active`) VALUES
-
 
 
 -- Bảng OnlineOrder (đơn hàng online)
@@ -124,9 +127,7 @@ CREATE TABLE `order` (
     FOREIGN KEY (`session_id`) REFERENCES `order_session`(`session_id`) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (`online_order_id`) REFERENCES `online_order`(`online_order_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
--- INSERT INTO `order` (`session_id`, `online_order_id`, `create_at`, `is_paid`) VALUES
 
-;
 -- Bảng Category ( loại món ăn) 
 CREATE TABLE `category` (
 	`category_id` INT PRIMARY KEY AUTO_INCREMENT,
@@ -169,7 +170,6 @@ VALUES
 (5,'Sò Điệp',239000.00,'https://res.cloudinary.com/dfi68mgij/image/upload/v1755092988/s_i_p_chpsuw.png',TRUE,5,6,'Cồi sò điệp trắng nõn, tươi rói mang hương vị tinh khiết của biển cả. Thịt sò điệp ngọt lịm, mềm mại và giàu đạm, là điểm nhấn sang trọng giúp nâng tầm bữa tiệc lẩu của bạn.');
 
 
-
 -- Bảng online_cart (Giỏ hàng online tạm thời)
 CREATE TABLE `online_cart` (
     `cart_id` INT PRIMARY KEY AUTO_INCREMENT,
@@ -180,9 +180,6 @@ CREATE TABLE `online_cart` (
     FOREIGN KEY (`user_id`) REFERENCES `user`(`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (`menu_item_id`) REFERENCES `menu_item`(`menu_item_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB;
--- Thêm một vài món vào giỏ hàng của user_id = 4
--- INSERT INTO `online_cart` (`user_id`, `menu_item_id`, `quantity`) VALUES
-
 
 
 -- Bảng OrderItem (chi tiết từng món trong đơn hàng)
@@ -196,40 +193,11 @@ CREATE TABLE `order_item` (
     `priority_score` DOUBLE,
     `start_time` DATETIME,
     `deadline_time` DATETIME,
+    `finished_at` DATETIME,
     `note` TEXT,
     FOREIGN KEY (`order_id`) REFERENCES `order`(`order_id`) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (`menu_item_id`) REFERENCES `menu_item`(`menu_item_id`)
 ) ENGINE=InnoDB;
--- INSERT INTO `order_item` 
--- (`order_id`, `menu_item_id`, `quantity`, `status`, `estimate_time`, `priority_score`, `start_time`, `deadline_time`, `note`) 
--- VALUES
--- (1, 1, 1, 'DONE', 12, 80, '2025-01-10 18:15:00', '2025-01-10 18:27:00', 'Ít cay'),
--- (1, 3, 2, 'DONE', 10, 70, '2025-01-10 18:20:00', '2025-01-10 18:30:00', NULL),
-
--- (2, 2, 1, 'DONE', 15, 85, '2025-01-15 12:15:00', '2025-01-15 12:30:00', 'Nhiều cay'),
--- (2, 5, 1, 'DONE', 20, 75, '2025-01-15 12:20:00', '2025-01-15 12:40:00', NULL),
-
--- (3, 4, 2, 'DONE', 18, 90, '2025-03-05 18:25:00', '2025-03-05 18:43:00', NULL),
--- (3, 7, 1, 'DONE', 25, 60, '2025-03-05 18:27:00', '2025-03-05 18:52:00', NULL),
-
--- (4, 6, 1, 'DONE', 12, 88, '2025-03-18 11:15:00', '2025-03-18 11:27:00', NULL),
-
--- (5, 8, 2, 'DONE', 30, 92, '2025-05-09 11:35:00', '2025-05-09 12:05:00', NULL),
-
--- (6, 9, 1, 'DONE', 14, 85, '2025-08-01 19:25:00', '2025-08-01 19:39:00', NULL),
--- (6, 10, 1, 'DONE', 16, 65, '2025-08-01 19:27:00', '2025-08-01 19:43:00', NULL),
-
--- (7, 11, 1, 'DONE', 20, 70, '2025-08-01 19:30:00', '2025-08-01 19:50:00', NULL),
-
--- (8, 12, 2, 'DONE', 22, 95, '2025-08-01 19:40:00', '2025-08-01 20:02:00', NULL),
-
--- (9, 2, 3, 'DONE', 12, 80, '2025-08-01 19:45:00', '2025-08-01 19:57:00', NULL),
-
--- (10, 4, 2, 'DONE', 18, 88, '2025-10-20 10:20:00', '2025-10-20 10:38:00', NULL),
-
--- (11, 1, 1, 'DONE', 15, 85, '2025-12-25 18:50:00', '2025-12-25 19:05:00', 'Extra soup');
-
-
 
 
 -- Bảng Voucher (Định nghĩa Voucher)
@@ -322,16 +290,3 @@ CREATE TABLE `point_transaction` (
 ALTER TABLE `voucher` ADD INDEX `idx_voucher_code` (`voucher_code`);
 ALTER TABLE `point_transaction` ADD INDEX `idx_user_id` (`user_id`);
 ALTER TABLE `user_voucher` ADD INDEX `idx_user_status` (`user_id`, `is_used`);
--- INSERT INTO `bill` (`order_id`, `create_at`, `sub_total`, `discount_amount`, `total_amount`, `status`, `payment_time`) VALUES
--- (1, '2025-01-10 20:00:00', 247000.00, 0.00, 247000.00, 'PAID', '2025-01-10 20:05:00'),
--- (2, '2025-01-15 14:30:00', 208000.00, 8000.00, 200000.00, 'PAID', '2025-01-15 14:35:00'),
--- (3, '2025-03-05 20:30:00', 179000.00, 0.00, 179000.00, 'PAID', '2025-03-05 20:35:00'),
--- (4, '2025-03-18 13:30:00', 49000.00, 0.00, 49000.00, 'UNPAID', NULL),
--- (5, '2025-05-09 13:00:00', 278000.00, 0.00, 278000.00, 'PAID', '2025-05-09 13:05:00'),
--- (6, '2025-08-01 20:55:00', 148000.00, 0.00, 148000.00, 'PAID', '2025-08-01 21:00:00'),
--- (7, '2025-08-01 20:55:00', 49000.00, 0.00, 49000.00, 'UNPAID', NULL),
--- (8, '2025-08-01 20:55:00', 478000.00, 20000.00, 458000.00, 'PAID', '2025-08-01 21:05:00'),
--- (9, '2025-08-01 20:55:00', 327000.00, 0.00, 327000.00, 'PAID', '2025-08-01 21:10:00'),
--- (10,'2025-10-20 12:00:00', 99000.00, 0.00, 99000.00, 'PAID', '2025-10-20 12:05:00'),
--- (11,'2025-12-25 21:30:00', 89000.00, 0.00, 89000.00, 'PAID', '2025-12-25 21:35:00');
-;

@@ -4,6 +4,7 @@ package com.tth.RestaurantApplication.service;
 import com.tth.RestaurantApplication.dto.response.CustomerOrderHistoryResponse;
 import com.tth.RestaurantApplication.dto.response.OrderItemResponse;
 import com.tth.RestaurantApplication.entity.*;
+import com.tth.RestaurantApplication.entity.OrderItemStatus;
 import com.tth.RestaurantApplication.exception.AppException;
 import com.tth.RestaurantApplication.exception.ErrorCode;
 import com.tth.RestaurantApplication.mapper.OnlineOrderMapper;
@@ -79,7 +80,7 @@ public class OrderManagementService {
             orderItem.setOrder(order);
             orderItem.setMenuItem(menuItem);
             orderItem.setQuantity(cartItem.getQuantity());
-            orderItem.setStatus(OrderItem.OrderItemStatus.DONE);
+            orderItem.setStatus(OrderItemStatus.DONE);
             orderItem.setEstimateTime(null);
             orderItem.setStartTime(null);
             orderItem.setDeadlineTime(null);

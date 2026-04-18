@@ -20,6 +20,9 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class MembershipTier {
+    public static final int PRIORITY_GOLD = 3;
+    public static final int PRIORITY_SILVER = 2;
+    public static final int PRIORITY_NEW_MEMBER = 1;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,6 +42,9 @@ public class MembershipTier {
 
     @Column(name = "max_point_redemption_pct")
     private Integer maxPointRedemptionPct;
+
+    @Column(name = "priority")
+    private Integer priority;
 
     @OneToMany(mappedBy = "membershipTier")
     private List<User> users;

@@ -92,4 +92,77 @@ public class StatsService {
 
     }
 
+    /**
+     * THESIS STATS: Efficiency analysis per MenuItem.
+     * Compares actual cooking duration vs base cooking time.
+     */
+    public List<Map<String, Object>> getKitchenEfficiencyStats() {
+        String query = "SELECT m.name as name, m.base_cooking_time as base, " +
+                       "AVG(TIMESTAMPDIFF(SECOND, oi.start_time, oi.finished_at) / 60.0) as actual " +
+                       "FROM order_item oi JOIN menu_item m ON oi.menu_item_id = m.menu_item_id " +
+                       "WHERE oi.status = 'DONE' AND oi.start_time IS NOT NULL AND oi.finished_at IS NOT NULL " +
+                       "GROUP BY m.name, m.base_cooking_time";
+        
+        List<Object[]> results = entityManager.createNativeQuery(query).getResultList();
+        List<Map<String, Object>> response = new ArrayList<>();
+        
+        for (Object[] row : results) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("dishName", row[0]);
+            map.put("baseTime", row[1]);
+            map.put("actualTime", row[2]);
+            response.add(map);
+        }
+        return response;
+    }
+
+    /**
+     * THESIS STATS: Service quality across Membership Tiers.
+     * Verifies if VIPs are actually getting faster service.
+     */
+    public List<Map<String, Object>> getWaitTimeByTierStats() {
+        String query = "SELECT mt.tier_name, AVG(TIMESTAMPDIFF(SECOND, o.created_at, oi.finished_at) / 60.0) as avgWait " +
+                       "FROM order_item oi " +
+                       "JOIN `order` o ON oi.order_id = o.order_id " +
+                       "JOIN order_session os ON o.order_session_id = os.order_session_id " +
+                       "JOIN reservation r ON os.reservation_id = r.reservation_id " +
+                       "JOIN user u ON r.user_id = u.user_id " +
+                       "JOIN membership_tier mt ON u.membership_tier_id = mt.id " +
+                       "WHERE oi.status = 'DONE' AND oi.finished_at IS NOT NULL " +
+                       "GROUP BY mt.tier_name";
+
+        List<Object[]> results = entityManager.createNativeQuery(query).getResultList();
+        List<Map<String, Object>> response = new ArrayList<>();
+
+        for (Object[] row : results) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("tierName", row[0]);
+            map.put("avgWaitMinutes", row[1]);
+            response.add(map);
+        }
+        return response;
+    }
+
+    /**
+     * THESIS STATS: Bottleneck identification.
+     * Finds dishes that deviate most from their estimated time.
+     */
+    public List<Map<String, Object>> getBottleneckDishes() {
+        String query = "SELECT m.name, AVG(TIMESTAMPDIFF(SECOND, oi.start_time, oi.finished_at) / (m.base_cooking_time * 60.0)) as delayRatio " +
+                       "FROM order_item oi JOIN menu_item m ON oi.menu_item_id = m.menu_item_id " +
+                       "WHERE oi.status = 'DONE' AND oi.start_time IS NOT NULL AND oi.finished_at IS NOT NULL " +
+                       "GROUP BY m.name HAVING delayRatio > 1.2 " +
+                       "ORDER BY delayRatio DESC LIMIT 5";
+
+        List<Object[]> results = entityManager.createNativeQuery(query).getResultList();
+        List<Map<String, Object>> response = new ArrayList<>();
+
+        for (Object[] row : results) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("dishName", row[0]);
+            map.put("delayRatio", row[1]);
+            response.add(map);
+        }
+        return response;
+    }
 }

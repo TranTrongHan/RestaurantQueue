@@ -78,6 +78,9 @@ public class FirestoreService {
                 itemData.put("status", orderItem.getStatus().toString());
                 itemData.put("orderedAt", FieldValue.serverTimestamp());
                 itemData.put("note", orderItem.getNote());
+                itemData.put("priority", orderItem.getPriorityScore() != null ? orderItem.getPriorityScore().intValue() : 1);
+                itemData.put("estimateTime", orderItem.getEstimateTime());
+                itemData.put("deadlineTime", orderItem.getDeadlineTime() != null ? orderItem.getDeadlineTime().toString() : null);
 
                 // 4. Update cả 2 tài liệu
                 transaction.update(resRef, "totalAmount", newTotal, "lastUpdated", FieldValue.serverTimestamp());
