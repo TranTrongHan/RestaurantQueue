@@ -34,3 +34,4 @@ build/
 
 application.env
 src/main/resources/firebase-service-account.json
+src/main/resources/application.yml
