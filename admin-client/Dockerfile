@@ -1,13 +1,17 @@
 # Stage 1: Build the React application
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Install dependencies and build
-COPY package.json package-lock.json ./
+# Install dependencies
+COPY package.json ./
 RUN npm install --legacy-peer-deps
 
+# Copy source code and environment variables
+# Note: .env is needed at build time for Vite
 COPY . .
+
+# Build the application
 RUN npm run build
 
 # Stage 2: Serve the application with Nginx

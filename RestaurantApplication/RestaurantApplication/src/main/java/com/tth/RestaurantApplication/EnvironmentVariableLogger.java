@@ -15,15 +15,11 @@ public class EnvironmentVariableLogger implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        String googleClientId = environment.getProperty("GOOGLE_CLIENT_ID");
-        String googleClientSecret = environment.getProperty("GOOGLE_CLIENT_SECRET");
-        String contextPath = environment.getProperty("server.servlet.context-path");
-
-//        String secretKey = environment.getProperty("stripe.key.secret");
-        String redirect_uri = environment.getProperty("spring.security.oauth2.client.registration.google.redirect-uri");
-//        System.out.println("redirect_uri: " + (redirect_uri != null ? redirect_uri : "Not configured"));
-//        System.out.println("Context Path: " + (contextPath != null ? contextPath : "Not configured"));
-//        System.out.println("GOOGLE_CLIENT_ID: " + googleClientId);
-//        System.out.println("Stripe secret: " + secretKey);
+        System.out.println("========== [DOCKER] CONFIGURATION CHECK ==========");
+        System.out.println("DB URL      : " + environment.getProperty("spring.datasource.url"));
+        System.out.println("Redis Host  : " + environment.getProperty("spring.data.redis.host"));
+        System.out.println("Gemini Key  : " + (environment.getProperty("gemini.api.key") != null ? "FOUND" : "NOT FOUND"));
+        System.out.println("Context Path: " + environment.getProperty("server.servlet.context-path"));
+        System.out.println("=================================================");
     }
 }

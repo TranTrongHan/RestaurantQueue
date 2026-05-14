@@ -20,8 +20,14 @@ public class RedisConfig {
         return template;
     }
 
+    @org.springframework.beans.factory.annotation.Value("${spring.data.redis.host:localhost}")
+    private String redisHost;
+
+    @org.springframework.beans.factory.annotation.Value("${spring.data.redis.port:6379}")
+    private int redisPort;
+
     @Bean
     JedisPooled jedisPool() {
-        return new JedisPooled("localhost", 6379);
+        return new JedisPooled(redisHost, redisPort);
     }
 }

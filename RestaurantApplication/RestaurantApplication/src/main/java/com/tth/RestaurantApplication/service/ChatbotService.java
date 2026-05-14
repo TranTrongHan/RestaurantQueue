@@ -37,12 +37,12 @@ public class ChatbotService {
 
     private static final String CHAT_HISTORY_PREFIX = "chat:history:";
     private static final int HISTORY_TTL_SECONDS = 3600; // 1 tiếng
-    private static final int MAX_HISTORY_ITEMS = 4;     // Giảm xuống 4 để tiết kiệm Input Token
+    private static final int MAX_HISTORY_ITEMS = 4; // Giảm xuống 4 để tiết kiệm Input Token
 
     public ChatbotService(JedisPooled jedis,
-                          RecommendFood recommendFood,
-                          UserRepository userRepository,
-                          OrderSessionRepository orderSessionRepository) {
+            RecommendFood recommendFood,
+            UserRepository userRepository,
+            OrderSessionRepository orderSessionRepository) {
         this.jedis = jedis;
         this.recommendFood = recommendFood;
         this.userRepository = userRepository;
@@ -71,7 +71,8 @@ public class ChatbotService {
                     .orElseThrow(() -> new AppException(ErrorCode.ORDER_SESSION_NOT_FOUND));
 
             if (Boolean.FALSE.equals(orderSession.getIsActive()) ||
-                    (orderSession.getExpiredAt() != null && orderSession.getExpiredAt().isBefore(LocalDateTime.now()))) {
+                    (orderSession.getExpiredAt() != null
+                            && orderSession.getExpiredAt().isBefore(LocalDateTime.now()))) {
                 throw new AppException(ErrorCode.ORDER_SESSION_EXPIRED);
             }
             user = orderSession.getReservation().getUser();
@@ -107,11 +108,15 @@ public class ChatbotService {
                     .systemInstruction(com.google.genai.types.Content.builder()
                             .role("user")
                             .parts(List.of(com.google.genai.types.Part.builder()
-                                    .text("Bạn là một nhân viên phục vụ chuyên nghiệp, am hiểu ẩm thực. " +
-                                          "Luôn trả lời bằng Tiếng Việt, thân thiện và ngắn gọn. " +
-                                          "Chỉ tư vấn về món ăn có trong thực đơn gợi ý. " +
-                                          "Dựa vào lịch sử hội thoại để hiểu các từ thay thế như 'món đó', 'nó', 'loại này'. " +
-                                          "QUAN TRỌNG: Nếu khách hàng bộc lộ sở thích mới, hãy viết kèm '[PREF: <sở thích>]'.")
+                                    .text("Bạn là một nhân viên phục vụ chuyên nghiệp. " +
+                                            "QUY TẮC TỐI THƯỢNG: Chỉ được tư vấn các món ăn có trong phần 'THỰC ĐƠN GỢI Ý LIÊN QUAN'. "
+                                            +
+                                            "Nếu phần này trống hoặc không có món khớp, hãy lịch sự thông báo nhà hàng hiện không có món này hoặc dữ liệu thực đơn chưa được cập nhật. "
+                                            +
+                                            "Không được tự ý gợi ý các món ngoài danh sách hoặc hỏi lan man về sở thích nếu không tìm thấy món tương ứng trong hệ thống. "
+                                            +
+                                            "Luôn trả lời bằng Tiếng Việt, thân thiện và ngắn gọn. " +
+                                            "Nếu khách bộc lộ sở thích, hãy ghi chú thêm '[PREF: <sở thích>]'.")
                                     .build()))
                             .build())
                     .build();
@@ -140,7 +145,8 @@ public class ChatbotService {
             throw e;
         } catch (Exception e) {
             log.error("Lỗi nghiêm trọng trong ChatbotService cho userId={}: {}", userId, e.getMessage(), e);
-            return "Xin lỗi " + user.getFullName() + ", tôi đang gặp sự cố kỹ thuật kết nối với trí tuệ nhân tạo. Bạn vui lòng thử lại sau nhé!";
+            return "Xin lỗi " + user.getFullName()
+                    + ", tôi đang gặp sự cố kỹ thuật kết nối với trí tuệ nhân tạo. Bạn vui lòng thử lại sau nhé!";
         }
     }
 
@@ -153,7 +159,7 @@ public class ChatbotService {
 
         if (user.getFoodPreference() != null && !user.getFoodPreference().isBlank()) {
             sb.append("Sở thích ẩm thực (ghi nhớ từ các lần trước): ")
-              .append(user.getFoodPreference()).append("\n");
+                    .append(user.getFoodPreference()).append("\n");
         }
 
         sb.append("\n=== THỰC ĐƠN GỢI Ý LIÊN QUAN ===\n");
@@ -172,18 +178,19 @@ public class ChatbotService {
 
     private String buildMenuContext(List<MenuItemVectorResponse> foods) {
         if (foods == null || foods.isEmpty()) {
-            return "Không tìm thấy món ăn nào khớp trực tiếp. Hãy hỏi thêm để tôi hỗ trợ tốt hơn.";
+            return "THÔNG BÁO: Hiện tại hệ thống không tìm thấy món ăn nào phù hợp trong thực đơn của nhà hàng.";
         }
         // Giới hạn 3 món để tiết kiệm Token
         return foods.stream()
                 .limit(3)
                 .map(f -> {
                     String desc = f.getDescription() != null ? f.getDescription() : "Đang cập nhật";
-                    if (desc.length() > 100) desc = desc.substring(0, 97) + "..."; // Cắt ngắn mô tả
+                    if (desc.length() > 100)
+                        desc = desc.substring(0, 97) + "..."; // Cắt ngắn mô tả
                     return String.format("• %s | Giá: %s VNĐ | Mô tả: %s",
-                        f.getName(),
-                        f.getPrice().toPlainString(),
-                        desc);
+                            f.getName(),
+                            f.getPrice().toPlainString(),
+                            desc);
                 })
                 .collect(Collectors.joining("\n"));
     }
@@ -208,7 +215,8 @@ public class ChatbotService {
     }
 
     private void extractAndUpdatePreference(User user, String extractedPreference) {
-        if (extractedPreference == null || extractedPreference.isBlank() || extractedPreference.equalsIgnoreCase("NONE")) {
+        if (extractedPreference == null || extractedPreference.isBlank()
+                || extractedPreference.equalsIgnoreCase("NONE")) {
             return;
         }
 

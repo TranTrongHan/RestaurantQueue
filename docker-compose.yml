@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  restaurant-client:
+    build:
+      context: ./restaurant-client
+      dockerfile: Dockerfile
+    container_name: restaurant-client
+    ports:
+      - "5173:80"
+    restart: always
+
+  admin-client:
+    build:
+      context: ./admin-client
+      dockerfile: Dockerfile
+    container_name: admin-client
+    ports:
+      - "5174:80"
+    restart: always
