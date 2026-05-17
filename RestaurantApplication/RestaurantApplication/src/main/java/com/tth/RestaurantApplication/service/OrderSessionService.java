@@ -2,6 +2,7 @@ package com.tth.RestaurantApplication.service;
 
 import com.tth.RestaurantApplication.dto.response.OrderResponse;
 import com.tth.RestaurantApplication.dto.response.OrderSessionResponse;
+import com.tth.RestaurantApplication.dto.response.ReservationResponse;
 import com.tth.RestaurantApplication.entity.*;
 import com.tth.RestaurantApplication.exception.AppException;
 import com.tth.RestaurantApplication.exception.ErrorCode;
@@ -35,6 +36,7 @@ public class OrderSessionService {
     PaymentService paymentService;
     ReservationMapper reservationMapper;
     TableRepository tableRepository;
+    JwtService jwtService;
 
     public OrderSessionResponse validateSession(String token) {
         log.info("validating OrderSession with token={}", token);
@@ -59,6 +61,55 @@ public class OrderSessionService {
 
         return response;
     }
+
+    @Transactional
+    public OrderSessionResponse joinSessionWithToken(String token) throws com.nimbusds.jose.JOSEException {
+        log.info("joining OrderSession with token={}", token);
+
+        // 1. Tìm OrderSession qua sessionToken
+        OrderSession orderSession = orderSessionRepository.findBySessionToken(token)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_SESSION_NOT_FOUND));
+
+        // 2. Validate session
+        boolean isValid = Boolean.TRUE.equals(orderSession.getIsActive());
+
+        if (orderSession.getExpiredAt() != null && orderSession.getExpiredAt().isBefore(LocalDateTime.now())) {
+            isValid = false;
+        }
+        if (!isValid) {
+            log.warn("OrderSession token={} is invalid or expired", token);
+            throw new AppException(ErrorCode.INVALID_ORDER_SESSION);
+        }
+
+        Reservation reservation = orderSession.getReservation();
+
+        // 3. Tạo customer JWT cho Khách (expire = expiredAt của session)
+        java.time.Instant expiresAt = orderSession.getExpiredAt().atZone(java.time.ZoneId.systemDefault()).toInstant();
+        String customerJwt = jwtService.generateCustomerSessionToken(
+                reservation.getUser(),
+                orderSession.getSessionId(),
+                reservation.getReservationId(),
+                reservation.getTable().getTableId(),
+                orderSession.getSessionToken(),
+                expiresAt
+        );
+
+        // 4. Map sang OrderSessionResponse
+        OrderSessionResponse response = orderSessionMapper.toOrderSessionResponse(orderSession);
+
+        // Map sang ReservationResponse
+        ReservationResponse resResponse = reservationMapper.toReservationResponse(reservation);
+        resResponse.setCustomerJwt(customerJwt);
+        resResponse.setExpiresAt(expiresAt);
+        resResponse.setSessionId(orderSession.getSessionId());
+
+        response.setReservationResponse(resResponse);
+        response.setValid(true);
+
+        log.info("Join OrderSession token={} successful, generated customerJwt", token);
+        return response;
+    }
+
 
     public OrderResponse getOrder(Integer sessionId) {
         OrderSession orderSession = orderSessionRepository.findById(sessionId)
@@ -121,9 +172,36 @@ public class OrderSessionService {
         if (order == null) throw new AppException(ErrorCode.ORDER_NOT_FOUND);
 
         BigDecimal subTotal = getSubTotal(null, order);
-        
+
         // This will handle Table/Reservation status updates and Firestore deletion
         return paymentService.createBillForDineInOrder(order, null, subTotal);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderSessionResponse getActiveSessionForTable(Integer tableId) {
+        log.info("Getting active session for tableId={}", tableId);
+
+        List<Reservation> activeReservations = reservationRepository.findActiveReservationsByTable(tableId, Reservation.ReservationStatus.CHECKEDIN);
+        if (activeReservations.isEmpty()) {
+            throw new AppException(ErrorCode.RESERVATION_NOT_FOUND);
+        }
+
+        Reservation reservation = activeReservations.get(0);
+        OrderSession orderSession = reservation.getOrderSession();
+        if (orderSession == null) {
+            throw new AppException(ErrorCode.ORDER_SESSION_NOT_FOUND);
+        }
+
+        // Map to response
+        OrderSessionResponse response = orderSessionMapper.toOrderSessionResponse(orderSession);
+
+        ReservationResponse resResponse = reservationMapper.toReservationResponse(reservation);
+        resResponse.setSessionId(orderSession.getSessionId());
+
+        response.setReservationResponse(resResponse);
+        response.setValid(true);
+
+        return response;
     }
 }
 

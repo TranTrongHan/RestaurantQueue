@@ -21,13 +21,13 @@ import useCartStore from './store/useCartStore'
 import { Toaster } from 'react-hot-toast'
 
 const App = () => {
-  const [cookies] = useCookies(["token"]);
+  const [cookies, setCookie, removeCookie] = useCookies(["token"]);
   const { setUser, logout, user } = useUserStore();
   const { setCart } = useCartStore();
 
   // Load authenticated user from API on token change
   const loadUser = async () => {
-    if (cookies.token) {
+    if (cookies.token && cookies.token !== "undefined" && cookies.token !== "null") {
       try {
         const res = await authApis(cookies.token).get(endpoints['profile']);
         if (res.status === 200) setUser(res.data.result);
@@ -35,13 +35,16 @@ const App = () => {
         logout();
       }
     } else {
+      if (cookies.token === "undefined" || cookies.token === "null") {
+        removeCookie("token", { path: "/" });
+      }
       logout();
     }
   };
 
   // Load cart from API (only for CUSTOMER role)
   const loadCart = async () => {
-    if (cookies.token && user?.role === "CUSTOMER") {
+    if (cookies.token && cookies.token !== "undefined" && cookies.token !== "null" && user?.role === "CUSTOMER") {
       try {
         const url = `${import.meta.env.VITE_API_BASE_URL}${endpoints.cart}`;
         const res = await authApis(cookies.token).get(url);

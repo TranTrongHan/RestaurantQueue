@@ -54,4 +54,15 @@ public class AdminReservationController {
                 .message("Check in successfully")
                 .build();
     }
+
+    @PostMapping("/quick-checkin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<ReservationResponse> quickCheckIn(@RequestParam(value = "tableId") Integer tableId)
+            throws JOSEException {
+        return ApiResponse.<ReservationResponse>builder()
+                .result(reservationService.quickCheckIn(tableId))
+                .message("Quick check in successfully")
+                .build();
+    }
 }
+

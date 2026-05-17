@@ -8,8 +8,88 @@ import useUserStore from "../../store/useUserStore";
 import useCartStore from "../../store/useCartStore";
 import { Link } from "react-router-dom";
 import { ShoppingCart, Plus, UtensilsCrossed } from "lucide-react";
+import TableOrderingPage from "./TableOrderingPage";
+
+// Synchronously parse and setup Table Mode if accessed via Table Mode setup link
+const queryParams = new URLSearchParams(window.location.search);
+const urlTableMode = queryParams.get("tableMode");
+const urlTableId = queryParams.get("tableId");
+
+if (urlTableMode === "true" && urlTableId) {
+    localStorage.setItem("rq-table-mode", "true");
+    localStorage.setItem("rq-table-id", urlTableId);
+    window.history.replaceState({}, document.title, window.location.pathname);
+}
 
 const MenuPages = () => {
+    const isTableMode = localStorage.getItem("rq-table-mode") === "true";
+    const [cookies, setCookie] = useCookies(["token"]);
+    const { setUser } = useUserStore();
+    const [joiningSession, setJoiningSession] = useState(false);
+
+    const queryParams = new URLSearchParams(window.location.search);
+    const urlToken = queryParams.get("token");
+
+    useEffect(() => {
+        if (!urlToken) return;
+
+        const joinTableSession = async () => {
+            try {
+                setJoiningSession(true);
+                const resJoin = await Apis.get(`/order_session/join?token=${urlToken}`);
+                if (resJoin.status === 200) {
+                    const data = resJoin.data.result;
+                    const jwt = data.reservationResponse?.customerJwt || data.customerJwt;
+                    const sId = data.reservationResponse?.sessionId || data.sessionId;
+                    const reservationId = data.reservationResponse?.reservationId;
+                    const sToken = urlToken;
+
+                    setCookie("token", jwt, { path: "/" });
+                    localStorage.setItem("rq-table-mode", "true");
+                    localStorage.setItem("rq-table-id", String(data.reservationResponse?.tableResponse?.tableId || ""));
+                    localStorage.setItem("rq-active-reservation-id", String(reservationId));
+                    localStorage.setItem("rq-active-session-id", String(sId));
+                    localStorage.setItem("rq-active-session-token", sToken);
+                    localStorage.setItem("rq-active-table-name", data.reservationResponse?.tableResponse?.tableName || `Bàn`);
+
+                    // Fetch shadow profile
+                    const resProfile = await axios.create({
+                        baseURL: import.meta.env.VITE_API_BASE_URL,
+                        headers: { Authorization: `Bearer ${jwt}` }
+                    }).get(endpoints.profile);
+
+                    if (resProfile.status === 200) {
+                        setUser(resProfile.data.result);
+                    }
+
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    window.location.reload();
+                }
+            } catch (err) {
+                console.error("BYOD Join Error:", err);
+            } finally {
+                setJoiningSession(false);
+            }
+        };
+
+        joinTableSession();
+    }, [urlToken]);
+
+    if (joiningSession) {
+        return (
+            <div className="h-screen flex flex-col items-center justify-center bg-[#090d16] text-white">
+                <SpinnerComp className="w-12 h-12 border-blue-600 border-t-transparent" />
+                <p className="mt-4 text-slate-450 font-semibold animate-pulse">
+                    Đang kết nối bàn ăn tự động...
+                </p>
+            </div>
+        );
+    }
+
+    if (isTableMode) {
+        return <TableOrderingPage />;
+    }
+
     const [menuItems, setMenuItems] = useState([]);
     const [categories, setCategories] = useState([]);
     const [cateId, setCateId] = useState(null);
@@ -17,7 +97,6 @@ const MenuPages = () => {
     const { cart, addItem, updateItemId } = useCartStore();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [cookies] = useCookies(["token"]);
 
     const formatPrice = (price) =>
         price.toLocaleString("vi-VN", { style: "currency", currency: "VND" });

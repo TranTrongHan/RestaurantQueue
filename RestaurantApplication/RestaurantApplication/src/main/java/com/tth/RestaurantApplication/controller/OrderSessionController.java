@@ -11,6 +11,7 @@ import com.tth.RestaurantApplication.service.AuthenticateService;
 import com.tth.RestaurantApplication.service.JwtService;
 import com.tth.RestaurantApplication.service.OrderSessionService;
 import jakarta.transaction.Transactional;
+import com.nimbusds.jose.JOSEException;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -40,6 +41,22 @@ public class OrderSessionController {
                 .result(orderSessionService.validateSession(token))
                 .build();
     }
+
+    @GetMapping("/join")
+    public ApiResponse<OrderSessionResponse> joinSession(@RequestParam("token") String token) throws JOSEException {
+        return ApiResponse.<OrderSessionResponse>builder()
+                .result(orderSessionService.joinSessionWithToken(token))
+                .build();
+    }
+
+    @GetMapping("/active-session")
+    public ApiResponse<OrderSessionResponse> getActiveSession(@RequestParam("tableId") Integer tableId) {
+        return ApiResponse.<OrderSessionResponse>builder()
+                .result(orderSessionService.getActiveSessionForTable(tableId))
+                .build();
+    }
+
+
 
     @GetMapping("/{sessionId}")
     public ApiResponse<OrderResponse> getOrder(@PathVariable(value = "sessionId") Integer sessionId) {

@@ -23,6 +23,9 @@ export const endpoints = {
   admin_points_report: "/admin/points/report",
   admin_points_adjust: "/admin/points/adjust",
   admin_customers: "/admin/customers",
+  admin_tables: "/admin/tables",
+  admin_quick_checkin: "/admin/reservation/quick-checkin",
+  admin_active_session: "/order_session/active-session",
 }
 
 const instance = axios.create({

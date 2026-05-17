@@ -16,6 +16,7 @@ import com.tth.RestaurantApplication.mapper.TableMapper;
 import com.tth.RestaurantApplication.repository.OrderSessionRepository;
 import com.tth.RestaurantApplication.repository.ReservationRepository;
 import com.tth.RestaurantApplication.repository.TableRepository;
+import com.tth.RestaurantApplication.repository.UserRepository;
 import com.tth.RestaurantApplication.specification.ReservationSpecification;
 import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
@@ -40,6 +41,7 @@ import java.util.*;
 public class ReservationService {
     ReservationRepository reservationRepository;
     TableRepository tableRepository;
+    UserRepository userRepository;
     TableMapper tableMapper;
     CustomerMapper customerMapper;
     ReservationMapper reservationMapper;
@@ -225,6 +227,71 @@ public class ReservationService {
         reservationResponse.setSessionId(orderSession.getSessionId());
         return reservationResponse;
     }
+
+    @Transactional
+    public ReservationResponse quickCheckIn(Integer tableId) throws JOSEException {
+        log.info("Starting quick guest check-in for tableId={}", tableId);
+
+        // 1. Tìm bàn ăn
+        TableEntity table = tableRepository.findById(tableId)
+                .orElseThrow(() -> new AppException(ErrorCode.TABLE_NOT_FOUND));
+
+        if (!table.getStatus().toString().equals("AVAILABLE")) {
+            throw new AppException(ErrorCode.INVALID_TABLE_STATUS);
+        }
+
+        // 2. Tạo Shadow Guest User
+        String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
+        User guestUser = User.builder()
+                .fullName("Khách Bàn " + table.getTableName())
+                .username("guest_" + tableId + "_" + uniqueSuffix)
+                .email("guest_" + tableId + "_" + System.currentTimeMillis() + "@guest.restaurant.com")
+                .role(User.Role.CUSTOMER)
+                .authProvider(User.AuthProvider.LOCAL)
+                .build();
+        userRepository.save(guestUser);
+
+        // 3. Tạo Reservation dạng CHECKEDIN
+        Reservation reservation = new Reservation();
+        reservation.setUser(guestUser);
+        reservation.setTable(table);
+        reservation.setBookingTime(LocalDateTime.now());
+        reservation.setCheckinTime(LocalDateTime.now());
+        reservation.setStatus(Reservation.ReservationStatus.CHECKEDIN);
+        reservationRepository.save(reservation);
+
+        // 4. Tạo OrderSession & Order thông qua OrderManagementService
+        OrderSession orderSession = orderManagementService.createInHouseOrderFromReservation(reservation);
+        reservation.setOrderSession(orderSession);
+        reservationRepository.save(reservation);
+
+        // 5. Cập nhật trạng thái bàn thành OCCUPIED
+        table.setStatus(TableEntity.TableStatus.OCCUPIED);
+        tableRepository.save(table);
+
+        // 6. Đồng bộ Firestore metadata
+        firestoreService.syncReservationMetadata(reservation);
+
+        // 7. Tạo customer JWT cho Khách (hết hạn tương ứng expiredAt của session)
+        Instant expiresAt = orderSession.getExpiredAt().atZone(ZoneId.systemDefault()).toInstant();
+        String customerJwt = jwtService.generateCustomerSessionToken(
+                guestUser,
+                orderSession.getSessionId(),
+                reservation.getReservationId(),
+                table.getTableId(),
+                orderSession.getSessionToken(),
+                expiresAt
+        );
+
+        log.info("Quick guest check-in for tableId={} completed successfully", tableId);
+
+        ReservationResponse reservationResponse = reservationMapper.toReservationResponse(reservation);
+        reservationResponse.setCustomerJwt(customerJwt);
+        reservationResponse.setExpiresAt(expiresAt);
+        reservationResponse.setSessionId(orderSession.getSessionId());
+        return reservationResponse;
+    }
+
 
     public ReservationDetailResponse getReservation(Integer reservationId, User currentUser) {
 
