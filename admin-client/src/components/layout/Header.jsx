@@ -2,9 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import useAuthStore from '../../store/useAuthStore';
 import { User, LogOut, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useCookies } from 'react-cookie';
 
 const Header = () => {
   const { user, logout } = useAuthStore();
+  const [, , removeCookie] = useCookies(['admin_token']);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
@@ -20,6 +22,7 @@ const Header = () => {
   }, []);
 
   const handleLogout = () => {
+    removeCookie('admin_token', { path: '/' });
     logout();
     navigate('/login');
   };

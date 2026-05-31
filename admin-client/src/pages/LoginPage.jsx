@@ -13,7 +13,7 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login } = useAuthStore();
-  const [, setCookie] = useCookies(['token']);
+  const [, setCookie] = useCookies(['admin_token']);
 
   const [formData, setFormData] = useState({
     username: '',
@@ -38,7 +38,7 @@ const LoginPage = () => {
 
       if (res.data.code === 200) {
         const token = res.data.result?.token;
-        setCookie('token', token, { path: '/', maxAge: 86400 * 7 }); // 7 days
+        setCookie('admin_token', token, { path: '/', maxAge: 86400 * 7 }); // 7 days
 
         const userRes = await authApis(token).get(endpoints.profile);
         login(userRes.data?.result, token);

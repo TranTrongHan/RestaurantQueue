@@ -29,7 +29,7 @@ const Header = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
             <Link to="/" className="text-sm font-medium text-gray-700 hover:text-primary dark:text-gray-300 transition-colors">Trang Chủ</Link>
-            <Link to="/menu" className="text-sm font-medium text-gray-700 hover:text-primary dark:text-gray-300 transition-colors">Thực đơn</Link>
+            {/* <Link to="/menu" className="text-sm font-medium text-gray-700 hover:text-primary dark:text-gray-300 transition-colors">Thực đơn</Link> */}
             {user?.role === "STAFF" && (
               <>
                 <Link to="/reservations" className="text-sm font-medium text-gray-700 hover:text-primary dark:text-gray-300 transition-colors">Danh sách bàn</Link>
@@ -102,7 +102,7 @@ const Header = () => {
         <div className="md:hidden bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800 shadow-lg absolute w-full left-0">
           <div className="px-4 py-4 space-y-2">
             <Link to="/" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2.5 rounded-lg text-base font-semibold text-gray-800 hover:bg-gray-50 hover:text-primary transition-colors dark:text-gray-200 dark:hover:bg-gray-900">Trang Chủ</Link>
-            <Link to="/menu" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2.5 rounded-lg text-base font-semibold text-gray-800 hover:bg-gray-50 hover:text-primary transition-colors dark:text-gray-200 dark:hover:bg-gray-900">Thực đơn</Link>
+            {/* <Link to="/menu" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2.5 rounded-lg text-base font-semibold text-gray-800 hover:bg-gray-50 hover:text-primary transition-colors dark:text-gray-200 dark:hover:bg-gray-900">Thực đơn</Link> */}
             {user?.role === "STAFF" && (
               <>
                 <Link to="/reservations" onClick={() => setIsMenuOpen(false)} className="block px-3 py-2.5 rounded-lg text-base font-semibold text-gray-800 hover:bg-gray-50 hover:text-primary transition-colors dark:text-gray-200 dark:hover:bg-gray-900">Danh sách bàn</Link>

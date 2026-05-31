@@ -17,6 +17,7 @@ import com.tth.RestaurantApplication.repository.OrderSessionRepository;
 import com.tth.RestaurantApplication.repository.ReservationRepository;
 import com.tth.RestaurantApplication.repository.TableRepository;
 import com.tth.RestaurantApplication.repository.UserRepository;
+import com.tth.RestaurantApplication.repository.MembershipTierRepository;
 import com.tth.RestaurantApplication.specification.ReservationSpecification;
 import jakarta.mail.MessagingException;
 import jakarta.transaction.Transactional;
@@ -52,6 +53,8 @@ public class ReservationService {
     JwtService jwtService;
     EmailService emailService;
     FirestoreService firestoreService;
+    MembershipTierRepository membershipTierRepository;
+    MembershipService membershipService;
 
 
     public ReservationResponse bookingTable(TableBookingRequest request, User currentUser) throws MessagingException {
@@ -248,8 +251,15 @@ public class ReservationService {
                 .email("guest_" + tableId + "_" + System.currentTimeMillis() + "@guest.restaurant.com")
                 .role(User.Role.CUSTOMER)
                 .authProvider(User.AuthProvider.LOCAL)
+                .totalSpending(java.math.BigDecimal.ZERO)
+                .loyaltyPoints(0)
                 .build();
+        
+        membershipTierRepository.findByTierName("New Member").ifPresent(guestUser::setMembershipTier);
         userRepository.save(guestUser);
+
+        // Tặng Voucher chào mừng cho khách vãng lai mới
+        membershipService.grantWelcomeVoucher(guestUser);
 
         // 3. Tạo Reservation dạng CHECKEDIN
         Reservation reservation = new Reservation();

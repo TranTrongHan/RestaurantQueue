@@ -357,10 +357,25 @@ const ReservationDetailPage = () => {
                                             <input 
                                                 type="text"
                                                 value={selectedVoucher}
-                                                onChange={(e) => setSelectedVoucher(e.target.value.toUpperCase())}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.toUpperCase();
+                                                    setSelectedVoucher(val);
+                                                    if (!val) setDiscountInfo(null);
+                                                }}
                                                 placeholder="NHẬP MÃ..."
-                                                className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-bold text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500/50 transition-all"
+                                                className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 pl-11 pr-10 text-sm font-bold text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500/50 transition-all"
                                             />
+                                            {selectedVoucher && (
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedVoucher("");
+                                                        setDiscountInfo(null);
+                                                    }}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                                                >
+                                                    <X size={16} />
+                                                </button>
+                                            )}
                                         </div>
                                         <button 
                                             onClick={handleCheckVoucher}
@@ -387,6 +402,16 @@ const ReservationDetailPage = () => {
 
                                         {showVoucherList && (
                                             <div className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-white/10 rounded-2xl shadow-2xl p-2 max-h-48 overflow-y-auto z-50 animate-in fade-in slide-in-from-top-2">
+                                                <button 
+                                                    onClick={() => {
+                                                        setSelectedVoucher("");
+                                                        setDiscountInfo(null);
+                                                        setShowVoucherList(false);
+                                                    }}
+                                                    className="w-full text-left p-3 rounded-xl hover:bg-white/5 transition-all mb-1 text-slate-400 text-xs font-bold border-b border-white/5 flex items-center gap-2"
+                                                >
+                                                    <X size={14} /> Không sử dụng voucher (Hủy)
+                                                </button>
                                                 {vouchers.length === 0 ? (
                                                     <p className="text-[10px] text-slate-500 text-center py-4 font-bold">Khách chưa có voucher nào</p>
                                                 ) : (

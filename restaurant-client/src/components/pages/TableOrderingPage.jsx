@@ -391,6 +391,30 @@ const TableOrderingPage = () => {
         }
     };
 
+    const toDate = (timestamp) => {
+        if (!timestamp) return null;
+        if (timestamp.toDate) return timestamp.toDate();
+        if (timestamp.seconds) return new Date(timestamp.seconds * 1000);
+        return new Date(timestamp);
+    };
+
+    const getDeadlineInfo = (deadlineTime) => {
+        if (!deadlineTime) return null;
+        const now = new Date();
+        const deadline = new Date(deadlineTime);
+        const diffMs = deadline - now;
+        const minutesLeft = Math.ceil(diffMs / 60000);
+        
+        const hh = String(deadline.getHours()).padStart(2, '0');
+        const mm = String(deadline.getMinutes()).padStart(2, '0');
+        
+        return {
+            time: `${hh}:${mm}`,
+            minutesLeft: minutesLeft,
+            isOverdue: minutesLeft < 0
+        };
+    };
+
     const formatPrice = (price) => new Intl.NumberFormat('vi-VN').format(price) + 'đ';
 
     const getCategoryIcon = (name) => {
@@ -460,46 +484,69 @@ const TableOrderingPage = () => {
 
     // 6. Welcome Standby Screen when table is not active
     if (!token || !sessionId) {
+        const qrUrl = `${BASE_URL}/order_session/activate-by-scan?tableId=${tableId}`;
+        const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=2563eb&margin=10&data=${encodeURIComponent(qrUrl)}`;
+
         return (
             <div className="h-screen w-full bg-[#090d16] flex flex-col items-center justify-center text-white relative overflow-hidden select-none">
                 {/* Glowing decorative background bubbles */}
                 <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] animate-pulse"></div>
                 <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-indigo-500/10 rounded-full blur-[100px] animate-pulse [animation-delay:2s]"></div>
 
-                <div className="z-10 flex flex-col items-center max-w-2xl px-6 text-center space-y-8 animate-in fade-in zoom-in duration-1000">
+                <div className="z-10 flex flex-col items-center max-w-2xl px-6 text-center space-y-6 animate-in fade-in zoom-in duration-1000">
                     {/* Glowing Logo Circle */}
-                    <div className="relative w-28 h-28 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[32px] flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.3)] ring-4 ring-white/10 animate-bounce-slow">
-                        <UtensilsCrossed size={52} className="text-white" strokeWidth={1.5} />
-                        <div className="absolute -top-1 -right-1 bg-amber-400 p-2 rounded-full shadow-md">
-                            <Sparkles size={14} className="text-slate-900" fill="currentColor" />
+                    <div className="relative w-24 h-24 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[28px] flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.3)] ring-4 ring-white/10 animate-bounce-slow">
+                        <UtensilsCrossed size={44} className="text-white" strokeWidth={1.5} />
+                        <div className="absolute -top-1 -right-1 bg-amber-400 p-1.5 rounded-full shadow-md">
+                            <Sparkles size={12} className="text-slate-900" fill="currentColor" />
                         </div>
                     </div>
 
-                    <div className="space-y-4">
-                        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
+                    <div className="space-y-2">
+                        <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white leading-tight">
                             Restaurant<span className="text-blue-500">App</span>
                         </h1>
-                        <p className="text-lg md:text-xl text-slate-300 font-semibold max-w-lg mx-auto">
+                        <p className="text-base md:text-lg text-slate-300 font-semibold max-w-lg mx-auto">
                             Xin kính chào quý khách!
-                        </p>
-                        <p className="text-sm md:text-base text-slate-400 leading-relaxed max-w-md mx-auto">
-                            Vui lòng đợi nhân viên phục vụ mở bàn để bắt đầu khám phá thực đơn gọi món trực tiếp.
                         </p>
                     </div>
 
-                    {/* Animated Pulsing Loader */}
-                    <div className="flex flex-col items-center space-y-3">
-                        <div className="flex gap-2">
-                            <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                            <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                            <div className="w-2.5 h-2.5 bg-blue-500 rounded-full animate-bounce"></div>
+                    {/* QR Code Activation Box */}
+                    <div className="flex flex-col items-center space-y-4 my-2">
+                        <div className="bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-[28px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] hover:shadow-blue-500/15 transition-all duration-500 relative group max-w-[220px]">
+                            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-[28px] blur opacity-25 group-hover:opacity-40 transition duration-500"></div>
+                            <div className="relative bg-white rounded-2xl p-2.5">
+                                <img 
+                                    src={qrCodeApiUrl} 
+                                    alt="Mã QR kích hoạt bàn" 
+                                    className="w-full aspect-square object-contain rounded-xl select-none"
+                                />
+                            </div>
                         </div>
-                        <span className="text-xs text-slate-500 uppercase tracking-widest font-bold">Chờ kích hoạt</span>
+                        <div className="space-y-1">
+                            <p className="text-sm font-bold text-blue-400 uppercase tracking-wider animate-pulse flex items-center justify-center gap-1.5">
+                                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping"></span>
+                                Quét QR để mở bàn ngay
+                            </p>
+                            <p className="text-xs text-slate-450 max-w-xs mx-auto">
+                                Sử dụng camera điện thoại quét mã QR để tự động kích hoạt phiên gọi món trên máy tính bảng này.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Alternative Waiting Note */}
+                    <div className="pt-2 flex flex-col items-center space-y-2">
+                        <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black">Hoặc đợi nhân viên mở bàn</span>
+                        <div className="flex gap-1.5">
+                            <div className="w-2 h-2 bg-slate-600 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                            <div className="w-2 h-2 bg-slate-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                            <div className="w-2 h-2 bg-slate-600 rounded-full animate-bounce"></div>
+                        </div>
                     </div>
 
                     {/* Floating Tablet Info Badge */}
-                    <div className="pt-8 border-t border-white/5 w-full flex justify-center">
-                        <span className="px-5 py-2.5 bg-slate-900/60 border border-white/10 rounded-2xl text-xs font-black uppercase tracking-widest text-slate-400 shadow-xl backdrop-blur-md">
+                    <div className="pt-6 border-t border-white/5 w-full flex justify-center">
+                        <span className="px-4 py-2 bg-slate-900/60 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-450 shadow-xl backdrop-blur-md">
                             📍 Máy tính bảng cố định tại Bàn {tableId}
                         </span>
                     </div>
@@ -680,6 +727,20 @@ const TableOrderingPage = () => {
                                                     <div className="flex-1">
                                                         <h4 className="font-bold text-slate-800">{item.name}</h4>
                                                         <p className="text-xs text-slate-500 mt-1">Số lượng: {item.quantity} | Giá: {formatPrice(item.price)}</p>
+                                                        {item.deadlineTime && (item.status === "PENDING" || item.status === "COOKING") && (() => {
+                                                            const dInfo = getDeadlineInfo(item.deadlineTime);
+                                                            if (!dInfo) return null;
+                                                            return (
+                                                                <p className={`text-xs font-semibold mt-1.5 flex items-center gap-1.5 ${dInfo.isOverdue ? 'text-rose-550' : 'text-slate-500'}`}>
+                                                                    <span className="flex items-center gap-1">
+                                                                        ⏱️ Dự kiến: <span className="font-black">{dInfo.time}</span>
+                                                                    </span>
+                                                                    <span>
+                                                                        {dInfo.isOverdue ? '(Bếp đang làm gấp!)' : `(còn ~${dInfo.minutesLeft} phút)`}
+                                                                    </span>
+                                                                </p>
+                                                            );
+                                                        })()}
                                                     </div>
                                                     <div className="flex items-center gap-3">
                                                         <span className={`px-4 py-1.5 rounded-full text-xs font-bold border flex items-center gap-1.5 ${cfg.color}`}>

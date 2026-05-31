@@ -62,6 +62,8 @@ public class SecurityConfig {
                                                 .permitAll()
                                                 .requestMatchers(HttpMethod.GET, "/api/order_session/active-session")
                                                 .permitAll()
+                                                .requestMatchers(HttpMethod.GET, "/api/order_session/activate-by-scan")
+                                                .permitAll()
                                                 .requestMatchers("/api/order_session/**")
                                                 .hasAnyRole("CUSTOMER", "ADMIN")
                                                 .requestMatchers("/api/order_item/**").hasRole("CUSTOMER")
@@ -107,7 +109,7 @@ public class SecurityConfig {
         @Bean
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
-                configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5174")); // React app
+                configuration.setAllowedOriginPatterns(List.of("*")); // Cho phép mọi origin bao gồm ngrok và IP nội bộ khi phát triển
                 configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
                 configuration.setAllowedHeaders(List.of("*"));
                 configuration.setAllowCredentials(true); // Cho phép gửi cookie/token

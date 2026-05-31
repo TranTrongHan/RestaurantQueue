@@ -57,7 +57,7 @@ const ReservationsPage = () => {
     const [loading, setLoading] = useState(false);
     const [loadingBtn, setLoadingBtn] = useState(null);
     const [search, setSearch] = useState("");
-    const [status, setStatus] = useState("BOOKED");
+    const [status, setStatus] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalElements, setTotalElements] = useState(0);
@@ -179,6 +179,11 @@ const ReservationsPage = () => {
     useEffect(() => {
         if (!qrTable) {
             setQrToken("");
+            return;
+        }
+
+        if (qrTable.isActivationQR) {
+            setQrToken("ACTIVATION");
             return;
         }
 
@@ -551,19 +556,28 @@ const ReservationsPage = () => {
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <button
-                                                        onClick={() => handleQuickCheckin(table.tableId)}
-                                                        disabled={loadingBtn === table.tableId}
-                                                        className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-1 disabled:bg-slate-200"
-                                                    >
-                                                        {loadingBtn === table.tableId ? (
-                                                            <SpinnerComp className="w-4 h-4 border-white border-t-transparent" />
-                                                        ) : (
-                                                            <>
-                                                                <PlusCircle size={14} /> Mở Bàn Khách Vãng Lai
-                                                            </>
-                                                        )}
-                                                    </button>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={() => setQrTable({ ...table, isActivationQR: true })}
+                                                            className="px-3 py-2.5 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl text-slate-700 flex items-center justify-center transition-all shadow-sm"
+                                                            title="Xem mã QR Kích Hoạt Bàn"
+                                                        >
+                                                            <QrCode size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleQuickCheckin(table.tableId)}
+                                                            disabled={loadingBtn === table.tableId}
+                                                            className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-1 disabled:bg-slate-200"
+                                                        >
+                                                            {loadingBtn === table.tableId ? (
+                                                                <SpinnerComp className="w-4 h-4 border-white border-t-transparent" />
+                                                            ) : (
+                                                                <>
+                                                                    <PlusCircle size={14} /> Mở bàn nhanh
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -600,12 +614,18 @@ const ReservationsPage = () => {
                         ) : qrToken ? (
                             <div className="space-y-4">
                                 <QRCodeSVG
-                                    value={`http://${window.location.hostname}:5173/menu?token=${qrToken}`}
+                                    value={
+                                        qrTable.isActivationQR
+                                            ? `${import.meta.env.VITE_API_BASE_URL}/order_session/activate-by-scan?tableId=${qrTable.tableId}`
+                                            : `http://${window.location.hostname}:5173/menu?token=${qrToken}`
+                                    }
                                     size={220}
                                     className="mx-auto border p-4 bg-white rounded-2xl shadow-sm"
                                 />
                                 <p className="text-[11px] text-slate-400 font-semibold max-w-[240px] mx-auto leading-relaxed">
-                                    Khách hàng dùng camera điện thoại quét mã này để vào gọi món trực tiếp.
+                                    {qrTable.isActivationQR
+                                        ? "Khách dùng camera điện thoại quét mã này để kích hoạt bàn ăn từ xa."
+                                        : "Khách hàng dùng camera điện thoại quét mã này để vào gọi món trực tiếp."}
                                 </p>
                             </div>
                         ) : (
@@ -613,7 +633,19 @@ const ReservationsPage = () => {
                         )}
 
                         {/* Simulator controls */}
-                        <div className="w-full border-t pt-4">
+                        <div className="w-full border-t pt-4 space-y-2">
+                            {qrTable.isActivationQR && (
+                                <button
+                                    onClick={() => {
+                                        const scanUrl = `${import.meta.env.VITE_API_BASE_URL}/order_session/activate-by-scan?tableId=${qrTable.tableId}`;
+                                        window.open(scanUrl, "_blank");
+                                        setQrTable(null);
+                                    }}
+                                    className="w-full py-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                                >
+                                    <QrCode size={14} /> Giả lập quét QR (Khách quét điện thoại)
+                                </button>
+                            )}
                             <button
                                 onClick={() => {
                                     const simUrl = `http://localhost:5173/menu?tableMode=true&tableId=${qrTable.tableId}`;
