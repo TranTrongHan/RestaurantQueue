@@ -3,6 +3,7 @@ package com.tth.RestaurantApplication.service;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.GenerateContentResponse;
+import com.tth.RestaurantApplication.dto.request.ChatRequest;
 import com.tth.RestaurantApplication.dto.response.MenuItemVectorResponse;
 import com.tth.RestaurantApplication.entity.OrderSession;
 import com.tth.RestaurantApplication.entity.User;
@@ -58,7 +59,7 @@ public class ChatbotService {
     }
 
     @Transactional
-    public String chat(com.tth.RestaurantApplication.dto.request.ChatRequest request) {
+    public String chat(ChatRequest request) {
         String sessionToken = request.getSessionToken();
         Integer userIdParam = request.getUserId();
         String userMessage = request.getUserMessage();
